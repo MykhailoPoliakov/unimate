@@ -13,6 +13,14 @@ INSTITUTIONS = [
             {"slug": "ibm", "name": "International Business Management", "duration_years": 3},
         ],
     },
+    {
+        "slug": "tm",
+        "name": "Thomas More",
+        "programs": [
+            {"slug": "acs", "name": "Applied Computer Science", "duration_years": 3},
+            {"slug": "ibm", "name": "International Business Management", "duration_years": 3},
+        ],
+    }
     # add the next university here, same shape
 ]
 
