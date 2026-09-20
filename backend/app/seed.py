@@ -21,6 +21,7 @@ INSTITUTIONS = [
             {"slug": "ibm", "name": "International Business Management", "duration_years": 3},
         ],
     }
+    
     # add the next university here, same shape
 ]
 
