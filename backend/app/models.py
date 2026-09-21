@@ -94,6 +94,40 @@ class ButtonTranslation(Base):
     description: Mapped[str | None] = mapped_column(String(500))
 
 
+class Social(Base):
+    __tablename__ = "socials"
+    __table_args__ = (
+        CheckConstraint("year_min IS NULL OR year_max IS NULL OR year_min <= year_max"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url: Mapped[str] = mapped_column(String(500))
+    icon: Mapped[str | None] = mapped_column(String(100))
+    platform: Mapped[str | None] = mapped_column(String(30))
+    sort_order: Mapped[int] = mapped_column(default=0)
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+    institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"))
+    program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"))
+    year_min: Mapped[int | None]
+    year_max: Mapped[int | None]
+
+    translations: Mapped[list["SocialTranslation"]] = relationship(
+        cascade="all, delete-orphan"
+    )
+
+
+class SocialTranslation(Base):
+    __tablename__ = "social_translations"
+
+    social_id: Mapped[int] = mapped_column(
+        ForeignKey("socials.id", ondelete="CASCADE"), primary_key=True
+    )
+    lang: Mapped[str] = mapped_column(String(5), primary_key=True)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(String(500))
+
+
 class News(Base):
     __tablename__ = "news"
     __table_args__ = (
