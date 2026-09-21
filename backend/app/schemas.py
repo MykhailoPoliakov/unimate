@@ -76,3 +76,12 @@ class ButtonOut(BaseModel):
     url: str
     icon: str | None
     platform: str | None
+
+
+class SocialOut(BaseModel):
+    id: int
+    title: str
+    description: str | None
+    url: str
+    icon: str | None
+    platform: str | None
