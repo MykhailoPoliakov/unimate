@@ -15,3 +15,5 @@ __pycache__/
 # Frontend (for your friend)
 node_modules/
 dist/
+
+.cursor/

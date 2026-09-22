@@ -1,0 +1,145 @@
+{
+  "institutions": [
+    {
+      "slug": "kdg",
+      "name": "KdG University of Applied Sciences and Arts",
+      "programs": [
+        {
+          "slug": "acs",
+          "name": "Applied Computer Science",
+          "duration_years": 3
+        },
+        {
+          "slug": "ibm",
+          "name": "International Business Management",
+          "duration_years": 3
+        }
+      ]
+    },
+    {
+      "slug": "tm",
+      "name": "Thomas More",
+      "programs": [
+        {
+          "slug": "st",
+          "name": "Shit",
+          "duration_years": 3
+        },
+        {
+          "slug": "fk",
+          "name": "Fuck",
+          "duration_years": 3
+        }
+      ]
+    }
+  ],
+  "buttons": [
+    {
+      "url": "https://canvas.kdg.be/",
+      "institution": "kdg",
+      "icon": "book",
+      "platform": "canvas",
+      "sort_order": 1,
+      "translations": {
+        "nl": ["Canvas", "Cursussen, opdrachten en punten"],
+        "de": ["Canvas", "Kurse, Aufgaben und Noten"],
+        "fr": ["Canvas", "Cours, devoirs et notes"],
+        "en": ["Canvas", "Courses, assignments and grades"],
+        "uk": ["Canvas", "Курси, завдання та оцінки"],
+        "ru": ["Canvas", "Курсы, задания и оценки"]
+      }
+    },
+    {
+      "url": "https://E-studentservice.kdg.be/Main.aspx",
+      "institution": "kdg",
+      "icon": "document-text",
+      "platform": "student-service",
+      "sort_order": 2,
+      "translations": {
+        "nl": ["E-studentservice", "Studentenadministratie en aanvragen"],
+        "de": ["E-studentservice", "Studentenverwaltung und Anträge"],
+        "fr": ["E-studentservice", "Administration et demandes étudiantes"],
+        "en": ["E-studentservice", "Student administration and requests"],
+        "uk": ["E-studentservice", "Студентське адміністрування та запити"],
+        "ru": ["E-studentservice", "Студенческие услуги и запросы"]
+      }
+    },
+    {
+      "url": "https://www.kdg.be/en",
+      "institution": "kdg",
+      "icon": "globe-outline",
+      "platform": "website",
+      "sort_order": 3,
+      "translations": {
+        "nl": ["KdG-website", "Officieel nieuws, opleidingen en info van KdG"],
+        "de": ["KdG-Website", "Offizielle Website der KdG"],
+        "fr": ["Site web de la KdG", "Site web officiel de la KdG"],
+        "en": ["KdG Website", "Official KdG website"],
+        "uk": ["Сайт KdG", "Офіційний сайт KdG"],
+        "ru": ["Сайт KdG", "Официальный сайт KdG"]
+      }
+    },
+    {
+      "url": "https://cloud.timeedit.net/be_kdg/web/student/ri1Y315Q655Z54Q81.html",
+      "institution": "kdg",
+      "icon": "calendar",
+      "platform": "schedule",
+      "sort_order": 4,
+      "translations": {
+        "nl": ["Rooster", "Je lesrooster, lokalen en tijden"],
+        "de": ["Stundenplan", "Dein Stundenplan, Räume und Zeiten"],
+        "fr": ["Horaire", "Votre emploi du temps, locaux et horaires"],
+        "en": ["Schedule", "Your class timetable, rooms and times"],
+        "uk": ["Розклад", "Розклад занять, аудиторії та час"],
+        "ru": ["Расписание", "Расписание занятий: аудитории и время"]
+      }
+    }
+  ],
+  "socials": [
+    {
+      "url": "https://www.instagram.com/kdg_hogeschool/",
+      "institution": "kdg",
+      "sort_order": 1,
+      "icon": "logo-instagram",
+      "platform": "instagram",
+      "translations": {
+        "nl": ["Instagram", "Volg KdG op Instagram"],
+        "de": ["Instagram", "KdG auf Instagram folgen"],
+        "fr": ["Instagram", "Suivez la KdG sur Instagram"],
+        "en": ["Instagram", "Follow KdG on Instagram"],
+        "uk": ["Instagram", "Стежте за KdG в Instagram"],
+        "ru": ["Instagram", "Следите за KdG в Instagram"]
+      }
+    },
+    {
+      "url": "https://www.facebook.com/KdGHogeschool/",
+      "institution": "kdg",
+      "sort_order": 2,
+      "icon": "logo-facebook",
+      "platform": "facebook",
+      "translations": {
+        "nl": ["Facebook", "Nieuws en updates van KdG"],
+        "de": ["Facebook", "Neuigkeiten und Updates von KdG"],
+        "fr": ["Facebook", "Actualités et mises à jour de la KdG"],
+        "en": ["Facebook", "KdG news and updates"],
+        "uk": ["Facebook", "Новини та оновлення KdG"],
+        "ru": ["Facebook", "Новости и обновления KdG"]
+      }
+    },
+    {
+      "url": "https://www.linkedin.com/school/karel-de-grote-hogeschool/",
+      "institution": "kdg",
+      "sort_order": 3,
+      "icon": "logo-linkedin",
+      "platform": "linkedin",
+      "translations": {
+        "nl": ["LinkedIn", "KdG op LinkedIn"],
+        "de": ["LinkedIn", "KdG auf LinkedIn"],
+        "fr": ["LinkedIn", "La KdG sur LinkedIn"],
+        "en": ["LinkedIn", "KdG on LinkedIn"],
+        "uk": ["LinkedIn", "KdG у LinkedIn"],
+        "ru": ["LinkedIn", "KdG в LinkedIn"]
+      }
+    }
+  ]
+}

@@ -112,6 +112,7 @@ class Social(Base):
     year_min: Mapped[int | None]
     year_max: Mapped[int | None]
 
+    program: Mapped[Program | None] = relationship()
     translations: Mapped[list["SocialTranslation"]] = relationship(
         cascade="all, delete-orphan"
     )
@@ -160,7 +161,14 @@ class NewsTranslation(Base):
     )
     lang: Mapped[str] = mapped_column(String(5), primary_key=True)
     title: Mapped[str] = mapped_column(String(200))
+    excerpt: Mapped[str | None] = mapped_column(String(300))
     body: Mapped[str] = mapped_column(Text)
+    hero_image_url: Mapped[str | None] = mapped_column(String(500))
+    hero_image_alt: Mapped[str | None] = mapped_column(String(200))
+    cta_label: Mapped[str | None] = mapped_column(String(100))
+    cta_url: Mapped[str | None] = mapped_column(String(500))
+    tags: Mapped[str | None] = mapped_column(Text)
+    blocks: Mapped[str | None] = mapped_column(Text)
 
 
 class NewsVote(Base):
