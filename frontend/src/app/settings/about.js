@@ -3,8 +3,11 @@ import { ScrollView } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useI18n } from '@/hooks/use-i18n';
 
 export default function AboutScreen() {
+  const { t } = useI18n();
+
   return (
     <ThemedView className="flex-1">
       <ScrollView
@@ -14,16 +17,9 @@ export default function AboutScreen() {
           UniMate
         </ThemedText>
         <ThemedText themeColor="textSecondary">
-          Version {Constants.expoConfig?.version ?? '1.0.0'}
+          {t('version')} {Constants.expoConfig?.version ?? '1.0.0'}
         </ThemedText>
-        <ThemedText>
-          UniMate is a central point for students to find study information. It currently
-          supports Karel de Grote Hogeschool, with more universities planned later.
-        </ThemedText>
-        <ThemedText>
-          Home links out to Canvas, E-studentservice, your timetable, and KdG mail. Info and
-          Socials will grow as the app does.
-        </ThemedText>
+        <ThemedText>{t('aboutBody')}</ThemedText>
       </ScrollView>
     </ThemedView>
   );
