@@ -1,71 +1,102 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FormField } from '@/components/form-field';
+import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { SettingsGroup, SettingsRow } from '@/components/settings-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getUniversity } from '@/constants/universities';
+import { useFeed } from '@/hooks/use-feed';
+import { useI18n } from '@/hooks/use-i18n';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useProfile } from '@/hooks/use-profile';
+import { mapRemoteUser, useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemePreference } from '@/hooks/use-theme-preference';
+import { updateUser } from '@/lib/api';
 
-const THEME_OPTIONS = [
-  { id: 'system', label: 'System', icon: 'phone-portrait-outline' },
-  { id: 'light', label: 'Light', icon: 'sunny-outline' },
-  { id: 'dark', label: 'Dark', icon: 'moon-outline' },
+const THEME_IDS = [
+  { id: 'system', icon: 'phone-portrait-outline' },
+  { id: 'light', icon: 'sunny-outline' },
+  { id: 'dark', icon: 'moon-outline' },
 ];
 
 export default function SettingsScreen() {
   const theme = useTheme();
-  const { profile, saveProfile, clearProfile } = useProfile();
+  const { t, language, languages } = useI18n();
+  const { profile, saveProfile, refreshUser } = useProfile();
+  const { refresh: refreshFeed } = useFeed();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { preference, setPreference } = useThemePreference();
   const { enabled: notificationsEnabled, setEnabled: setNotificationsEnabled } = useNotifications();
-  const university = getUniversity(profile?.university);
+  const study = useStudySelection({
+    initialInstitution: profile?.institution,
+    initialProgram: profile?.program,
+    initialYear: profile?.yearOfStudy,
+    initialInstitutionName: profile?.institutionName,
+    programsDelayMs: 300,
+  });
+  const [isSavingStudy, setIsSavingStudy] = useState(false);
 
-  const [firstName, setFirstName] = useState(profile?.firstName ?? '');
-  const [lastName, setLastName] = useState(profile?.lastName ?? '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const studyChanged =
+    study.institutionSlug !== profile?.institution ||
+    study.programSlug !== profile?.program ||
+    study.yearOfStudy !== profile?.yearOfStudy;
 
-  const canSave =
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    (firstName.trim() !== profile?.firstName || lastName.trim() !== profile?.lastName) &&
-    !isSaving;
-
-  const handleSave = async () => {
-    if (!canSave) return;
-    setIsSaving(true);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     try {
-      await saveProfile({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      await Promise.all([refreshUser(), study.loadInstitutions()]);
+    } catch (error) {
+      Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
     } finally {
-      setIsSaving(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleReset = () => {
-    Alert.alert(
-      'Reset UniMate?',
-      'This clears your name and university from this device and shows onboarding again.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: () => clearProfile(),
-        },
-      ]
-    );
+  const handleLanguage = async (next) => {
+    if (!profile?.userId || next === language) return;
+    try {
+      const remote = await updateUser(profile.userId, { language: next });
+      await saveProfile({
+        ...mapRemoteUser(remote, profile.deviceId),
+        institutionName: profile.institutionName,
+        programName: profile.programName,
+      });
+    } catch (error) {
+      Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
+    }
+  };
+
+  const handleSaveStudy = async () => {
+    if (!profile?.userId || !study.canSubmit || !studyChanged || isSavingStudy) return;
+    setIsSavingStudy(true);
+    try {
+      const remote = await updateUser(profile.userId, {
+        institution: study.institutionSlug,
+        program: study.programSlug,
+        year_of_study: study.yearOfStudy,
+      });
+      await saveProfile({
+        ...mapRemoteUser(remote, profile.deviceId),
+        institutionName: study.selectedInstitution?.name,
+        programName: study.selectedProgram?.name,
+      });
+      await refreshFeed();
+    } catch (error) {
+      Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
+    } finally {
+      setIsSavingStudy(false);
+    }
+  };
+
+  const canSaveStudy = studyChanged && study.canSubmit && !isSavingStudy;
+
+  const themeLabel = {
+    system: t('themeSystem'),
+    light: t('themeLight'),
+    dark: t('themeDark'),
   };
 
   return (
@@ -77,53 +108,82 @@ export default function SettingsScreen() {
           <ScrollView
             className="flex-1"
             contentContainerClassName="px-four py-four gap-five pb-bottom-tab-gap max-w-content self-center w-full"
-            keyboardShouldPersistTaps="handled">
-            <SettingsGroup title="Profile">
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceVertical
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={theme.primary}
+                colors={[theme.primary]}
+              />
+            }>
+            <SettingsGroup title={t('studies')}>
               <ThemedView type="backgroundElement" className="gap-three px-three py-three">
-                <FormField
-                  label="First name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  autoCapitalize="words"
-                  autoComplete="given-name"
+                <StudyFields
+                  institutions={study.institutions}
+                  programs={study.programs}
+                  institutionSlug={study.institutionSlug}
+                  programSlug={study.programSlug}
+                  yearOfStudy={study.yearOfStudy}
+                  maxYear={study.maxYear}
+                  isLoading={study.isLoading}
+                  isLoadingPrograms={study.isLoadingPrograms}
+                  loadFailed={study.loadFailed}
+                  onRetry={study.loadInstitutions}
+                  onSelectInstitution={study.setInstitutionSlug}
+                  onSelectProgram={(slug) => {
+                    study.setProgramSlug(slug);
+                    study.setYearOfStudy(1);
+                  }}
+                  onSelectYear={study.setYearOfStudy}
                 />
-                <FormField
-                  label="Surname"
-                  value={lastName}
-                  onChangeText={setLastName}
-                  autoCapitalize="words"
-                  autoComplete="family-name"
-                />
-                <ThemedView className="gap-one bg-transparent">
-                  <ThemedText type="small" themeColor="textSecondary">
-                    University
-                  </ThemedText>
-                  <ThemedText>
-                    {university.shortName} · {university.name}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    More universities are coming soon.
-                  </ThemedText>
-                </ThemedView>
                 <Pressable
-                  onPress={handleSave}
-                  disabled={!canSave}
-                  className={`rounded-three py-three items-center ${
-                    canSave ? 'bg-primary active:bg-primary-pressed' : 'bg-background-selected'
-                  }`}>
+                  onPress={handleSaveStudy}
+                  disabled={!canSaveStudy}
+                  className="rounded-three py-three items-center"
+                  style={{
+                    backgroundColor: canSaveStudy ? theme.primary : theme.border,
+                  }}>
                   <ThemedText
-                    className={canSave ? '!text-white' : ''}
-                    themeColor={canSave ? undefined : 'textSecondary'}
+                    className={canSaveStudy ? '!text-white' : ''}
+                    themeColor={canSaveStudy ? undefined : 'textSecondary'}
                     type="smallBold">
-                    {isSaving ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
+                    {isSavingStudy ? t('saving') : t('saveChanges')}
                   </ThemedText>
                 </Pressable>
               </ThemedView>
             </SettingsGroup>
 
-            <SettingsGroup title="Appearance">
+            <SettingsGroup title={t('language')}>
+              <ThemedView type="backgroundElement" className="flex-row flex-wrap gap-two p-two">
+                {languages.map((item) => {
+                  const selected = language === item.id;
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => handleLanguage(item.id)}
+                      className="active:opacity-70">
+                      <ThemedView
+                        type={selected ? 'backgroundSelected' : 'backgroundElement'}
+                        className="px-three py-two rounded-two"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: selected ? theme.primary : theme.border,
+                        }}>
+                        <ThemedText type="small" themeColor={selected ? 'primary' : 'textSecondary'}>
+                          {item.nativeName}
+                        </ThemedText>
+                      </ThemedView>
+                    </Pressable>
+                  );
+                })}
+              </ThemedView>
+            </SettingsGroup>
+
+            <SettingsGroup title={t('appearance')}>
               <ThemedView type="backgroundElement" className="flex-row gap-two p-two">
-                {THEME_OPTIONS.map((option) => {
+                {THEME_IDS.map((option) => {
                   const selected = preference === option.id;
                   return (
                     <Pressable
@@ -144,10 +204,8 @@ export default function SettingsScreen() {
                           size={20}
                           color={selected ? theme.primary : theme.textSecondary}
                         />
-                        <ThemedText
-                          type="small"
-                          themeColor={selected ? 'primary' : 'textSecondary'}>
-                          {option.label}
+                        <ThemedText type="small" themeColor={selected ? 'primary' : 'textSecondary'}>
+                          {themeLabel[option.id]}
                         </ThemedText>
                       </ThemedView>
                     </Pressable>
@@ -156,10 +214,10 @@ export default function SettingsScreen() {
               </ThemedView>
             </SettingsGroup>
 
-            <SettingsGroup title="Notifications">
+            <SettingsGroup title={t('notifications')}>
               <SettingsRow
                 icon="notifications-outline"
-                label="Push notifications"
+                label={t('pushNotifications')}
                 right={
                   <Switch
                     value={notificationsEnabled}
@@ -172,56 +230,24 @@ export default function SettingsScreen() {
               />
             </SettingsGroup>
 
-            <SettingsGroup title="Account">
-              <ThemedView type="backgroundElement" className="px-three py-three gap-two">
-                <ThemedText type="small" themeColor="textSecondary">
-                  Account type
+            <SettingsGroup title={t('accountRole')}>
+              <ThemedView type="backgroundElement" className="px-three py-three gap-one">
+                <ThemedText type="smallBold">
+                  {profile?.role === 'admin' ? t('admin') : t('student')}
                 </ThemedText>
-                <ThemedView className="flex-row gap-two bg-transparent">
-                  {[
-                    { id: 'default', label: 'Student' },
-                    { id: 'admin', label: 'Admin' },
-                  ].map((option) => {
-                    const selected = (profile?.role ?? 'default') === option.id;
-                    return (
-                      <Pressable
-                        key={option.id}
-                        onPress={() => saveProfile({ role: option.id })}
-                        className="flex-1 active:opacity-70">
-                        <ThemedView
-                          type={selected ? 'backgroundSelected' : 'backgroundElement'}
-                          className="items-center py-three rounded-two"
-                          style={{
-                            borderWidth: 1,
-                            borderColor: selected ? theme.primary : theme.border,
-                          }}>
-                          <ThemedText type="small" themeColor={selected ? 'primary' : 'textSecondary'}>
-                            {option.label}
-                          </ThemedText>
-                        </ThemedView>
-                      </Pressable>
-                    );
-                  })}
-                </ThemedView>
                 <ThemedText type="small" themeColor="textSecondary">
-                  Admins can publish news and events. This will come from your account later.
+                  {t('roleFromAccount')}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" selectable>
+                  {t('accountId')}: {profile?.userId ?? '—'}
                 </ThemedText>
               </ThemedView>
             </SettingsGroup>
 
-            <SettingsGroup title="Legal">
-              <SettingsRow icon="shield-checkmark-outline" label="Privacy policy" href="/settings/privacy" />
-              <SettingsRow icon="document-text-outline" label="Terms of use" href="/settings/terms" />
-              <SettingsRow icon="information-circle-outline" label="About UniMate" href="/settings/about" />
-            </SettingsGroup>
-
-            <SettingsGroup title="Data">
-              <SettingsRow
-                icon="refresh-outline"
-                label="Reset profile"
-                onPress={handleReset}
-                destructive
-              />
+            <SettingsGroup title={t('legal')}>
+              <SettingsRow icon="shield-checkmark-outline" label={t('privacyPolicy')} href="/settings/privacy" />
+              <SettingsRow icon="document-text-outline" label={t('termsOfUse')} href="/settings/terms" />
+              <SettingsRow icon="information-circle-outline" label={t('aboutUnimate')} href="/settings/about" />
             </SettingsGroup>
 
             <ThemedText type="small" themeColor="textSecondary" className="text-center">
