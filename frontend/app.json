@@ -41,6 +41,12 @@
           "color": "#5B5CE2",
           "defaultChannel": "unimate-info"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "UniMate uses your photos when an admin adds a picture to news."
+        }
       ]
     ],
     "experiments": {
