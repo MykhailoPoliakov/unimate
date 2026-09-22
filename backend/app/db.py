@@ -81,5 +81,19 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
         )
         """
     )
+    cursor.execute("PRAGMA table_info(news_translations)")
+    news_translation_columns = {row[1] for row in cursor.fetchall()}
+    if news_translation_columns:
+        for name, definition in (
+            ("excerpt", "VARCHAR(300)"),
+            ("hero_image_url", "VARCHAR(500)"),
+            ("hero_image_alt", "VARCHAR(200)"),
+            ("cta_label", "VARCHAR(100)"),
+            ("cta_url", "VARCHAR(500)"),
+            ("tags", "TEXT"),
+            ("blocks", "TEXT"),
+        ):
+            if name not in news_translation_columns:
+                cursor.execute(f"ALTER TABLE news_translations ADD COLUMN {name} {definition}")
     dbapi_connection.commit()
     cursor.close()
