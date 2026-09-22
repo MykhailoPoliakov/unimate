@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "UniMate",
-    "slug": "unimate",
+    "slug": "unimate-app",
+    "owner": "montely",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

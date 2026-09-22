@@ -132,10 +132,7 @@ export default function SettingsScreen() {
                   loadFailed={study.loadFailed}
                   onRetry={study.loadInstitutions}
                   onSelectInstitution={study.setInstitutionSlug}
-                  onSelectProgram={(slug) => {
-                    study.setProgramSlug(slug);
-                    study.setYearOfStudy(1);
-                  }}
+                  onSelectProgram={study.setProgramSlug}
                   onSelectYear={study.setYearOfStudy}
                 />
                 <Pressable

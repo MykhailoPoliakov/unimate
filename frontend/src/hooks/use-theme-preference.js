@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Appearance, Platform, useColorScheme as useSystemColorScheme } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Appearance, AppState, Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 
@@ -16,6 +16,11 @@ const ThemePreferenceContext = createContext({
   setPreference: () => {},
 });
 
+function readSystemScheme() {
+  const scheme = Appearance.getColorScheme();
+  return scheme === 'dark' ? 'dark' : scheme === 'light' ? 'light' : null;
+}
+
 function resolveScheme(preference, system) {
   if (preference === 'light' || preference === 'dark') return preference;
   return system === 'dark' ? 'dark' : 'light';
@@ -23,9 +28,9 @@ function resolveScheme(preference, system) {
 
 function applyOverrides(preference, resolved) {
   try {
-    nativewindColorScheme.set(preference);
+    nativewindColorScheme.set(resolved);
   } catch {
-    // NativeWind may not accept "system" on every platform.
+    // NativeWind colorScheme may be unavailable during early web boot.
   }
 
   if (Platform.OS === 'web') {
@@ -40,12 +45,28 @@ function applyOverrides(preference, resolved) {
 }
 
 export function ThemePreferenceProvider({ children }) {
-  const system = useSystemColorScheme();
   const [preference, setPreferenceState] = useState('system');
+  const [system, setSystem] = useState(readSystemScheme);
   const [isReady, setIsReady] = useState(false);
-  const appliedOnce = useRef(false);
-  const skipNextApply = useRef(true);
   const resolved = resolveScheme(preference, system);
+
+  useEffect(() => {
+    const syncSystem = () => {
+      const next = readSystemScheme();
+      if (next) setSystem(next);
+    };
+
+    syncSystem();
+    const appearance = Appearance.addChangeListener(syncSystem);
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncSystem();
+    });
+
+    return () => {
+      appearance.remove();
+      appState.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,16 +75,15 @@ export function ThemePreferenceProvider({ children }) {
       try {
         const value = await AsyncStorage.getItem(STORAGE_KEY);
         const next = VALID_PREFERENCES.includes(value) ? value : 'system';
-        const nextResolved = resolveScheme(next, Appearance.getColorScheme());
+        const nextSystem = readSystemScheme() ?? system;
+        const nextResolved = resolveScheme(next, nextSystem);
         if (cancelled) return;
+        if (nextSystem) setSystem(nextSystem);
         applyOverrides(next, nextResolved);
         SystemUI.setBackgroundColorAsync(Colors[nextResolved].background);
         setPreferenceState(next);
       } finally {
-        if (!cancelled) {
-          appliedOnce.current = true;
-          setIsReady(true);
-        }
+        if (!cancelled) setIsReady(true);
       }
     })();
 
@@ -73,11 +93,7 @@ export function ThemePreferenceProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!isReady || !appliedOnce.current) return;
-    if (skipNextApply.current) {
-      skipNextApply.current = false;
-      return;
-    }
+    if (!isReady) return;
     applyOverrides(preference, resolved);
     SystemUI.setBackgroundColorAsync(Colors[resolved].background);
   }, [isReady, preference, resolved]);

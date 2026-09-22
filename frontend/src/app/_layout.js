@@ -1,11 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
 import '@/global.css';
 import '@/nativewind-interop';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { Onboarding } from '@/components/onboarding';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,6 +21,11 @@ SplashScreen.preventAutoHideAsync();
 function Root() {
   const { profile, isLoading } = useProfile();
   const { isReady } = useThemePreference();
+
+  useEffect(() => {
+    if (isLoading || !isReady) return;
+    SplashScreen.hideAsync();
+  }, [isLoading, isReady]);
 
   if (isLoading || !isReady) return null;
   if (!profile) return <Onboarding />;
@@ -41,7 +46,6 @@ function Providers() {
         <I18nProvider>
           <NotificationsProvider>
             <FeedProvider>
-              <AnimatedSplashOverlay />
               <Root />
             </FeedProvider>
           </NotificationsProvider>

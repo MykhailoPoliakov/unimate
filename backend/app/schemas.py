@@ -69,6 +69,17 @@ class NewsOut(BaseModel):
     translations: list[NewsTranslationOut]
 
 
+class NewsVoteIn(BaseModel):
+    option_index: int = Field(ge=0)
+
+
+class NewsPollOut(BaseModel):
+    options: list[str]
+    counts: list[int]
+    total: int
+    your_vote: int | None
+
+
 class ButtonOut(BaseModel):
     id: int
     title: str

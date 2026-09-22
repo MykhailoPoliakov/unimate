@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { useNotifications } from '@/hooks/use-notifications';
 import { useProfile } from '@/hooks/use-profile';
 import { createNews, deleteNews, listNews, updateNews } from '@/lib/api';
+import { joinNewsBody, parseNewsBody } from '@/lib/poll';
 
 const FeedContext = createContext({
   posts: [],
@@ -15,20 +16,23 @@ const FeedContext = createContext({
 
 function toPost(item) {
   const translation = item.translations?.[0] ?? {};
+  const parsed = parseNewsBody(translation.body ?? '');
   return {
     id: item.id,
     title: translation.title ?? '',
-    body: translation.body ?? '',
+    body: parsed.body,
+    options: parsed.options,
     lang: translation.lang,
     isPublished: item.is_published,
   };
 }
 
-function newsPayload(profile, title, body) {
+function newsPayload(profile, title, body, options) {
   const language = profile?.language ?? 'en';
-  const translations = [{ lang: language, title: title.trim(), body: body.trim() }];
+  const fullBody = joinNewsBody(body, options);
+  const translations = [{ lang: language, title: title.trim(), body: fullBody }];
   if (language !== 'en') {
-    translations.push({ lang: 'en', title: title.trim(), body: body.trim() });
+    translations.push({ lang: 'en', title: title.trim(), body: fullBody });
   }
   return {
     translations,
@@ -70,10 +74,10 @@ export function FeedProvider({ children }) {
   }, [refresh, profile?.language]);
 
   const addPost = useCallback(
-    async ({ title, body }) => {
+    async ({ title, body, options }) => {
       const created = await createNews(
         profile.userId,
-        newsPayload(profile, title, body)
+        newsPayload(profile, title, body, options)
       );
       await notifyNewPost({ type: 'news' });
       await refresh();
@@ -83,8 +87,8 @@ export function FeedProvider({ children }) {
   );
 
   const editPost = useCallback(
-    async ({ id, title, body }) => {
-      await updateNews(profile.userId, id, newsPayload(profile, title, body));
+    async ({ id, title, body, options }) => {
+      await updateNews(profile.userId, id, newsPayload(profile, title, body, options));
       await refresh();
     },
     [profile, refresh]

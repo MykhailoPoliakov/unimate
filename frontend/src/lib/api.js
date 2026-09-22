@@ -94,3 +94,11 @@ export function updateNews(userId, newsId, payload) {
 export function deleteNews(userId, newsId) {
   return api.delete(`/news/${newsId}`, userId);
 }
+
+export function getNewsPoll(userId, newsId) {
+  return api.get(`/news/${newsId}/poll`, userId);
+}
+
+export function voteNewsPoll(userId, newsId, optionIndex) {
+  return api.post(`/news/${newsId}/poll`, { option_index: optionIndex }, userId);
+}
