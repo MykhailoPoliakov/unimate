@@ -112,6 +112,7 @@ class Social(Base):
     year_min: Mapped[int | None]
     year_max: Mapped[int | None]
 
+    program: Mapped[Program | None] = relationship()
     translations: Mapped[list["SocialTranslation"]] = relationship(
         cascade="all, delete-orphan"
     )
