@@ -1,68 +1,45 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FormField } from '@/components/form-field';
+import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { UNIVERSITIES } from '@/constants/universities';
-import { useProfile } from '@/hooks/use-profile';
+import { useI18n } from '@/hooks/use-i18n';
+import { mapRemoteUser, useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-
-function UniversityOption({ university, isSelected, onSelect }) {
-  const theme = useTheme();
-
-  return (
-    <Pressable onPress={onSelect} className="active:opacity-70 self-stretch">
-      <ThemedView
-        type="backgroundElement"
-        className="flex-row items-center gap-three px-three py-three rounded-three"
-        style={{
-          borderWidth: 1,
-          borderColor: isSelected ? theme.primary : theme.border,
-        }}>
-        <ThemedView
-          type="backgroundSelected"
-          className="w-[44px] h-[44px] rounded-two items-center justify-center">
-          <Ionicons name="school" size={22} color={theme.primary} />
-        </ThemedView>
-        <ThemedView className="flex-1 bg-transparent">
-          <ThemedText type="smallBold">{university.shortName}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {university.name}
-          </ThemedText>
-        </ThemedView>
-        <Ionicons
-          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-          size={22}
-          color={isSelected ? theme.primary : theme.border}
-        />
-      </ThemedView>
-    </Pressable>
-  );
-}
+import { createUser } from '@/lib/api';
+import { getDeviceId } from '@/lib/device-id';
 
 export function Onboarding() {
+  const theme = useTheme();
   const { saveProfile } = useProfile();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [universityId, setUniversityId] = useState(UNIVERSITIES[0].id);
+  const { t, language, setLanguage, languages } = useI18n();
+  const study = useStudySelection({ programsDelayMs: 700 });
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
-  const canContinue =
-    firstName.trim().length > 0 && lastName.trim().length > 0 && !!universityId && !isSaving;
+  const canContinue = study.canSubmit && !isSaving;
 
   const handleContinue = async () => {
     if (!canContinue) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
-      await saveProfile({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        university: universityId,
-        role: 'default',
+      const deviceId = await getDeviceId();
+      const user = await createUser({
+        institution: study.institutionSlug,
+        program: study.programSlug,
+        year_of_study: study.yearOfStudy,
+        language,
       });
+      await saveProfile({
+        institutionName: study.selectedInstitution?.name,
+        programName: study.selectedProgram?.name,
+        ...mapRemoteUser(user, deviceId),
+      });
+    } catch (error) {
+      setSaveError(error.message ?? t('tryAgain'));
     } finally {
       setIsSaving(false);
     }
@@ -80,47 +57,55 @@ export function Onboarding() {
             keyboardShouldPersistTaps="handled">
             <ThemedView className="gap-two bg-transparent mb-four">
               <ThemedText type="title">
-                Welcome to <ThemedText type="title" themeColor="primary">UniMate</ThemedText>
+                {t('welcomeTo')} <ThemedText type="title" themeColor="primary">UniMate</ThemedText>
               </ThemedText>
-              <ThemedText themeColor="textSecondary">
-                Your central point for everything about your studies. Tell us a bit about
-                yourself to get started.
-              </ThemedText>
+              <ThemedText themeColor="textSecondary">{t('onboardingSubtitle')}</ThemedText>
             </ThemedView>
 
-            <FormField
-              label="First name"
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="e.g. Emma"
-              autoCapitalize="words"
-              autoComplete="given-name"
-              returnKeyType="next"
-            />
-            <FormField
-              label="Surname"
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="e.g. Peeters"
-              autoCapitalize="words"
-              autoComplete="family-name"
-              returnKeyType="done"
+            <ThemedText type="small" themeColor="textSecondary">
+              {t('language')}
+            </ThemedText>
+            <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
+              {languages.map((item) => {
+                const selected = language === item.id;
+                return (
+                  <Pressable key={item.id} onPress={() => setLanguage(item.id)} className="active:opacity-70">
+                    <ThemedView
+                      type={selected ? 'backgroundSelected' : 'backgroundElement'}
+                      className="px-three py-two rounded-three"
+                      style={{
+                        borderWidth: 1,
+                        borderColor: selected ? theme.primary : theme.border,
+                      }}>
+                      <ThemedText type="small" themeColor={selected ? 'primary' : 'textSecondary'}>
+                        {item.nativeName}
+                      </ThemedText>
+                    </ThemedView>
+                  </Pressable>
+                );
+              })}
+            </ThemedView>
+
+            <StudyFields
+              institutions={study.institutions}
+              programs={study.programs}
+              institutionSlug={study.institutionSlug}
+              programSlug={study.programSlug}
+              yearOfStudy={study.yearOfStudy}
+              maxYear={study.maxYear}
+              isLoading={study.isLoading}
+              isLoadingPrograms={study.isLoadingPrograms}
+              loadFailed={study.loadFailed}
+              onRetry={study.loadInstitutions}
+              onSelectInstitution={study.setInstitutionSlug}
+              onSelectProgram={(slug) => {
+                study.setProgramSlug(slug);
+                study.setYearOfStudy(1);
+              }}
+              onSelectYear={study.setYearOfStudy}
             />
 
-            <ThemedText type="small" themeColor="textSecondary" className="mt-two">
-              Your university
-            </ThemedText>
-            {UNIVERSITIES.map((university) => (
-              <UniversityOption
-                key={university.id}
-                university={university}
-                isSelected={universityId === university.id}
-                onSelect={() => setUniversityId(university.id)}
-              />
-            ))}
-            <ThemedText type="small" themeColor="textSecondary">
-              More universities are coming soon.
-            </ThemedText>
+            {saveError ? <ThemedText style={{ color: theme.error }}>{saveError}</ThemedText> : null}
 
             <ThemedView className="grow bg-transparent" />
 
@@ -131,7 +116,7 @@ export function Onboarding() {
                 canContinue ? 'bg-primary active:bg-primary-pressed' : 'bg-primary opacity-40'
               }`}>
               <ThemedText className="!text-white" type="smallBold">
-                {isSaving ? 'Saving…' : 'Get started'}
+                {isSaving ? t('saving') : t('getStarted')}
               </ThemedText>
             </Pressable>
           </ScrollView>
