@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -18,29 +18,181 @@ import { useFeed } from '@/hooks/use-feed';
 import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { getNewsPoll, voteNewsPoll } from '@/lib/api';
 
-function PostCard({ post, isAdmin, onEdit, onDelete }) {
+function PollChoices({ post }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const { profile } = useProfile();
+  const [poll, setPoll] = useState(null);
+  const [pick, setPick] = useState(null);
+  const [isEditing, setIsEditing] = useState(true);
+  const [isVoting, setIsVoting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!post.options?.length || !profile?.userId) return undefined;
+    getNewsPoll(profile.userId, post.id)
+      .then((data) => {
+        if (cancelled) return;
+        setPoll(data);
+        const voted = typeof data.your_vote === 'number';
+        setPick(voted ? data.your_vote : null);
+        setIsEditing(!voted);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPoll({
+          options: post.options,
+          counts: post.options.map(() => 0),
+          total: 0,
+          your_vote: null,
+        });
+        setPick(null);
+        setIsEditing(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, post.options, profile?.userId]);
+
+  if (!post.options?.length) return null;
+
+  const options = poll?.options?.length ? poll.options : post.options;
+  const counts = poll?.counts ?? options.map(() => 0);
+  const total = poll?.total ?? 0;
+  const submitted = typeof poll?.your_vote === 'number';
+  const canSubmit =
+    !isVoting &&
+    pick != null &&
+    isEditing &&
+    (poll?.your_vote !== pick || !submitted);
+
+  const handleSubmit = async () => {
+    if (!profile?.userId || !canSubmit) return;
+    setIsVoting(true);
+    try {
+      const data = await voteNewsPoll(profile.userId, post.id, pick);
+      setPoll(data);
+      setPick(data.your_vote);
+      setIsEditing(false);
+    } catch (error) {
+      Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  return (
+    <ThemedView className="gap-two bg-transparent">
+      <ThemedText type="smallBold">{t('poll')}</ThemedText>
+      {options.map((label, index) => {
+        const isSelected = pick === index;
+        const count = counts[index] ?? 0;
+        const percent = submitted && total > 0 ? Math.round((count / total) * 100) : 0;
+        return (
+          <Pressable
+            key={`${post.id}-${index}`}
+            onPress={() => isEditing && setPick(index)}
+            disabled={!isEditing || isVoting}
+            className="active:opacity-70">
+            <ThemedView
+              type={isSelected ? 'backgroundSelected' : 'backgroundElement'}
+              className="px-three py-three rounded-two overflow-hidden"
+              style={{
+                borderWidth: 1,
+                borderColor: isSelected ? theme.primary : theme.border,
+              }}>
+              {submitted ? (
+                <ThemedView
+                  className="absolute left-0 top-0 bottom-0"
+                  style={{
+                    width: `${percent}%`,
+                    backgroundColor: theme.primary,
+                    opacity: 0.22,
+                  }}
+                />
+              ) : null}
+              <ThemedView className="flex-row items-center justify-between bg-transparent">
+                <ThemedText type="smallBold" themeColor={isSelected ? 'primary' : 'text'} className="flex-1 pr-two">
+                  {label}
+                </ThemedText>
+                {submitted ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {percent}%
+                  </ThemedText>
+                ) : null}
+              </ThemedView>
+            </ThemedView>
+          </Pressable>
+        );
+      })}
+      <ThemedText type="small" themeColor="textSecondary">
+        {t('voteCount', { n: total })}
+        {submitted && options[poll.your_vote] ? ` · ${t('youVoted')}: ${options[poll.your_vote]}` : ''}
+      </ThemedText>
+      {isEditing ? (
+        <Pressable
+          onPress={handleSubmit}
+          disabled={!canSubmit}
+          className="active:opacity-70">
+          <ThemedView
+            type="backgroundSelected"
+            className="items-center py-three rounded-three"
+            style={{ opacity: canSubmit ? 1 : 0.45 }}>
+            <ThemedText type="smallBold" themeColor={canSubmit ? 'primary' : 'textSecondary'}>
+              {isVoting ? '…' : t('submitVote')}
+            </ThemedText>
+          </ThemedView>
+        </Pressable>
+      ) : (
+        <Pressable onPress={() => setIsEditing(true)} className="active:opacity-70">
+          <ThemedView type="backgroundElement" className="items-center py-three rounded-three" style={{ borderWidth: 1, borderColor: theme.border }}>
+            <ThemedText type="smallBold" themeColor="primary">
+              {t('changeChoice')}
+            </ThemedText>
+          </ThemedView>
+        </Pressable>
+      )}
+    </ThemedView>
+  );
+}
+
+function PostCard({ post, isAdmin, onOpen, onEdit, onDelete }) {
   const theme = useTheme();
   const { t } = useI18n();
 
   return (
-    <ThemedView type="backgroundElement" className="gap-two px-three py-three rounded-three">
-      <ThemedView className="flex-row items-center gap-two bg-transparent">
-        <ThemedView
-          type="backgroundSelected"
-          className="w-[36px] h-[36px] rounded-two items-center justify-center">
-          <Ionicons name="newspaper" size={18} color={theme.primary} />
+    <ThemedView type="backgroundElement" className="rounded-three overflow-hidden">
+      <Pressable onPress={() => onOpen(post)} className="active:opacity-80">
+        <ThemedView className="gap-two px-three py-three bg-transparent">
+          <ThemedView className="flex-row items-center gap-two bg-transparent">
+            <ThemedView
+              type="backgroundSelected"
+              className="w-[36px] h-[36px] rounded-two items-center justify-center">
+              <Ionicons name="newspaper" size={18} color={theme.primary} />
+            </ThemedView>
+            <ThemedView className="flex-1 bg-transparent">
+              <ThemedText type="small" themeColor="primary">
+                {t('news')}
+              </ThemedText>
+              <ThemedText type="smallBold">{post.title}</ThemedText>
+            </ThemedView>
+          </ThemedView>
+          {post.body ? (
+            <ThemedText themeColor="textSecondary" numberOfLines={3}>
+              {post.body}
+            </ThemedText>
+          ) : null}
+          {post.options?.length ? (
+            <ThemedText type="small" themeColor="primary">
+              {t('poll')}
+            </ThemedText>
+          ) : null}
         </ThemedView>
-        <ThemedView className="flex-1 bg-transparent">
-          <ThemedText type="small" themeColor="primary">
-            {t('news')}
-          </ThemedText>
-          <ThemedText type="smallBold">{post.title}</ThemedText>
-        </ThemedView>
-      </ThemedView>
-      {post.body ? <ThemedText themeColor="textSecondary">{post.body}</ThemedText> : null}
+      </Pressable>
       {isAdmin ? (
-        <ThemedView className="flex-row gap-three bg-transparent">
+        <ThemedView className="flex-row gap-three px-three pb-three bg-transparent">
           <Pressable onPress={() => onEdit(post)} className="active:opacity-70">
             <ThemedText type="small" themeColor="primary">
               {t('edit')}
@@ -57,20 +209,52 @@ function PostCard({ post, isAdmin, onEdit, onDelete }) {
   );
 }
 
+function NewsReader({ post, onClose }) {
+  const { t } = useI18n();
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <ThemedView className="flex-1">
+        <SafeAreaView className="flex-1">
+          <ThemedView className="flex-row items-center justify-between px-four py-three bg-transparent">
+            <Pressable onPress={onClose} className="active:opacity-70">
+              <ThemedText themeColor="primary">{t('close')}</ThemedText>
+            </Pressable>
+            <ThemedText type="smallBold">{t('news')}</ThemedText>
+            <ThemedView className="w-[48px] bg-transparent" />
+          </ThemedView>
+          <ScrollView className="flex-1" contentContainerClassName="px-four py-three gap-three">
+            <ThemedText type="smallBold">{post.title}</ThemedText>
+            {post.body ? <ThemedText themeColor="textSecondary">{post.body}</ThemedText> : null}
+            <PollChoices post={post} />
+          </ScrollView>
+        </SafeAreaView>
+      </ThemedView>
+    </Modal>
+  );
+}
+
 function NewsModal({ visible, post, onClose }) {
   const theme = useTheme();
   const { t } = useI18n();
   const { addPost, editPost } = useFeed();
   const [title, setTitle] = useState(post?.title ?? '');
   const [body, setBody] = useState(post?.body ?? '');
+  const [options, setOptions] = useState(
+    post?.options?.length ? post.options : []
+  );
   const [isSaving, setIsSaving] = useState(false);
 
-  const canSave = title.trim().length > 0 && !isSaving;
+  const pollOn = options.length > 0;
+  const filledOptions = options.map((item) => item.trim()).filter(Boolean);
+  const pollValid = !pollOn || filledOptions.length >= 2;
+  const canSave = title.trim().length > 0 && pollValid && !isSaving;
   const isEdit = !!post;
 
   const handleClose = () => {
     setTitle('');
     setBody('');
+    setOptions([]);
     onClose();
   };
 
@@ -78,8 +262,9 @@ function NewsModal({ visible, post, onClose }) {
     if (!canSave) return;
     setIsSaving(true);
     try {
-      if (isEdit) await editPost({ id: post.id, title, body });
-      else await addPost({ title, body });
+      const payload = { title, body, options: pollOn ? filledOptions : [] };
+      if (isEdit) await editPost({ id: post.id, ...payload });
+      else await addPost(payload);
       handleClose();
     } catch (error) {
       Alert.alert(isEdit ? t('couldNotSave') : t('couldNotPublish'), error.message ?? t('tryAgain'));
@@ -135,6 +320,50 @@ function NewsModal({ visible, post, onClose }) {
                   textAlignVertical: 'top',
                 }}
               />
+
+              {pollOn ? (
+                <ThemedView className="gap-two bg-transparent">
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {t('pollHint')}
+                  </ThemedText>
+                  {options.map((option, index) => (
+                    <ThemedView key={index} className="flex-row items-center gap-two bg-transparent">
+                      <TextInput
+                        value={option}
+                        onChangeText={(value) => {
+                          const next = [...options];
+                          next[index] = value;
+                          setOptions(next);
+                        }}
+                        placeholder={t('pollOption', { n: index + 1 })}
+                        placeholderTextColor={theme.textSecondary}
+                        className="flex-1 rounded-three px-three py-three text-base font-medium"
+                        style={{
+                          backgroundColor: theme.backgroundElement,
+                          color: theme.text,
+                        }}
+                      />
+                      {options.length > 2 ? (
+                        <Pressable
+                          onPress={() => setOptions(options.filter((_, itemIndex) => itemIndex !== index))}
+                          className="active:opacity-70">
+                          <Ionicons name="close-circle" size={22} color={theme.textSecondary} />
+                        </Pressable>
+                      ) : null}
+                    </ThemedView>
+                  ))}
+                  <Pressable onPress={() => setOptions([...options, ''])} className="active:opacity-70">
+                    <ThemedText themeColor="primary">{t('addOption')}</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={() => setOptions([])} className="active:opacity-70">
+                    <ThemedText themeColor="textSecondary">{t('removePoll')}</ThemedText>
+                  </Pressable>
+                </ThemedView>
+              ) : (
+                <Pressable onPress={() => setOptions(['', ''])} className="active:opacity-70">
+                  <ThemedText themeColor="primary">{t('addPoll')}</ThemedText>
+                </Pressable>
+              )}
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -149,6 +378,7 @@ export default function InfoScreen() {
   const { profile, refreshUser } = useProfile();
   const { posts, removePost, refresh } = useFeed();
   const [composer, setComposer] = useState(null);
+  const [reader, setReader] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isAdmin = profile?.role === 'admin';
 
@@ -222,6 +452,7 @@ export default function InfoScreen() {
                 key={post.id}
                 post={post}
                 isAdmin={isAdmin}
+                onOpen={setReader}
                 onEdit={(item) => setComposer(item)}
                 onDelete={handleDelete}
               />
@@ -229,6 +460,7 @@ export default function InfoScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+      {reader ? <NewsReader post={reader} onClose={() => setReader(null)} /> : null}
       {composer ? (
         <NewsModal
           key={composer.id ?? 'new'}
