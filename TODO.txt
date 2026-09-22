@@ -1,0 +1,7 @@
+1. Better button UI, they hould have icons and maybe different color
+2. understand image storing
+3. impliment socials to UI
+4. make social list and add to seed.json
+5. play with different UI colors
+6. understand how polling in news work
+7. make news list
