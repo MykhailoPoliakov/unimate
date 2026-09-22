@@ -6,6 +6,15 @@ from pydantic import BaseModel, ConfigDict, Field
 Language = Literal["nl", "de", "fr", "en", "uk", "ru"]
 
 
+class NewsBlock(BaseModel):
+    type: Literal["paragraph", "image", "button", "embed", "quote", "list"]
+    content: str | None = None
+    url: str | None = None
+    label: str | None = None
+    caption: str | None = None
+    items: list[str] | None = None
+
+
 class InstitutionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     slug: str
@@ -45,7 +54,14 @@ class UserOut(BaseModel):
 class NewsTranslationIn(BaseModel):
     lang: Language
     title: str
+    excerpt: str | None = None
     body: str
+    hero_image_url: str | None = None
+    hero_image_alt: str | None = None
+    cta_label: str | None = None
+    cta_url: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    blocks: list[NewsBlock] = Field(default_factory=list)
 
 
 class NewsCreate(BaseModel):
@@ -60,7 +76,14 @@ class NewsCreate(BaseModel):
 class NewsTranslationOut(BaseModel):
     lang: Language
     title: str
+    excerpt: str | None = None
     body: str
+    hero_image_url: str | None = None
+    hero_image_alt: str | None = None
+    cta_label: str | None = None
+    cta_url: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    blocks: list[NewsBlock] = Field(default_factory=list)
 
 
 class NewsOut(BaseModel):
