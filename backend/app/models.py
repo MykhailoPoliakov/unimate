@@ -149,6 +149,7 @@ class News(Base):
     translations: Mapped[list["NewsTranslation"]] = relationship(
         cascade="all, delete-orphan"
     )
+    votes: Mapped[list["NewsVote"]] = relationship(cascade="all, delete-orphan")
 
 
 class NewsTranslation(Base):
@@ -160,3 +161,15 @@ class NewsTranslation(Base):
     lang: Mapped[str] = mapped_column(String(5), primary_key=True)
     title: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
+
+
+class NewsVote(Base):
+    __tablename__ = "news_votes"
+
+    news_id: Mapped[int] = mapped_column(
+        ForeignKey("news.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    option_index: Mapped[int]

@@ -135,8 +135,9 @@ export function useStudySelection({
   }, [institutionSlug, programsDelayMs]);
 
   useEffect(() => {
+    if (!selectedProgram) return;
     if (yearOfStudy > maxYear) setYearOfStudy(maxYear);
-  }, [maxYear, yearOfStudy]);
+  }, [selectedProgram, maxYear, yearOfStudy]);
 
   return {
     t,

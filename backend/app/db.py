@@ -69,5 +69,17 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
         )
     elif user_columns:
         cursor.execute("UPDATE users SET role = 'student' WHERE role = 'basic'")
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS news_votes (
+            news_id INTEGER NOT NULL,
+            user_id CHAR(32) NOT NULL,
+            option_index INTEGER NOT NULL,
+            PRIMARY KEY (news_id, user_id),
+            FOREIGN KEY(news_id) REFERENCES news (id) ON DELETE CASCADE,
+            FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+        """
+    )
     dbapi_connection.commit()
     cursor.close()
