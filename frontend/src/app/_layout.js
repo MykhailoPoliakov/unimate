@@ -11,6 +11,7 @@ import { Onboarding } from '@/components/onboarding';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NotificationObserver } from '@/components/notification-observer';
 import { FeedProvider } from '@/hooks/use-feed';
+import { I18nProvider } from '@/hooks/use-i18n';
 import { NotificationsProvider } from '@/hooks/use-notifications';
 import { ProfileProvider, useProfile } from '@/hooks/use-profile';
 import { ThemePreferenceProvider, useThemePreference } from '@/hooks/use-theme-preference';
@@ -37,12 +38,14 @@ function Providers() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <ProfileProvider>
-        <NotificationsProvider>
-          <FeedProvider>
-            <AnimatedSplashOverlay />
-            <Root />
-          </FeedProvider>
-        </NotificationsProvider>
+        <I18nProvider>
+          <NotificationsProvider>
+            <FeedProvider>
+              <AnimatedSplashOverlay />
+              <Root />
+            </FeedProvider>
+          </NotificationsProvider>
+        </I18nProvider>
       </ProfileProvider>
     </ThemeProvider>
   );
