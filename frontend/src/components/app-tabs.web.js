@@ -7,24 +7,27 @@ import { ThemedView } from './themed-view';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useI18n } from '@/hooks/use-i18n';
 
 export default function AppTabs() {
+  const { t } = useI18n();
+
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon="home">Home</TabButton>
+            <TabButton icon="home">{t('home')}</TabButton>
           </TabTrigger>
           <TabTrigger name="info" href="/info" asChild>
-            <TabButton icon="information-circle">Info</TabButton>
+            <TabButton icon="information-circle">{t('info')}</TabButton>
           </TabTrigger>
           <TabTrigger name="socials" href="/socials" asChild>
-            <TabButton icon="people">Socials</TabButton>
+            <TabButton icon="people">{t('socials')}</TabButton>
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton icon="settings">Settings</TabButton>
+            <TabButton icon="settings">{t('settings')}</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
