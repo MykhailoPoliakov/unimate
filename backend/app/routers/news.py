@@ -1,5 +1,6 @@
+import json
 from datetime import datetime, timezone
-from typing import cast
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
@@ -16,6 +17,22 @@ from app.schemas import Language, NewsCreate, NewsOut, NewsPollOut, NewsTranslat
 router = APIRouter(prefix="/news", tags=["news"])
 
 
+def _parse_json_list(value: str | None) -> list[Any]:
+    if value in (None, ""):
+        return []
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else []
+    except json.JSONDecodeError:
+        return []
+
+
+def _serialize_json(value: list[Any] | dict[str, Any] | None) -> str | None:
+    if value in (None, [], {}):
+        return None
+    return json.dumps(value, ensure_ascii=False)
+
+
 def news_out(news: News, language: str) -> NewsOut | None:
     translation = pick_translation(news.translations, language)
     if translation is None:
@@ -27,7 +44,14 @@ def news_out(news: News, language: str) -> NewsOut | None:
             NewsTranslationOut(
                 lang=cast(Language, translation.lang),
                 title=translation.title,
+                excerpt=translation.excerpt,
                 body=translation.body,
+                hero_image_url=translation.hero_image_url,
+                hero_image_alt=translation.hero_image_alt,
+                cta_label=translation.cta_label,
+                cta_url=translation.cta_url,
+                tags=_parse_json_list(translation.tags),
+                blocks=_parse_json_list(translation.blocks),
             )
         ],
     )
@@ -65,6 +89,21 @@ def _resolve_program(data: NewsCreate, db: Session):
     return program
 
 
+def _translation_row(item) -> NewsTranslation:
+    return NewsTranslation(
+        lang=item.lang,
+        title=item.title,
+        excerpt=item.excerpt,
+        body=item.body,
+        hero_image_url=item.hero_image_url,
+        hero_image_alt=item.hero_image_alt,
+        cta_label=item.cta_label,
+        cta_url=item.cta_url,
+        tags=_serialize_json(item.tags),
+        blocks=_serialize_json([block.model_dump(mode="json") for block in item.blocks]),
+    )
+
+
 def _created_out(news: News) -> NewsOut:
     return NewsOut(
         id=news.id,
@@ -73,7 +112,14 @@ def _created_out(news: News) -> NewsOut:
             NewsTranslationOut(
                 lang=cast(Language, item.lang),
                 title=item.title,
+                excerpt=item.excerpt,
                 body=item.body,
+                hero_image_url=item.hero_image_url,
+                hero_image_alt=item.hero_image_alt,
+                cta_label=item.cta_label,
+                cta_url=item.cta_url,
+                tags=_parse_json_list(item.tags),
+                blocks=_parse_json_list(item.blocks),
             )
             for item in news.translations
         ],
@@ -98,10 +144,7 @@ def create_news(
         program_id=program.id if program else None,
         year_min=data.year_min,
         year_max=data.year_max,
-        translations=[
-            NewsTranslation(lang=item.lang, title=item.title, body=item.body)
-            for item in data.translations
-        ],
+        translations=[_translation_row(item) for item in data.translations],
     )
     db.add(news)
     db.commit()
@@ -134,10 +177,7 @@ def update_news(
     news.year_min = data.year_min
     news.year_max = data.year_max
     news.translations.clear()
-    news.translations.extend(
-        NewsTranslation(lang=item.lang, title=item.title, body=item.body)
-        for item in data.translations
-    )
+    news.translations.extend(_translation_row(item) for item in data.translations)
     db.commit()
     db.refresh(news)
     return _created_out(news)
