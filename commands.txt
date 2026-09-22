@@ -1,0 +1,26 @@
+seed:
+    cd backend; python -m app.seed
+
+launch backend:
+    cd backend; python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    
+    backend url:
+        http://127.0.0.1:8000
+
+open database:
+    cd backend; python -m sqlite3 .\unimate.db
+
+    add admin:
+        UPDATE users
+        SET role = 'admin'
+        WHERE id = 'USER_ID_HERE';
+        
+    remove admin:
+        UPDATE users
+        SET role = 'student'
+        WHERE id = 'USER_ID_HERE';
+        
+
+launch frontend:
+    cd frontend; npx expo start
+    
