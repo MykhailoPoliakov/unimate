@@ -108,3 +108,53 @@ class SocialOut(BaseModel):
     url: str
     icon: str | None
     platform: str | None
+
+
+class SocialTranslationIn(BaseModel):
+    lang: Language
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=500)
+
+
+class SocialCreate(BaseModel):
+    url: str = Field(min_length=1, max_length=500)
+    icon: str | None = Field(default=None, max_length=100)
+    platform: str | None = Field(default=None, max_length=30)
+    sort_order: int = 0
+    is_active: bool = True
+    institution: str | None = None
+    program: str | None = None
+    year_min: int | None = Field(default=None, ge=1)
+    year_max: int | None = Field(default=None, ge=1)
+    translations: list[SocialTranslationIn] = Field(min_length=1)
+
+
+class SocialUpdate(BaseModel):
+    url: str | None = Field(default=None, min_length=1, max_length=500)
+    icon: str | None = Field(default=None, max_length=100)
+    platform: str | None = Field(default=None, max_length=30)
+    sort_order: int | None = None
+    is_active: bool | None = None
+    institution: str | None = None
+    program: str | None = None
+    year_min: int | None = Field(default=None, ge=1)
+    year_max: int | None = Field(default=None, ge=1)
+    translations: list[SocialTranslationIn] | None = Field(default=None, min_length=1)
+
+
+class SocialTranslationAdminOut(SocialTranslationIn):
+    pass
+
+
+class SocialAdminOut(BaseModel):
+    id: int
+    url: str
+    icon: str | None
+    platform: str | None
+    sort_order: int
+    is_active: bool
+    institution: str | None
+    program: str | None
+    year_min: int | None
+    year_max: int | None
+    translations: list[SocialTranslationAdminOut]
