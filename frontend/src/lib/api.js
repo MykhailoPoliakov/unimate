@@ -102,3 +102,19 @@ export function getNewsPoll(userId, newsId) {
 export function voteNewsPoll(userId, newsId, optionIndex) {
   return api.post(`/news/${newsId}/poll`, { option_index: optionIndex }, userId);
 }
+
+export function listSocials(userId) {
+  return api.get('/socials', userId);
+}
+
+export function createSocial(userId, payload) {
+  return api.post('/socials', payload, userId);
+}
+
+export function updateSocial(userId, socialId, payload) {
+  return api.patch(`/socials/${socialId}`, payload, userId);
+}
+
+export function deleteSocial(userId, socialId) {
+  return api.delete(`/socials/${socialId}`, userId);
+}
