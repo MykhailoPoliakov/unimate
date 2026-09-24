@@ -165,7 +165,7 @@ def create_social(
     )
     db.add(social)
     db.commit()
-    return _get_social(db, social.id)
+    return _admin_out(_get_social(db, social.id))
 
 
 @router.patch("/{social_id}", response_model=SocialAdminOut)
@@ -202,7 +202,7 @@ def update_social(
 
     _validate_years(social.year_min, social.year_max)
     db.commit()
-    return _get_social(db, social.id)
+    return _admin_out(_get_social(db, social.id))
 
 
 @router.delete("/{social_id}", status_code=204)
