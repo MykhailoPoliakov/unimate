@@ -20,8 +20,8 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton icon="home">{t('home')}</TabButton>
           </TabTrigger>
-          <TabTrigger name="info" href="/info" asChild>
-            <TabButton icon="information-circle">{t('info')}</TabButton>
+          <TabTrigger name="news" href="/news" asChild>
+            <TabButton icon="newspaper">{t('news')}</TabButton>
           </TabTrigger>
           <TabTrigger name="socials" href="/socials" asChild>
             <TabButton icon="people">{t('socials')}</TabButton>

@@ -23,10 +23,10 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="info">
-        <NativeTabs.Trigger.Label>{t('info')}</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="news">
+        <NativeTabs.Trigger.Label>{t('news')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="information-circle" />}
+          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="newspaper" />}
         />
       </NativeTabs.Trigger>
 

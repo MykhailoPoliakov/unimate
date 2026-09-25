@@ -8,7 +8,7 @@ export function NotificationObserver() {
 
   useEffect(() => {
     const sub = addNotificationResponseListener(() => {
-      router.push('/info');
+      router.push('/news');
     });
 
     return () => sub.remove();

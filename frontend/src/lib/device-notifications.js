@@ -19,10 +19,10 @@ if (canUseNativeNotifications) {
 export async function ensureNotificationChannel() {
   if (!canUseNativeNotifications || Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: 'News and events',
+    name: 'UniMate News',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#5B5CE2',
+    lightColor: '#1A1C1F',
   });
 }
 
@@ -46,7 +46,7 @@ export async function scheduleInfoNotification({ title, body }) {
     content: {
       title,
       body,
-      data: { screen: 'info' },
+      data: { screen: 'news' },
       sound: true,
       ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
     },

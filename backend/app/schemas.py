@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,17 +16,18 @@ class NewsBlock(BaseModel):
     items: list[str] | None = None
 
 
-class InstitutionOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    slug: str
-    name: str
-
-
 class ProgramOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     slug: str
     name: str
     duration_years: int
+
+
+class InstitutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    slug: str
+    name: str
+    programs: list[ProgramOut] = []
 
 
 class UserCreate(BaseModel):
@@ -86,21 +88,23 @@ class NewsTranslationOut(BaseModel):
     blocks: list[NewsBlock] = Field(default_factory=list)
 
 
-class NewsOut(BaseModel):
-    id: int
-    is_published: bool
-    translations: list[NewsTranslationOut]
-
-
-class NewsVoteIn(BaseModel):
-    option_index: int = Field(ge=0)
-
-
 class NewsPollOut(BaseModel):
     options: list[str]
     counts: list[int]
     total: int
     your_vote: int | None
+
+
+class NewsOut(BaseModel):
+    id: int
+    is_published: bool
+    created_at: datetime | None = None
+    translations: list[NewsTranslationOut]
+    poll: NewsPollOut | None = None
+
+
+class NewsVoteIn(BaseModel):
+    option_index: int = Field(ge=0)
 
 
 class ButtonOut(BaseModel):
@@ -109,6 +113,7 @@ class ButtonOut(BaseModel):
     description: str | None
     url: str
     icon: str | None
+    color: str | None = None
     platform: str | None
 
 

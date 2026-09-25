@@ -103,8 +103,16 @@ export function voteNewsPoll(userId, newsId, optionIndex) {
   return api.post(`/news/${newsId}/poll`, { option_index: optionIndex }, userId);
 }
 
+export function retractNewsPoll(userId, newsId) {
+  return api.delete(`/news/${newsId}/poll`, userId);
+}
+
 export function listSocials(userId) {
   return api.get('/socials', userId);
+}
+
+export function listManageSocials(userId) {
+  return api.get('/socials/manage', userId);
 }
 
 export function createSocial(userId, payload) {

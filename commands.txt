@@ -1,5 +1,8 @@
 seed:
+    stop uvicorn first, then:
     cd backend; python -m app.seed
+    then start uvicorn again
+    (wipes backend/unimate.db including news and users, then seeds)
 
 launch backend:
     cd backend; python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -11,14 +14,13 @@ open database:
     cd backend; python -m sqlite3 .\unimate.db
 
     add admin:
-        UPDATE users
-        SET role = 'admin'
-        WHERE id = 'USER_ID_HERE';
-        
+        python -m app.admin grant USER_ID_HERE
+
     remove admin:
-        UPDATE users
-        SET role = 'student'
-        WHERE id = 'USER_ID_HERE';
+        python -m app.admin revoke USER_ID_HERE
+
+    list users:
+        python -m app.admin list
         
 
 launch frontend:

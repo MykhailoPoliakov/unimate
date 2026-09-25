@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable } from 'react-native';
 
@@ -6,10 +7,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
 import { useTheme } from '@/hooks/use-theme';
+import { catalogInstitution, mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
 import { listInstitutions, listPrograms } from '@/lib/api';
+import { LOCAL_ICONS } from '@/lib/local-icons';
 
-export function Choice({ title, subtitle, isSelected, onSelect, icon }) {
+export function Choice({ title, subtitle, isSelected, onSelect, icon, imageKey }) {
   const theme = useTheme();
+  const image = imageKey
+    ? LOCAL_ICONS[imageKey] ?? LOCAL_ICONS[String(imageKey).toLowerCase()]
+    : null;
 
   return (
     <Pressable onPress={onSelect} className="active:opacity-70 self-stretch">
@@ -20,11 +26,19 @@ export function Choice({ title, subtitle, isSelected, onSelect, icon }) {
           borderWidth: 1,
           borderColor: isSelected ? theme.primary : theme.border,
         }}>
-        <ThemedView
-          type="backgroundSelected"
-          className="w-[44px] h-[44px] rounded-two items-center justify-center">
-          <Ionicons name={icon} size={22} color={theme.primary} />
-        </ThemedView>
+        {image ? (
+          <Image
+            source={image}
+            style={{ width: 44, height: 44, borderRadius: 0 }}
+            contentFit="cover"
+          />
+        ) : (
+          <ThemedView
+            type="backgroundSelected"
+            className="w-[44px] h-[44px] rounded-two items-center justify-center">
+            <Ionicons name={icon} size={22} color={theme.primary} />
+          </ThemedView>
+        )}
         <ThemedView className="flex-1 bg-transparent">
           <ThemedText type="smallBold">{title}</ThemedText>
           {subtitle ? (
@@ -68,8 +82,13 @@ export function useStudySelection({
     setIsLoading(true);
     setLoadFailed(false);
     try {
-      const items = await listInstitutions();
-      const next = [...items];
+      let items = [];
+      try {
+        items = await listInstitutions();
+      } catch {
+        items = [];
+      }
+      const next = mergeInstitutions(items);
       if (
         initialInstitution &&
         !next.some((item) => item.slug === initialInstitution)
@@ -77,13 +96,13 @@ export function useStudySelection({
         next.push({
           slug: initialInstitution,
           name: initialInstitutionName ?? initialInstitution,
+          programs: catalogInstitution(initialInstitution)?.programs ?? [],
         });
       }
 
       setInstitutions(next);
       setInstitutionSlug((current) => current ?? next[0]?.slug ?? null);
-    } catch {
-      setLoadFailed(true);
+      if (next.length === 0) setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -103,22 +122,30 @@ export function useStudySelection({
     }
 
     let cancelled = false;
-    setIsLoadingPrograms(true);
+    const fallback = mergePrograms(institutionSlug, []);
+    setPrograms(fallback);
+    setProgramSlug((current) =>
+      fallback.some((item) => item.slug === current) ? current : fallback[0]?.slug ?? null
+    );
+    setIsLoadingPrograms(fallback.length === 0);
 
     const load = () => {
       listPrograms(institutionSlug)
         .then((items) => {
           if (cancelled) return;
-          setPrograms(items);
+          const next = mergePrograms(institutionSlug, items);
+          setPrograms(next);
           setProgramSlug((current) =>
-            items.some((item) => item.slug === current) ? current : items[0]?.slug ?? null
+            next.some((item) => item.slug === current) ? current : next[0]?.slug ?? null
           );
         })
         .catch(() => {
-          if (!cancelled) {
-            setPrograms([]);
-            setProgramSlug(null);
-          }
+          if (cancelled) return;
+          const next = mergePrograms(institutionSlug, []);
+          setPrograms(next);
+          setProgramSlug((current) =>
+            next.some((item) => item.slug === current) ? current : next[0]?.slug ?? null
+          );
         })
         .finally(() => {
           if (!cancelled) setIsLoadingPrograms(false);
@@ -201,6 +228,7 @@ export function StudyFields({
           <Choice
             key={institution.slug}
             icon="school"
+            imageKey={institution.slug}
             title={institution.name}
             subtitle={institution.slug}
             isSelected={institutionSlug === institution.slug}
@@ -224,7 +252,6 @@ export function StudyFields({
               key={program.slug}
               icon="library"
               title={program.name}
-              subtitle={t('yearLabel', { n: program.duration_years })}
               isSelected={programSlug === program.slug}
               onSelect={() => onSelectProgram(program.slug)}
             />

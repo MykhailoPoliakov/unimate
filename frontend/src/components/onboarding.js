@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useReload } from '@/components/reload-button';
 import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -20,6 +21,7 @@ export function Onboarding() {
   const [saveError, setSaveError] = useState(null);
 
   const canContinue = study.canSubmit && !isSaving;
+  const { refreshing, reload } = useReload(study.loadInstitutions);
 
   const handleContinue = async () => {
     if (!canContinue) return;
@@ -54,7 +56,16 @@ export function Onboarding() {
           <ScrollView
             className="flex-1"
             contentContainerClassName="grow px-four py-six gap-three"
-            keyboardShouldPersistTaps="handled">
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceVertical
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={reload}
+                tintColor={theme.primary}
+                colors={[theme.primary]}
+              />
+            }>
             <ThemedView className="gap-two bg-transparent mb-four">
               <ThemedText type="title">
                 {t('welcomeTo')} <ThemedText type="title" themeColor="primary">UniMate</ThemedText>
@@ -112,10 +123,12 @@ export function Onboarding() {
             <Pressable
               onPress={handleContinue}
               disabled={!canContinue}
-              className={`rounded-three py-three items-center ${
-                canContinue ? 'bg-primary active:bg-primary-pressed' : 'bg-primary opacity-40'
-              }`}>
-              <ThemedText className="!text-white" type="smallBold">
+              className="rounded-three py-three items-center"
+              style={{
+                backgroundColor: canContinue ? theme.primary : theme.border,
+                opacity: canContinue ? 1 : 0.45,
+              }}>
+              <ThemedText type="smallBold" style={{ color: theme.background }}>
                 {isSaving ? t('saving') : t('getStarted')}
               </ThemedText>
             </Pressable>

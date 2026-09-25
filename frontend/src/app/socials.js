@@ -14,29 +14,71 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
+import { GlassCard } from '@/components/glass-card';
+import { useReload } from '@/components/reload-button';
+import { SocialBrandIcon } from '@/components/social-brand-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-import { createSocial, deleteSocial, listSocials, updateSocial } from '@/lib/api';
-import { detectService, MANUAL_ICONS, normalizeUrl, resolveIconName, socialIcon } from '@/lib/social-service';
+import { mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
+import { LANGUAGES } from '@/i18n/translations';
+import { createSocial, deleteSocial, listManageSocials, listSocials, updateSocial, listInstitutions, listPrograms } from '@/lib/api';
+import {
+  brandColor,
+  detectService,
+  iconOnBrand,
+  MANUAL_ICONS,
+  normalizeUrl,
+  resolveIconName,
+  socialIcon,
+  brandForIcon,
+} from '@/lib/social-service';
+
+function flattenAdminSocial(item, language) {
+  const translation =
+    item.translations?.find((row) => row.lang === language) ?? item.translations?.[0] ?? {};
+  return {
+    id: item.id,
+    url: item.url,
+    icon: item.icon,
+    platform: item.platform,
+    title: translation.title ?? item.title ?? '',
+    description: translation.description ?? item.description ?? '',
+    institution: item.institution ?? null,
+    program: item.program ?? null,
+    yearMin: item.year_min ?? null,
+    yearMax: item.year_max ?? null,
+  };
+}
+
+function yearsFromRange(min, max) {
+  if (!min && !max) return [];
+  const start = min ?? max;
+  const end = max ?? min;
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
 
 function SocialRow({ item, isAdmin, onEdit, onDelete }) {
   const theme = useTheme();
   const { t } = useI18n();
   const icon = socialIcon(item);
+  const accent = brandColor(item);
+  const glyph = accent ? iconOnBrand(accent) : theme.primary;
 
   return (
-    <ThemedView type="backgroundElement" className="rounded-three overflow-hidden">
-      <ExternalLink href={item.url} asChild>
+    <GlassCard>
+      <ExternalLink href={item.url} preferNativeApp asChild>
         <Pressable className="active:opacity-70">
           <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
-            <ThemedView
-              type="backgroundSelected"
-              className="w-[44px] h-[44px] rounded-two items-center justify-center">
-              <Ionicons name={icon} size={22} color={theme.primary} />
-            </ThemedView>
+            <SocialBrandIcon
+              name={icon}
+              size={32}
+              well={44}
+              color={glyph}
+              backgroundColor={accent ?? theme.backgroundSelected}
+            />
             <ThemedView className="flex-1 bg-transparent">
               <ThemedText type="smallBold">{item.title}</ThemedText>
               {item.description ? (
@@ -63,7 +105,7 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
           </Pressable>
         </ThemedView>
       ) : null}
-    </ThemedView>
+    </GlassCard>
   );
 }
 
@@ -76,6 +118,12 @@ function SocialModal({ item, onClose, onSaved }) {
   const [description, setDescription] = useState(item?.description ?? '');
   const [icon, setIcon] = useState(item?.icon ?? null);
   const [isSaving, setIsSaving] = useState(false);
+  const [institutions, setInstitutions] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [everyone, setEveryone] = useState(!item?.institution);
+  const [institutionSlug, setInstitutionSlug] = useState(item?.institution ?? profile?.institution ?? null);
+  const [programSlug, setProgramSlug] = useState(item?.program ?? profile?.program ?? null);
+  const [selectedYears, setSelectedYears] = useState(yearsFromRange(item?.yearMin, item?.yearMax));
   const isEdit = !!item;
 
   const detected = useMemo(() => detectService(url), [url]);
@@ -83,7 +131,12 @@ function SocialModal({ item, onClose, onSaved }) {
   const resolvedIcon = hasLink
     ? resolveIconName(icon || detected?.icon || 'globe-outline')
     : 'globe-outline';
-  const canSave = normalizeUrl(url).length > 8 && title.trim().length > 0 && !isSaving;
+  const targetingValid = everyone || (!!institutionSlug && !!programSlug);
+  const canSave =
+    normalizeUrl(url).length > 8 && title.trim().length > 0 && targetingValid && !isSaving;
+  const selectedInstitution = institutions.find((row) => row.slug === institutionSlug);
+  const selectedProgram = programs.find((row) => row.slug === programSlug);
+  const maxYear = selectedProgram?.duration_years ?? 6;
 
   useEffect(() => {
     if (!hasLink) {
@@ -95,6 +148,43 @@ function SocialModal({ item, onClose, onSaved }) {
     if (!icon) setIcon(detected.icon);
   }, [detected, hasLink, icon, item]);
 
+  useEffect(() => {
+    let cancelled = false;
+    listInstitutions()
+      .then((rows) => {
+        if (!cancelled) setInstitutions(mergeInstitutions(rows));
+      })
+      .catch(() => {
+        if (!cancelled) setInstitutions(mergeInstitutions([]));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (everyone || !institutionSlug) {
+      setPrograms([]);
+      return;
+    }
+    let cancelled = false;
+    listPrograms(institutionSlug)
+      .then((rows) => {
+        if (cancelled) return;
+        const next = mergePrograms(institutionSlug, rows);
+        setPrograms(next);
+        setProgramSlug((current) =>
+          next.some((row) => row.slug === current) ? current : next[0]?.slug ?? null
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setPrograms(mergePrograms(institutionSlug, []));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [everyone, institutionSlug]);
+
   const handleSave = async () => {
     if (!canSave || !profile?.userId) return;
     setIsSaving(true);
@@ -104,13 +194,15 @@ function SocialModal({ item, onClose, onSaved }) {
         icon: resolvedIcon,
         platform: detected?.id ?? 'website',
         is_active: true,
-        translations: [
-          {
-            lang: profile.language ?? 'en',
-            title: title.trim(),
-            description: description.trim() || null,
-          },
-        ],
+        institution: everyone ? null : institutionSlug,
+        program: everyone ? null : programSlug,
+        year_min: everyone || selectedYears.length === 0 ? null : Math.min(...selectedYears),
+        year_max: everyone || selectedYears.length === 0 ? null : Math.max(...selectedYears),
+        translations: LANGUAGES.map((row) => ({
+          lang: row.id,
+          title: title.trim(),
+          description: description.trim() || null,
+        })),
       };
       if (isEdit) await updateSocial(profile.userId, item.id, payload);
       else await createSocial(profile.userId, payload);
@@ -161,11 +253,15 @@ function SocialModal({ item, onClose, onSaved }) {
                 style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
               />
               <ThemedView className="flex-row items-center gap-two bg-transparent">
-                <ThemedView
-                  type="backgroundSelected"
-                  className="w-[36px] h-[36px] rounded-two items-center justify-center">
-                  <Ionicons name={resolvedIcon} size={20} color={theme.primary} />
-                </ThemedView>
+                <SocialBrandIcon
+                  name={resolvedIcon}
+                  size={22}
+                  well={36}
+                  color={iconOnBrand(brandForIcon(resolvedIcon)?.color ?? detected?.color) ?? theme.primary}
+                  backgroundColor={
+                    brandForIcon(resolvedIcon)?.color ?? detected?.color ?? theme.backgroundSelected
+                  }
+                />
                 <ThemedText type="small" themeColor="textSecondary">
                   {detected ? t('detectedService', { name: detected.label }) : t('unknownService')}
                 </ThemedText>
@@ -192,6 +288,7 @@ function SocialModal({ item, onClose, onSaved }) {
               <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
                 {MANUAL_ICONS.map((option) => {
                   const selected = resolvedIcon === option.icon;
+                  const accent = brandForIcon(option.icon)?.color;
                   return (
                     <Pressable
                       key={option.id}
@@ -199,15 +296,132 @@ function SocialModal({ item, onClose, onSaved }) {
                         setIcon(option.icon);
                       }}>
                       <ThemedView
-                        type={selected ? 'backgroundSelected' : 'backgroundElement'}
-                        className="w-[44px] h-[44px] rounded-two items-center justify-center"
-                        style={{ borderWidth: 1, borderColor: selected ? theme.primary : theme.border }}>
-                        <Ionicons name={option.icon} size={20} color={selected ? theme.primary : theme.text} />
+                        className="bg-transparent"
+                        style={{
+                          borderWidth: 1,
+                          borderRadius: 10,
+                          borderColor: selected ? accent ?? theme.primary : theme.border,
+                        }}>
+                        <SocialBrandIcon
+                          name={option.icon}
+                          size={20}
+                          well={36}
+                          color={iconOnBrand(accent) ?? theme.primary}
+                          backgroundColor={accent ?? theme.backgroundElement}
+                        />
                       </ThemedView>
                     </Pressable>
                   );
                 })}
               </ThemedView>
+
+              <ThemedText type="smallBold">{t('audience')}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {t('audienceHint')}
+              </ThemedText>
+              <ThemedView className="flex-row gap-two bg-transparent">
+                <Pressable onPress={() => setEveryone(true)} className="flex-1">
+                  <ThemedView
+                    type={everyone ? 'backgroundSelected' : 'backgroundElement'}
+                    className="px-three py-three rounded-two items-center"
+                    style={{ borderWidth: 1, borderColor: everyone ? theme.primary : theme.border }}>
+                    <ThemedText type="smallBold" themeColor={everyone ? 'primary' : 'text'}>
+                      {t('everyone')}
+                    </ThemedText>
+                  </ThemedView>
+                </Pressable>
+                <Pressable onPress={() => setEveryone(false)} className="flex-1">
+                  <ThemedView
+                    type={!everyone ? 'backgroundSelected' : 'backgroundElement'}
+                    className="px-three py-three rounded-two items-center"
+                    style={{ borderWidth: 1, borderColor: !everyone ? theme.primary : theme.border }}>
+                    <ThemedText type="smallBold" themeColor={!everyone ? 'primary' : 'text'}>
+                      {t('specificAudience')}
+                    </ThemedText>
+                  </ThemedView>
+                </Pressable>
+              </ThemedView>
+              {!everyone ? (
+                <ThemedView className="gap-two bg-transparent">
+                  <ThemedText type="small" themeColor="textSecondary">
+                    1. {t('pickUniversity')}
+                  </ThemedText>
+                  {institutions.map((institution) => {
+                    const selected = institutionSlug === institution.slug;
+                    return (
+                      <Pressable key={institution.slug} onPress={() => setInstitutionSlug(institution.slug)}>
+                        <ThemedView
+                          type={selected ? 'backgroundSelected' : 'backgroundElement'}
+                          className="px-three py-three rounded-two"
+                          style={{ borderWidth: 1, borderColor: selected ? theme.primary : theme.border }}>
+                          <ThemedText type="smallBold" themeColor={selected ? 'primary' : 'text'}>
+                            {institution.name}
+                          </ThemedText>
+                        </ThemedView>
+                      </Pressable>
+                    );
+                  })}
+                  <ThemedText type="small" themeColor="textSecondary">
+                    2. {t('pickProgram')}
+                  </ThemedText>
+                  {programs.map((program) => {
+                    const selected = programSlug === program.slug;
+                    return (
+                      <Pressable key={program.slug} onPress={() => setProgramSlug(program.slug)}>
+                        <ThemedView
+                          type={selected ? 'backgroundSelected' : 'backgroundElement'}
+                          className="px-three py-three rounded-two"
+                          style={{ borderWidth: 1, borderColor: selected ? theme.primary : theme.border }}>
+                          <ThemedText type="smallBold" themeColor={selected ? 'primary' : 'text'}>
+                            {program.name}
+                          </ThemedText>
+                        </ThemedView>
+                      </Pressable>
+                    );
+                  })}
+                  <ThemedText type="small" themeColor="textSecondary">
+                    3. {t('pickYears')}
+                  </ThemedText>
+                  <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
+                    <Pressable onPress={() => setSelectedYears([])}>
+                      <ThemedView
+                        type={selectedYears.length === 0 ? 'backgroundSelected' : 'backgroundElement'}
+                        className="px-three py-two rounded-two"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: selectedYears.length === 0 ? theme.primary : theme.border,
+                        }}>
+                        <ThemedText type="small" themeColor={selectedYears.length === 0 ? 'primary' : 'textSecondary'}>
+                          {t('allYears')}
+                        </ThemedText>
+                      </ThemedView>
+                    </Pressable>
+                    {Array.from({ length: maxYear }, (_, index) => index + 1).map((year) => {
+                      const selected = selectedYears.includes(year);
+                      return (
+                        <Pressable
+                          key={year}
+                          onPress={() =>
+                            setSelectedYears((current) =>
+                              current.includes(year)
+                                ? current.filter((row) => row !== year)
+                                : [...current, year].sort((a, b) => a - b)
+                            )
+                          }>
+                          <ThemedView
+                            type={selected ? 'backgroundSelected' : 'backgroundElement'}
+                            className="px-three py-two rounded-two"
+                            style={{ borderWidth: 1, borderColor: selected ? theme.primary : theme.border }}>
+                            <ThemedText type="small" themeColor={selected ? 'primary' : 'textSecondary'}>
+                              {t('yearLabel', { n: year })}
+                            </ThemedText>
+                          </ThemedView>
+                        </Pressable>
+                      );
+                    })}
+                  </ThemedView>
+                </ThemedView>
+              ) : null}
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -221,7 +435,6 @@ export default function SocialsScreen() {
   const { t } = useI18n();
   const { profile } = useProfile();
   const [items, setItems] = useState([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [composer, setComposer] = useState(null);
   const isAdmin = profile?.role === 'admin';
 
@@ -230,8 +443,13 @@ export default function SocialsScreen() {
       setItems([]);
       return;
     }
-    const next = await listSocials(profile.userId);
-    setItems(next);
+    const language = profile.language ?? 'en';
+    if (profile.role === 'admin') {
+      const next = await listManageSocials(profile.userId);
+      setItems(next.map((row) => flattenAdminSocial(row, language)));
+      return;
+    }
+    setItems(await listSocials(profile.userId));
   }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language]);
 
   useFocusEffect(
@@ -240,16 +458,13 @@ export default function SocialsScreen() {
     }, [refresh])
   );
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
+  const { refreshing: isRefreshing, reload: handleRefresh } = useReload(async () => {
     try {
       await refresh();
     } catch {
       // Keep the current list if the API is unreachable.
-    } finally {
-      setIsRefreshing(false);
     }
-  };
+  });
 
   const handleDelete = (item) => {
     Alert.alert(t('deleteSocial'), t('deleteSocialMessage'), [

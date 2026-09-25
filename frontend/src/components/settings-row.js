@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import { Children, Fragment } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { GlassCard } from '@/components/glass-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
@@ -13,7 +14,7 @@ export function SettingsRow({ icon, label, value, href, onPress, destructive, ri
   const iconColor = destructive ? theme.error : theme.primary;
 
   const content = (
-    <ThemedView type="backgroundElement" className="flex-row items-center gap-three px-three py-three">
+    <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
       {icon ? (
         <ThemedView
           type="backgroundSelected"
@@ -66,7 +67,7 @@ export function SettingsGroup({ title, children }) {
           {title}
         </ThemedText>
       ) : null}
-      <ThemedView type="backgroundElement" className="rounded-three overflow-hidden">
+      <GlassCard>
         {items.map((child, index) => (
           <Fragment key={index}>
             {index > 0 ? (
@@ -81,7 +82,7 @@ export function SettingsGroup({ title, children }) {
             {child}
           </Fragment>
         ))}
-      </ThemedView>
+      </GlassCard>
     </ThemedView>
   );
 }

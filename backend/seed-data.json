@@ -2,7 +2,7 @@
   "institutions": [
     {
       "slug": "kdg",
-      "name": "KdG University of Applied Sciences and Arts",
+      "name": "KdG University",
       "programs": [
         {
           "slug": "acs",
@@ -13,21 +13,15 @@
           "slug": "ibm",
           "name": "International Business Management",
           "duration_years": 3
-        }
-      ]
-    },
-    {
-      "slug": "tm",
-      "name": "Thomas More",
-      "programs": [
+        },
         {
-          "slug": "st",
-          "name": "Shit",
+          "slug": "mct",
+          "name": "Multimedia & Creative Technologies",
           "duration_years": 3
         },
         {
-          "slug": "fk",
-          "name": "Fuck",
+          "slug": "nur",
+          "name": "Nursing",
           "duration_years": 3
         }
       ]
@@ -37,7 +31,8 @@
     {
       "url": "https://canvas.kdg.be/",
       "institution": "kdg",
-      "icon": "book",
+      "icon": "canvas",
+      "color": "225, 63, 43",
       "platform": "canvas",
       "sort_order": 1,
       "translations": {
@@ -52,7 +47,8 @@
     {
       "url": "https://E-studentservice.kdg.be/Main.aspx",
       "institution": "kdg",
-      "icon": "document-text",
+      "icon": "e-studentservice",
+      "color": "47, 95, 168",
       "platform": "student-service",
       "sort_order": 2,
       "translations": {
@@ -67,7 +63,8 @@
     {
       "url": "https://www.kdg.be/en",
       "institution": "kdg",
-      "icon": "globe-outline",
+      "icon": "kdg-icon",
+      "color": "28, 28, 28",
       "platform": "website",
       "sort_order": 3,
       "translations": {
@@ -82,16 +79,17 @@
     {
       "url": "https://cloud.timeedit.net/be_kdg/web/student/ri1Y315Q655Z54Q81.html",
       "institution": "kdg",
-      "icon": "calendar",
+      "icon": "timeedit",
+      "color": "140, 232, 196",
       "platform": "schedule",
       "sort_order": 4,
       "translations": {
-        "nl": ["Rooster", "Je lesrooster, lokalen en tijden"],
-        "de": ["Stundenplan", "Dein Stundenplan, Räume und Zeiten"],
-        "fr": ["Horaire", "Votre emploi du temps, locaux et horaires"],
-        "en": ["Schedule", "Your class timetable, rooms and times"],
-        "uk": ["Розклад", "Розклад занять, аудиторії та час"],
-        "ru": ["Расписание", "Расписание занятий: аудитории и время"]
+        "nl": ["Rooster", "Lesrooster"],
+        "de": ["Stundenplan", "Stundenplan"],
+        "fr": ["Horaire", "Emploi du temps"],
+        "en": ["Schedule", "Class timetable"],
+        "uk": ["Розклад", "Розклад"],
+        "ru": ["Расписание", "Расписание"]
       }
     }
   ],
