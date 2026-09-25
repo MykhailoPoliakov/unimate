@@ -42,6 +42,7 @@ def list_buttons(
                 description=t.description,
                 url=b.url,
                 icon=b.icon,
+                color=b.color,
                 platform=b.platform,
             )
         )

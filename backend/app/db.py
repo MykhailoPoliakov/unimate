@@ -1,7 +1,10 @@
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-DATABASE_URL = "sqlite:///./unimate.db"
+DB_PATH = Path(__file__).resolve().parents[1] / "unimate.db"
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DATABASE_URL,
@@ -95,5 +98,16 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
         ):
             if name not in news_translation_columns:
                 cursor.execute(f"ALTER TABLE news_translations ADD COLUMN {name} {definition}")
+    cursor.execute("PRAGMA table_info(buttons)")
+    button_columns = {row[1] for row in cursor.fetchall()}
+    if button_columns and "color" not in button_columns:
+        cursor.execute("ALTER TABLE buttons ADD COLUMN color VARCHAR(32)")
+    cursor.execute("PRAGMA table_info(news)")
+    news_columns = {row[1] for row in cursor.fetchall()}
+    if news_columns and "created_at" not in news_columns:
+        cursor.execute("ALTER TABLE news ADD COLUMN created_at DATETIME")
+        cursor.execute(
+            "UPDATE news SET created_at = COALESCE(published_at, updated_at) WHERE created_at IS NULL"
+        )
     dbapi_connection.commit()
     cursor.close()

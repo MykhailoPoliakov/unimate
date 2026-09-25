@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
 from app.models import Institution
@@ -11,7 +11,9 @@ router = APIRouter(prefix="/institutions", tags=["institutions"])
 
 @router.get("", response_model=list[InstitutionOut])
 def list_institutions(db: Session = Depends(get_db)):
-    return db.scalars(select(Institution).order_by(Institution.name)).all()
+    return db.scalars(
+        select(Institution).options(selectinload(Institution.programs)).order_by(Institution.name)
+    ).all()
 
 
 @router.get("/{slug}/programs", response_model=list[ProgramOut])

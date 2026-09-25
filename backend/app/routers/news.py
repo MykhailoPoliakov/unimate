@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from collections import defaultdict
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -33,7 +34,20 @@ def _serialize_json(value: list[Any] | dict[str, Any] | None) -> str | None:
     return json.dumps(value, ensure_ascii=False)
 
 
-def news_out(news: News, language: str) -> NewsOut | None:
+def _poll_snapshot(news: News, counts_by_option: dict[int, int], your_vote: int | None) -> NewsPollOut | None:
+    options = poll_options_from_news(news)
+    if len(options) < 2:
+        return None
+    counts = [counts_by_option.get(index, 0) for index in range(len(options))]
+    return NewsPollOut(
+        options=options,
+        counts=counts,
+        total=sum(counts),
+        your_vote=your_vote,
+    )
+
+
+def news_out(news: News, language: str, poll: NewsPollOut | None = None) -> NewsOut | None:
     translation = pick_translation(news.translations, language)
     if translation is None:
         return None
@@ -54,6 +68,8 @@ def news_out(news: News, language: str) -> NewsOut | None:
                 blocks=_parse_json_list(translation.blocks),
             )
         ],
+        created_at=news.created_at or news.published_at,
+        poll=poll,
     )
 
 
@@ -69,9 +85,37 @@ def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_
         select(News)
         .options(selectinload(News.translations))
         .where(News.is_published, *rules)
-        .order_by(News.published_at.desc(), News.id.desc())
+        .order_by(News.created_at.desc(), News.published_at.desc(), News.id.desc())
     ).all()
-    return [result for item in news_items if (result := news_out(item, user.language))]
+    news_ids = [item.id for item in news_items]
+    counts_by_news: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    yours_by_news: dict[int, int] = {}
+    if news_ids:
+        for news_id, option_index, count in db.execute(
+            select(NewsVote.news_id, NewsVote.option_index, func.count())
+            .where(NewsVote.news_id.in_(news_ids))
+            .group_by(NewsVote.news_id, NewsVote.option_index)
+        ).all():
+            counts_by_news[news_id][option_index] = count
+        yours_by_news = dict(
+            db.execute(
+                select(NewsVote.news_id, NewsVote.option_index).where(
+                    NewsVote.news_id.in_(news_ids),
+                    NewsVote.user_id == user.id,
+                )
+            ).all()
+        )
+    return [
+        result
+        for item in news_items
+        if (
+            result := news_out(
+                item,
+                user.language,
+                _poll_snapshot(item, counts_by_news[item.id], yours_by_news.get(item.id)),
+            )
+        )
+    ]
 
 
 def _resolve_program(data: NewsCreate, db: Session):
@@ -108,6 +152,7 @@ def _created_out(news: News) -> NewsOut:
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
+        created_at=news.created_at or news.published_at,
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, item.lang),
@@ -139,6 +184,7 @@ def create_news(
 
     news = News(
         is_published=data.is_published,
+        created_at=datetime.now(timezone.utc),
         published_at=datetime.now(timezone.utc) if data.is_published else None,
         institution_id=program.institution_id if program else None,
         program_id=program.id if program else None,
@@ -214,29 +260,22 @@ def _visible_news(news_id: int, user: User, db: Session) -> News:
 
 
 def _poll_out(news: News, user: User, db: Session) -> NewsPollOut:
-    options = poll_options_from_news(news)
-    if len(options) < 2:
-        raise HTTPException(404, "No poll")
-    counts = [0] * len(options)
-    rows = db.execute(
+    counts = defaultdict(int)
+    for option_index, count in db.execute(
         select(NewsVote.option_index, func.count())
         .where(NewsVote.news_id == news.id)
         .group_by(NewsVote.option_index)
-    ).all()
-    for option_index, count in rows:
-        if 0 <= option_index < len(options):
-            counts[option_index] = count
+    ).all():
+        counts[option_index] = count
     yours = db.scalar(
         select(NewsVote.option_index).where(
             NewsVote.news_id == news.id, NewsVote.user_id == user.id
         )
     )
-    return NewsPollOut(
-        options=options,
-        counts=counts,
-        total=sum(counts),
-        your_vote=yours,
-    )
+    poll = _poll_snapshot(news, counts, yours)
+    if poll is None:
+        raise HTTPException(404, "No poll")
+    return poll
 
 
 @router.get("/{news_id}/poll", response_model=NewsPollOut)
@@ -268,4 +307,18 @@ def vote_news_poll(
     else:
         vote.option_index = data.option_index
     db.commit()
+    return _poll_out(news, user, db)
+
+
+@router.delete("/{news_id}/poll", response_model=NewsPollOut)
+def retract_news_poll(
+    news_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    news = _visible_news(news_id, user, db)
+    vote = db.get(NewsVote, (news.id, user.id))
+    if vote is not None:
+        db.delete(vote)
+        db.commit()
     return _poll_out(news, user, db)

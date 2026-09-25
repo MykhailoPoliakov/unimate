@@ -68,6 +68,7 @@ class Button(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     url: Mapped[str] = mapped_column(String(500))
     icon: Mapped[str | None] = mapped_column(String(100))
+    color: Mapped[str | None] = mapped_column(String(32))
     platform: Mapped[str | None] = mapped_column(String(30))
     sort_order: Mapped[int] = mapped_column(default=0)
     is_active: Mapped[bool] = mapped_column(default=True)
@@ -137,6 +138,7 @@ class News(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     is_published: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow

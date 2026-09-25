@@ -2,8 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 
 import { useNotifications } from '@/hooks/use-notifications';
 import { useProfile } from '@/hooks/use-profile';
+import { LANGUAGES } from '@/i18n/translations';
 import { createNews, deleteNews, listNews, updateNews } from '@/lib/api';
 import { joinNewsBody, parseNewsBody } from '@/lib/poll';
+import { normalizeUrl } from '@/lib/social-service';
 
 const FeedContext = createContext({
   posts: [],
@@ -12,6 +14,7 @@ const FeedContext = createContext({
   addPost: async () => {},
   editPost: async () => {},
   removePost: async () => {},
+  applyPoll: () => {},
 });
 
 function imageFromTranslation(translation) {
@@ -32,6 +35,10 @@ function toPost(item) {
     audience: translation.excerpt ?? '',
     lang: translation.lang,
     isPublished: item.is_published,
+    poll: item.poll ?? null,
+    linkUrl: translation.cta_url ?? '',
+    linkLabel: translation.cta_label ?? '',
+    createdAt: item.created_at ?? null,
   };
 }
 
@@ -42,6 +49,7 @@ function newsPayload(profile, data) {
   const tags = (data.tags ?? []).map((item) => item.trim()).filter(Boolean);
   const excerpt = data.audience?.trim() || null;
   const shortUrl = image && image.length <= 500 && !image.startsWith('data:') ? image : null;
+  const linkUrl = data.linkUrl?.trim() ? normalizeUrl(data.linkUrl) : null;
   const translation = {
     lang: language,
     title: data.title.trim(),
@@ -49,13 +57,12 @@ function newsPayload(profile, data) {
     excerpt,
     hero_image_url: shortUrl,
     hero_image_alt: image ? data.title.trim() : null,
+    cta_url: linkUrl,
+    cta_label: data.linkLabel?.trim() || (linkUrl ? 'Open link' : null),
     tags,
     blocks: image ? [{ type: 'image', url: image, caption: data.title.trim() }] : [],
   };
-  const translations = [translation];
-  if (language !== 'en') {
-    translations.push({ ...translation, lang: 'en' });
-  }
+  const translations = LANGUAGES.map((item) => ({ ...translation, lang: item.id }));
   const targeted = data.institution && data.program;
   return {
     translations,
@@ -104,7 +111,7 @@ export function FeedProvider({ children }) {
         profile.userId,
         newsPayload(profile, data)
       );
-      await notifyNewPost({ type: 'news' });
+      await notifyNewPost({ type: 'news', title: data.title.trim() });
       await refresh();
       return toPost(created);
     },
@@ -119,6 +126,12 @@ export function FeedProvider({ children }) {
     [profile, refresh]
   );
 
+  const applyPoll = useCallback((newsId, poll) => {
+    setPosts((current) =>
+      current.map((post) => (post.id === newsId ? { ...post, poll } : post))
+    );
+  }, []);
+
   const removePost = useCallback(
     async (id) => {
       await deleteNews(profile.userId, id);
@@ -128,7 +141,7 @@ export function FeedProvider({ children }) {
   );
 
   return (
-    <FeedContext.Provider value={{ posts, isLoading, refresh, addPost, editPost, removePost }}>
+    <FeedContext.Provider value={{ posts, isLoading, refresh, addPost, editPost, removePost, applyPoll }}>
       {children}
     </FeedContext.Provider>
   );

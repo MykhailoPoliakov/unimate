@@ -43,7 +43,7 @@ export function NotificationsProvider({ children }) {
   }, []);
 
   const notifyNewPost = useCallback(
-    async ({ type }) => {
+    async ({ type, title }) => {
       if (!enabled || !canUseNativeNotifications) return;
 
       const granted = await requestNotificationPermission();
@@ -51,8 +51,8 @@ export function NotificationsProvider({ children }) {
 
       const isEvent = type === 'event';
       await scheduleInfoNotification({
-        title: 'UniMate Info',
-        body: isEvent ? 'A new event was published.' : 'A new update was published.',
+        title: 'UniMate News',
+        body: title?.trim() || (isEvent ? 'A new event was published.' : 'A new update was published.'),
       });
     },
     [enabled]

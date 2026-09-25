@@ -3,14 +3,18 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.db import Base, SessionLocal, engine
-from app.models import (
+from app.db import DB_PATH, Base, SessionLocal, engine
+from app.models import (  # noqa: F401 — register every table for drop_all
     Button,
     ButtonTranslation,
     Institution,
+    News,
+    NewsTranslation,
+    NewsVote,
     Program,
     Social,
     SocialTranslation,
+    User,
 )
 
 
@@ -27,9 +31,22 @@ def load_seed_data() -> dict:
     return data
 
 
+def reset_database() -> None:
+    print(f"Resetting {DB_PATH.resolve()}")
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+    for extra in ("", "-wal", "-shm"):
+        file = Path(f"{DB_PATH.resolve()}{extra}") if extra else DB_PATH.resolve()
+        if file.exists():
+            file.unlink()
+            print(f"Deleted {file}")
+
+
 def seed():
+    reset_database()
     data = load_seed_data()
     Base.metadata.create_all(engine)
+    print("Seeded institutions, buttons, and socials. News table is empty.")
     with SessionLocal() as db:
         for inst_data in data["institutions"]:
             inst = db.scalar(
@@ -80,6 +97,7 @@ def seed_buttons(db, buttons):
             button = Button(
                 url=data["url"],
                 icon=data.get("icon"),
+                color=data.get("color"),
                 platform=data.get("platform"),
                 sort_order=data["sort_order"],
                 institution_id=inst.id,
@@ -88,6 +106,7 @@ def seed_buttons(db, buttons):
             db.flush()
         else:
             button.icon = data.get("icon")
+            button.color = data.get("color")
             button.platform = data.get("platform")
 
         existing_languages = {translation.lang for translation in button.translations}

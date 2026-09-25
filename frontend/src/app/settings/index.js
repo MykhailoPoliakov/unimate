@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useReload } from '@/components/reload-button';
 import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { SettingsGroup, SettingsRow } from '@/components/settings-row';
 import { ThemedText } from '@/components/themed-text';
@@ -27,7 +28,6 @@ export default function SettingsScreen() {
   const { t, language, languages } = useI18n();
   const { profile, saveProfile, refreshUser } = useProfile();
   const { refresh: refreshFeed } = useFeed();
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const { preference, setPreference } = useThemePreference();
   const { enabled: notificationsEnabled, setEnabled: setNotificationsEnabled } = useNotifications();
   const study = useStudySelection({
@@ -44,16 +44,13 @@ export default function SettingsScreen() {
     study.programSlug !== profile?.program ||
     study.yearOfStudy !== profile?.yearOfStudy;
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
+  const { refreshing: isRefreshing, reload: handleRefresh } = useReload(async () => {
     try {
       await Promise.all([refreshUser(), study.loadInstitutions()]);
     } catch (error) {
       Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
-    } finally {
-      setIsRefreshing(false);
     }
-  };
+  });
 
   const handleLanguage = async (next) => {
     if (!profile?.userId || next === language) return;
@@ -119,7 +116,7 @@ export default function SettingsScreen() {
               />
             }>
             <SettingsGroup title={t('studies')}>
-              <ThemedView type="backgroundElement" className="gap-three px-three py-three">
+              <ThemedView className="gap-three px-three py-three bg-transparent">
                 <StudyFields
                   institutions={study.institutions}
                   programs={study.programs}
@@ -153,7 +150,7 @@ export default function SettingsScreen() {
             </SettingsGroup>
 
             <SettingsGroup title={t('language')}>
-              <ThemedView type="backgroundElement" className="flex-row flex-wrap gap-two p-two">
+              <ThemedView className="flex-row flex-wrap gap-two p-two bg-transparent">
                 {languages.map((item) => {
                   const selected = language === item.id;
                   return (
@@ -179,7 +176,7 @@ export default function SettingsScreen() {
             </SettingsGroup>
 
             <SettingsGroup title={t('appearance')}>
-              <ThemedView type="backgroundElement" className="flex-row gap-two p-two">
+              <ThemedView className="flex-row gap-two p-two bg-transparent">
                 {THEME_IDS.map((option) => {
                   const selected = preference === option.id;
                   return (
@@ -219,24 +216,18 @@ export default function SettingsScreen() {
                   <Switch
                     value={notificationsEnabled}
                     onValueChange={setNotificationsEnabled}
-                    trackColor={{ false: theme.border, true: theme.primary }}
-                    thumbColor="#FFFFFF"
-                    ios_backgroundColor={theme.border}
                   />
                 }
               />
             </SettingsGroup>
 
             <SettingsGroup title={t('accountRole')}>
-              <ThemedView type="backgroundElement" className="px-three py-three gap-one">
+              <ThemedView className="px-three py-three gap-one bg-transparent">
                 <ThemedText type="smallBold">
                   {profile?.role === 'admin' ? t('admin') : t('student')}
                 </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {t('roleFromAccount')}
-                </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" selectable>
-                  {t('accountId')}: {profile?.userId ?? '—'}
+                  {profile?.userId ?? '—'}
                 </ThemedText>
               </ThemedView>
             </SettingsGroup>
