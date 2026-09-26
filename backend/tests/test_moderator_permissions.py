@@ -13,7 +13,7 @@ from app.deps import require_admin, require_news_manager
 from app.models import Institution, News, NewsTranslation, Program, PushToken, User
 from app.push import _send_batch, build_news_push_messages
 from app.routers.notifications import update_push_device
-from app.routers.news import create_news, delete_news, list_managed_news, update_news
+from app.routers.news import create_news, delete_news, list_managed_news, list_news, update_news
 from app.routers.users import update_user_role
 from app.schemas import NewsCreate, NewsTranslationIn, PushDeviceUpdate, UserRoleUpdate
 
@@ -122,6 +122,26 @@ class ModeratorPermissionTests(unittest.TestCase):
         self.assertIs(require_news_manager(self.moderator), self.moderator)
 
         delete_news(created.id, self.admin, self.db)
+
+    def test_moderator_news_create_is_rate_limited(self):
+        create_news(self._news_data("First"), BackgroundTasks(), self.moderator, self.db)
+        with self.assertRaises(HTTPException) as error:
+            create_news(self._news_data("Second"), BackgroundTasks(), self.moderator, self.db)
+        self.assertEqual(error.exception.status_code, 429)
+        self.assertEqual(error.exception.detail["code"], "cooldown")
+        create_news(self._news_data("Admin first"), BackgroundTasks(), self.admin, self.db)
+        create_news(self._news_data("Admin second"), BackgroundTasks(), self.admin, self.db)
+
+    def test_only_admin_sees_news_author(self):
+        create_news(self._news_data(), BackgroundTasks(), self.moderator, self.db)
+        student = self._user(self.db.get(Program, self.moderator.program_id), "student")
+        public = list_news(student, self.db)
+        self.assertTrue(public)
+        self.assertIsNone(public[0].author_id)
+        as_admin = list_news(self.admin, self.db)
+        self.assertEqual(as_admin[0].author_id, str(self.moderator.id))
+        managed = list_managed_news(self.admin, self.db)
+        self.assertEqual(managed[0].author_id, str(self.moderator.id))
 
     def test_last_admin_cannot_be_demoted(self):
         with self.assertRaises(HTTPException) as error:
@@ -246,6 +266,9 @@ class ModeratorPermissionTests(unittest.TestCase):
                 published_at DATETIME,
                 updated_at DATETIME
             );
+            CREATE TABLE socials (
+                id INTEGER PRIMARY KEY
+            );
             INSERT INTO programs (id) VALUES (1);
             INSERT INTO users
                 (id, created_at, program_id, language, enrollment_year, role)
@@ -267,6 +290,9 @@ class ModeratorPermissionTests(unittest.TestCase):
         columns = {row[1] for row in cursor.execute("PRAGMA table_info(news)")}
         self.assertIn("author_id", columns)
         self.assertIn("created_at", columns)
+        social_columns = {row[1] for row in cursor.execute("PRAGMA table_info(socials)")}
+        self.assertIn("author_id", social_columns)
+        self.assertIn("created_at", social_columns)
         self.assertIn(
             "push_tokens",
             {row[0] for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")},

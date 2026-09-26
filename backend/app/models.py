@@ -118,6 +118,10 @@ class Social(Base):
     platform: Mapped[str | None] = mapped_column(String(30))
     sort_order: Mapped[int] = mapped_column(default=0)
     is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    author_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
     institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"))
     program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"))

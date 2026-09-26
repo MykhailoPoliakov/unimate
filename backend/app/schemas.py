@@ -108,6 +108,7 @@ class NewsOut(BaseModel):
     id: int
     is_published: bool
     created_at: datetime | None = None
+    author_id: str | None = None
     translations: list[NewsTranslationOut]
     poll: NewsPollOut | None = None
 

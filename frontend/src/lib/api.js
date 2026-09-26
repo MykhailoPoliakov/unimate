@@ -11,11 +11,27 @@ function defaultBaseUrl() {
 export const API_BASE_URL = defaultBaseUrl();
 
 export class ApiError extends Error {
-  constructor(status, detail) {
-    super(typeof detail === 'string' ? detail : `Request failed (${status})`);
+  constructor(status, detail, retryAfter = null) {
+    const message =
+      typeof detail === 'string'
+        ? detail
+        : detail?.code === 'cooldown'
+          ? `cooldown:${detail.retry_after}`
+          : Array.isArray(detail)
+            ? JSON.stringify(detail)
+            : `Request failed (${status})`;
+    super(message);
     this.status = status;
     this.detail = detail;
+    this.retryAfter = retryAfter ?? (typeof detail?.retry_after === 'number' ? detail.retry_after : null);
   }
+}
+
+export function cooldownMessage(error, t, fallback) {
+  const seconds = error?.retryAfter;
+  if (error?.status !== 429 || !Number.isFinite(seconds)) return fallback;
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return t('postCooldown', { n: minutes });
 }
 
 async function request(path, { method = 'GET', body, userId } = {}) {
@@ -43,7 +59,7 @@ async function request(path, { method = 'GET', body, userId } = {}) {
 
   if (!response.ok) {
     const detail = data?.detail ?? data;
-    throw new ApiError(response.status, Array.isArray(detail) ? JSON.stringify(detail) : detail);
+    throw new ApiError(response.status, detail);
   }
   return data;
 }
