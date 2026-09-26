@@ -1,55 +1,27 @@
-# Welcome to your Expo app 👋
+# UniMate Frontend
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The frontend is an Expo Router app for iOS, Android, and web. See the [repository README](../README.md) for setup, API configuration, and database instructions.
 
-## Get started
+## Structure
 
-1. Install dependencies
+- `src/app/` contains file-based routes, including Settings and its legal pages.
+- `src/components/` contains shared UI such as tabs, settings rows, and legal-document layout.
+- `src/hooks/` contains profile, feed, theme, notification, and localization state.
+- `src/lib/` contains API clients, device helpers, and domain utilities.
+- `src/i18n/` contains user-facing translations; legal copy belongs here so it stays localized.
+- `assets/` contains app imagery and bundled institution/service icons.
 
-   ```bash
-   npm install
-   ```
+## Run
 
-2. Start the app
+From this directory:
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+npm install
+npm run web
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Use `npm run ios` or `npm run android` for native development targets.
 
-### Other setup steps
+## Licensing
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+UniMate source is licensed under MIT in the repository-root [`LICENSE`](../LICENSE). Expo's MIT notice is separate at `../THIRD-PARTY-LICENSES/EXPO-MIT.txt` and applies to Expo-authored material.

@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ExternalLink } from '@/components/external-link';
+import { openExternalUrl } from '@/components/external-link';
 import { GlassCard } from '@/components/glass-card';
 import { useReload } from '@/components/reload-button';
 import { SocialBrandIcon } from '@/components/social-brand-icon';
@@ -63,14 +64,54 @@ function yearsFromRange(min, max) {
 function SocialRow({ item, isAdmin, onEdit, onDelete }) {
   const theme = useTheme();
   const { t } = useI18n();
+  const suppressRedirect = useRef(false);
+  const suppressRedirectTimer = useRef(null);
   const icon = socialIcon(item);
   const accent = brandColor(item);
   const glyph = accent ? iconOnBrand(accent) : theme.primary;
 
+  const copyLink = async () => {
+    try {
+      const copied = await Clipboard.setStringAsync(item.url);
+      if (!copied) throw new Error('Clipboard write failed');
+      Alert.alert(t('copied'), t('linkCopied'));
+    } catch {
+      Alert.alert(t('couldNotSave'), t('tryAgain'));
+    }
+  };
+
+  const handleLongPress = () => {
+    suppressRedirect.current = true;
+    clearTimeout(suppressRedirectTimer.current);
+    suppressRedirectTimer.current = setTimeout(() => {
+      suppressRedirect.current = false;
+    }, 1000);
+    void copyLink();
+  };
+
+  const handleOpen = () => {
+    if (suppressRedirect.current) {
+      suppressRedirect.current = false;
+      clearTimeout(suppressRedirectTimer.current);
+      return;
+    }
+    void openExternalUrl(item.url, theme, { preferNativeApp: true });
+  };
+
+  const handleCopyPress = () => {
+    suppressRedirect.current = false;
+    clearTimeout(suppressRedirectTimer.current);
+    void copyLink();
+  };
+
   return (
     <GlassCard>
-      <ExternalLink href={item.url} preferNativeApp asChild>
-        <Pressable className="active:opacity-70">
+      <ThemedView className="flex-row items-center bg-transparent">
+        <Pressable
+          onPress={handleOpen}
+          onLongPress={handleLongPress}
+          delayLongPress={450}
+          className="flex-1 active:opacity-70">
           <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
             <SocialBrandIcon
               name={icon}
@@ -90,7 +131,15 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
             <Ionicons name="open-outline" size={18} color={theme.textSecondary} />
           </ThemedView>
         </Pressable>
-      </ExternalLink>
+        <Pressable
+          onPress={handleCopyPress}
+          accessibilityRole="button"
+          accessibilityLabel={t('copyLink')}
+          accessibilityHint={t('copyLinkHint')}
+          className="w-[44px] h-[44px] items-center justify-center active:opacity-70">
+          <Ionicons name="copy-outline" size={19} color={theme.textSecondary} />
+        </Pressable>
+      </ThemedView>
       {isAdmin ? (
         <ThemedView className="flex-row gap-three px-three pb-three bg-transparent">
           <Pressable onPress={() => onEdit(item)} className="active:opacity-70">

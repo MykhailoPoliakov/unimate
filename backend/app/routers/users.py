@@ -2,13 +2,14 @@ import uuid
 from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.academic import enrollment_year_for, year_of_study
 from app.db import get_db
+from app.deps import require_admin
 from app.models import Institution, Program, User
-from app.schemas import Language, UserCreate, UserOut, UserUpdate
+from app.schemas import Language, UserCreate, UserOut, UserRoleUpdate, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -28,7 +29,7 @@ def to_out(user: User) -> UserOut:
         program=user.program.slug,
         year_of_study=year_of_study(user.enrollment_year),
         language=cast(Language, user.language),
-        role=cast(Literal["student", "admin"], user.role),
+        role=cast(Literal["student", "moderator", "admin"], user.role),
     )
 
 
@@ -89,6 +90,30 @@ def update_user(user_id: uuid.UUID, data: UserUpdate, db: Session = Depends(get_
     if data.language is not None:
         user.language = data.language
 
+    db.commit()
+    db.refresh(user)
+    return to_out(user)
+
+
+@router.patch("/{user_id}/role", response_model=UserOut)
+def update_user_role(
+    user_id: uuid.UUID,
+    data: UserRoleUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(404, "User not found")
+
+    if user.role == "admin" and data.role != "admin":
+        admin_count = db.scalar(
+            select(func.count()).select_from(User).where(User.role == "admin")
+        )
+        if admin_count <= 1:
+            raise HTTPException(409, "Cannot remove the last admin")
+
+    user.role = data.role
     db.commit()
     db.refresh(user)
     return to_out(user)

@@ -37,7 +37,11 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
     users_schema = cursor.fetchone()
     cursor.execute("PRAGMA table_info(users)")
     user_columns = {row[1] for row in cursor.fetchall()}
-    if users_schema and user_columns and "'basic'" in users_schema[0]:
+    if users_schema and user_columns and (
+        "'basic'" in users_schema[0]
+        or "role" not in user_columns
+        or "'moderator'" not in users_schema[0]
+    ):
         cursor.execute("PRAGMA foreign_keys=OFF")
         cursor.execute("DROP TABLE IF EXISTS users_new")
         cursor.execute(
@@ -49,29 +53,26 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
                 language VARCHAR(5) NOT NULL,
                 enrollment_year INTEGER NOT NULL,
                 role VARCHAR(10) NOT NULL DEFAULT 'student',
-                CONSTRAINT ck_users_role CHECK (role IN ('student', 'admin')),
+                CONSTRAINT ck_users_role CHECK (role IN ('student', 'moderator', 'admin')),
                 FOREIGN KEY(program_id) REFERENCES programs (id)
             )
             """
         )
+        role_value = (
+            "CASE WHEN role = 'basic' THEN 'student' ELSE role END"
+            if "role" in user_columns
+            else "'student'"
+        )
         cursor.execute(
-            """
+            f"""
             INSERT INTO users_new
                 (id, created_at, program_id, language, enrollment_year, role)
-            SELECT id, created_at, program_id, language, enrollment_year,
-                CASE WHEN role = 'basic' THEN 'student' ELSE role END
+            SELECT id, created_at, program_id, language, enrollment_year, {role_value}
             FROM users
             """
         )
         cursor.execute("DROP TABLE users")
         cursor.execute("ALTER TABLE users_new RENAME TO users")
-        cursor.execute("PRAGMA foreign_keys=ON")
-    elif user_columns and "role" not in user_columns:
-        cursor.execute(
-            "ALTER TABLE users ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'student'"
-        )
-    elif user_columns:
-        cursor.execute("UPDATE users SET role = 'student' WHERE role = 'basic'")
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS news_votes (
@@ -104,10 +105,27 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
         cursor.execute("ALTER TABLE buttons ADD COLUMN color VARCHAR(32)")
     cursor.execute("PRAGMA table_info(news)")
     news_columns = {row[1] for row in cursor.fetchall()}
+    if news_columns and "author_id" not in news_columns:
+        cursor.execute(
+            "ALTER TABLE news ADD COLUMN author_id CHAR(32) "
+            "REFERENCES users (id) ON DELETE SET NULL"
+        )
     if news_columns and "created_at" not in news_columns:
         cursor.execute("ALTER TABLE news ADD COLUMN created_at DATETIME")
         cursor.execute(
             "UPDATE news SET created_at = COALESCE(published_at, updated_at) WHERE created_at IS NULL"
         )
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS push_tokens (
+            token VARCHAR(255) NOT NULL PRIMARY KEY,
+            user_id CHAR(32) NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+        """
+    )
     dbapi_connection.commit()
+    cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()

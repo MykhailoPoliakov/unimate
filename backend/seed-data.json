@@ -138,6 +138,57 @@
         "uk": ["LinkedIn", "KdG у LinkedIn"],
         "ru": ["LinkedIn", "KdG в LinkedIn"]
       }
+    },
+    {
+      "url": "https://discord.gg/rG32pRTbq",
+      "institution": "kdg",
+      "program": "acs",
+      "sort_order": 4,
+      "icon": "logo-discord",
+      "platform": "discord",
+      "translations": {
+        "nl": ["ACS Discord", "Officiële ACS Discord, beheerd door de studentenraad"],
+        "de": ["ACS Discord", "Offizieller ACS-Discord, betreut vom Studierendenrat"],
+        "fr": ["Discord ACS", "Discord officiel d'ACS, géré par le conseil étudiant"],
+        "en": ["ACS Discord", "Official ACS discord, hosted by student-council"],
+        "uk": ["ACS Discord", "Офіційний Discord ACS, який веде студентська рада"],
+        "ru": ["ACS Discord", "Официальный Discord ACS под управлением студенческого совета"]
+      }
+    },
+    {
+      "url": "https://chat.whatsapp.com/GLV5RPpk9q3FkKIxbWG4xV?mode=gi_t",
+      "institution": "kdg",
+      "program": "acs",
+      "year_min": 1,
+      "year_max": 1,
+      "sort_order": 5,
+      "icon": "logo-whatsapp",
+      "platform": "whatsapp",
+      "translations": {
+        "nl": ["ACS WhatsApp - 1e jaar", "WhatsApp-groep voor eerstejaarsstudenten ACS"],
+        "de": ["ACS WhatsApp - 1. Jahr", "WhatsApp-Gruppe für ACS-Studierende im ersten Jahr"],
+        "fr": ["WhatsApp ACS - 1re année", "Groupe WhatsApp pour les étudiants d'ACS en première année"],
+        "en": ["ACS WhatsApp - 1st Year", "WhatsApp group for first-year ACS students"],
+        "uk": ["WhatsApp ACS - 1-й курс", "Група WhatsApp для студентів ACS першого курсу"],
+        "ru": ["WhatsApp ACS - 1-й курс", "Группа WhatsApp для студентов ACS первого курса"]
+      }
+    },
+    {
+      "url": "https://t.me/kdg_ua",
+      "institution": "kdg",
+      "year_min": 1,
+      "year_max": 1,
+      "sort_order": 4,
+      "icon": "paper-plane",
+      "platform": "telegram",
+      "translations": {
+        "nl": ["Oekraïense Telegram - 1e jaar", "Telegramgroep voor Oekraïense eerstejaarsstudenten bij KdG"],
+        "de": ["Ukrainischer Telegram-Kanal - 1. Jahr", "Telegram-Gruppe für ukrainische Erstsemester an der KdG"],
+        "fr": ["Telegram ukrainien - 1re année", "Groupe Telegram pour les étudiants ukrainiens de première année à la KdG"],
+        "en": ["Ukrainian Telegram - 1st Year", "Telegram group for first-year Ukrainian students at KdG"],
+        "uk": ["Український Telegram - 1-й курс", "Telegram-група для українських студентів першого курсу KdG"],
+        "ru": ["Украинский Telegram - 1-й курс", "Telegram-группа для украинских студентов первого курса KdG"]
+      }
     }
   ]
 }

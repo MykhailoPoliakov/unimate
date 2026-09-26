@@ -1,4 +1,3 @@
-1. Better button UI, they hould have icons and maybe different color
-2. understand image storing
-3. play with different UI colors
-4. understand how polling in news work
+1. fill db table socials with links
+2. find moderators for news
+3. remote push notifications

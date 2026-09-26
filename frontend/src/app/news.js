@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -165,7 +166,7 @@ function PollChoices({ post }) {
   );
 }
 
-function PostCard({ post, isAdmin, onOpen, onEdit, onDelete }) {
+function PostCard({ post, onOpen, onEdit, onDelete }) {
   const theme = useTheme();
   const { t, language } = useI18n();
   const created = formatNewsTime(post.createdAt, language);
@@ -202,7 +203,7 @@ function PostCard({ post, isAdmin, onOpen, onEdit, onDelete }) {
         </ThemedView>
       </Pressable>
       {post.options?.length ? <PollChoices post={post} /> : null}
-      {isAdmin ? (
+      {post.canManage ? (
         <ThemedView className="flex-row gap-three px-three pb-three bg-transparent">
           <Pressable onPress={() => onEdit(post)} className="active:opacity-70">
             <ThemedText type="small" themeColor="primary">
@@ -639,10 +640,16 @@ export default function NewsScreen() {
   const theme = useTheme();
   const { t } = useI18n();
   const { profile, refreshUser } = useProfile();
-  const { posts, removePost, refresh } = useFeed();
+  const { posts, removePost, refresh, markNewsRead } = useFeed();
   const [composer, setComposer] = useState(null);
   const [reader, setReader] = useState(null);
-  const isAdmin = profile?.role === 'admin';
+  const canManageNews = ['admin', 'moderator'].includes(profile?.role);
+
+  useFocusEffect(
+    useCallback(() => {
+      void markNewsRead();
+    }, [markNewsRead])
+  );
 
   const { refreshing: isRefreshing, reload: handleRefresh } = useReload(async () => {
     try {
@@ -675,7 +682,7 @@ export default function NewsScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <ThemedView className="flex-row items-center justify-between px-four pt-three pb-two bg-transparent">
           <ThemedText type="subtitle">{t('news')}</ThemedText>
-          {isAdmin ? (
+          {canManageNews ? (
             <Pressable onPress={() => setComposer({})} className="active:opacity-70">
               <ThemedView
                 type="backgroundSelected"
@@ -702,7 +709,7 @@ export default function NewsScreen() {
             <ThemedView className="items-center py-six bg-transparent">
               <ThemedText themeColor="textSecondary" className="text-center">
                 {t('noNews')}
-                {isAdmin ? t('tapToPublish') : ''}
+                {canManageNews ? t('tapToPublish') : ''}
               </ThemedText>
             </ThemedView>
           ) : (
@@ -710,7 +717,6 @@ export default function NewsScreen() {
               <PostCard
                 key={post.id}
                 post={post}
-                isAdmin={isAdmin}
                 onOpen={setReader}
                 onEdit={(item) => setComposer(item)}
                 onDelete={handleDelete}

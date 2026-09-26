@@ -50,7 +50,16 @@ class UserOut(BaseModel):
     program: str
     year_of_study: int
     language: Language
-    role: Literal["student", "admin"]
+    role: Literal["student", "moderator", "admin"]
+
+
+class UserRoleUpdate(BaseModel):
+    role: Literal["student", "moderator", "admin"]
+
+
+class PushDeviceUpdate(BaseModel):
+    token: str = Field(min_length=20, max_length=255)
+    enabled: bool = True
 
 
 class NewsTranslationIn(BaseModel):

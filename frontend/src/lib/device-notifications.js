@@ -1,9 +1,18 @@
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const CHANNEL_ID = 'unimate-info';
 
 export const canUseNativeNotifications = Platform.OS !== 'web';
+
+function hasPermission(permission) {
+  return (
+    permission.granted ||
+    permission.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL ||
+    permission.ios?.status === Notifications.IosAuthorizationStatus.EPHEMERAL
+  );
+}
 
 if (canUseNativeNotifications) {
   Notifications.setNotificationHandler({
@@ -31,12 +40,30 @@ export async function requestNotificationPermission() {
 
   await ensureNotificationChannel();
   const current = await Notifications.getPermissionsAsync();
-  let status = current.status;
-  if (status !== 'granted') {
-    const next = await Notifications.requestPermissionsAsync();
-    status = next.status;
+  if (hasPermission(current)) return true;
+  const next = await Notifications.requestPermissionsAsync({
+    ios: { allowAlert: true, allowBadge: true, allowSound: true },
+  });
+  return hasPermission(next);
+}
+
+export async function getExpoPushToken() {
+  if (!canUseNativeNotifications) return null;
+  const permission = await Notifications.getPermissionsAsync();
+  if (!hasPermission(permission)) return null;
+
+  const projectId =
+    process.env.EXPO_PUBLIC_EAS_PROJECT_ID ??
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId;
+  if (!projectId) {
+    throw new Error(
+      'Push notifications need an EAS project ID. Set EXPO_PUBLIC_EAS_PROJECT_ID and rebuild the app.'
+    );
   }
-  return status === 'granted';
+
+  const result = await Notifications.getExpoPushTokenAsync({ projectId });
+  return result.data;
 }
 
 export async function scheduleInfoNotification({ title, body }) {
