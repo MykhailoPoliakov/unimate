@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,8 +8,9 @@ from sqlalchemy.orm import Session, selectinload
 from app.academic import year_of_study
 from app.content import pick_translation, visible_to
 from app.db import get_db
-from app.deps import get_current_user, require_admin
+from app.deps import get_current_user, require_news_manager
 from app.models import Institution, Program, Social, SocialTranslation, User
+from app.rate_limit import enforce_create_cooldown
 from app.schemas import (
     SocialAdminOut,
     SocialCreate,
@@ -118,28 +120,37 @@ def list_socials(
     return result
 
 
+def _ensure_can_manage(social: Social, user: User) -> None:
+    if user.role == "moderator" and social.author_id != user.id:
+        raise HTTPException(404, "Social not found")
+
+
 @router.get("/manage", response_model=list[SocialAdminOut])
 def manage_socials(
-    _: User = Depends(require_admin),
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
-    socials = db.scalars(
+    query = (
         select(Social)
         .options(
             selectinload(Social.translations),
             selectinload(Social.program).selectinload(Program.institution),
         )
         .order_by(Social.sort_order, Social.id)
-    ).all()
+    )
+    if user.role != "admin":
+        query = query.where(Social.author_id == user.id)
+    socials = db.scalars(query).all()
     return [_admin_out(social) for social in socials]
 
 
 @router.post("", response_model=SocialAdminOut, status_code=201)
 def create_social(
     data: SocialCreate,
-    _: User = Depends(require_admin),
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
+    enforce_create_cooldown(db, user, Social)
     _validate_translations(data.translations)
     _validate_years(data.year_min, data.year_max)
     program = _find_program(db, data.institution, data.program)
@@ -150,6 +161,8 @@ def create_social(
         platform=data.platform,
         sort_order=data.sort_order,
         is_active=data.is_active,
+        created_at=datetime.now(timezone.utc),
+        author_id=user.id,
         institution_id=program.institution_id if program else None,
         program_id=program.id if program else None,
         year_min=data.year_min,
@@ -172,12 +185,13 @@ def create_social(
 def update_social(
     social_id: int,
     data: SocialUpdate,
-    _: User = Depends(require_admin),
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
     social = db.get(Social, social_id)
     if social is None:
         raise HTTPException(404, "Social not found")
+    _ensure_can_manage(social, user)
 
     changes = data.model_dump(exclude_unset=True)
     if "translations" in changes:
@@ -208,12 +222,13 @@ def update_social(
 @router.delete("/{social_id}", status_code=204)
 def delete_social(
     social_id: int,
-    _: User = Depends(require_admin),
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
     social = db.get(Social, social_id)
     if social is None:
         raise HTTPException(404, "Social not found")
+    _ensure_can_manage(social, user)
     db.delete(social)
     db.commit()
 

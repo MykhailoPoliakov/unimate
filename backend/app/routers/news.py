@@ -13,6 +13,7 @@ from app.db import get_db
 from app.deps import get_current_user, require_news_manager
 from app.models import Institution, News, NewsTranslation, NewsVote, Program, User
 from app.poll import poll_options_from_news
+from app.rate_limit import enforce_create_cooldown
 from app.push import send_news_pushes
 from app.schemas import Language, NewsCreate, NewsOut, NewsPollOut, NewsTranslationOut, NewsVoteIn
 
@@ -56,13 +57,20 @@ def _poll_snapshot(news: News, counts_by_option: dict[int, int], your_vote: int 
     )
 
 
-def news_out(news: News, language: str, poll: NewsPollOut | None = None) -> NewsOut | None:
+def news_out(
+    news: News,
+    language: str,
+    poll: NewsPollOut | None = None,
+    *,
+    viewer: User | None = None,
+) -> NewsOut | None:
     translation = pick_translation(news.translations, language)
     if translation is None:
         return None
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
+        author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, translation.lang),
@@ -122,6 +130,7 @@ def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_
                 item,
                 user.language,
                 _poll_snapshot(item, counts_by_news[item.id], yours_by_news.get(item.id)),
+                viewer=user,
             )
         )
     ]
@@ -138,7 +147,7 @@ def list_managed_news(
     news_items = db.scalars(
         query.order_by(News.created_at.desc(), News.id.desc())
     ).all()
-    return [_created_out(item) for item in news_items]
+    return [_created_out(item, viewer=user) for item in news_items]
 
 
 def _resolve_program(data: NewsCreate, db: Session):
@@ -176,11 +185,12 @@ def _translation_row(item) -> NewsTranslation:
     )
 
 
-def _created_out(news: News) -> NewsOut:
+def _created_out(news: News, viewer: User | None = None) -> NewsOut:
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
         created_at=_as_utc(news.created_at or news.published_at),
+        author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, item.lang),
@@ -206,6 +216,7 @@ def create_news(
     user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
+    enforce_create_cooldown(db, user, News)
     program = _resolve_program(data, db)
 
     if data.year_min is not None and data.year_max is not None and data.year_min > data.year_max:
@@ -227,7 +238,7 @@ def create_news(
     db.refresh(news)
     if news.is_published:
         background_tasks.add_task(send_news_pushes, news.id)
-    return _created_out(news)
+    return _created_out(news, viewer=user)
 
 
 @router.patch("/{news_id}", response_model=NewsOut)
@@ -263,7 +274,7 @@ def update_news(
     db.refresh(news)
     if data.is_published and not was_published:
         background_tasks.add_task(send_news_pushes, news.id)
-    return _created_out(news)
+    return _created_out(news, viewer=user)
 
 
 @router.delete("/{news_id}", status_code=204)

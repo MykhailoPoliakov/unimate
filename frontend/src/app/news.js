@@ -25,7 +25,7 @@ import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
-import { listInstitutions, listPrograms, retractNewsPoll, voteNewsPoll } from '@/lib/api';
+import { cooldownMessage, listInstitutions, listPrograms, retractNewsPoll, voteNewsPoll } from '@/lib/api';
 
 function formatNewsTime(iso, language) {
   if (!iso) return '';
@@ -194,11 +194,18 @@ function PostCard({ post, onOpen, onEdit, onDelete }) {
             ) : (
               <ThemedView className="bg-transparent" />
             )}
-            {created ? (
-              <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.55 }}>
-                {created}
-              </ThemedText>
-            ) : null}
+            <ThemedView className="items-end bg-transparent">
+              {created ? (
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.55 }}>
+                  {created}
+                </ThemedText>
+              ) : null}
+              {post.authorId ? (
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.55 }}>
+                  {t('postedBy', { id: post.authorId })}
+                </ThemedText>
+              ) : null}
+            </ThemedView>
           </ThemedView>
         </ThemedView>
       </Pressable>
@@ -244,6 +251,11 @@ function NewsReader({ post, onClose }) {
             {created ? (
               <ThemedText type="small" themeColor="textSecondary">
                 {created}
+              </ThemedText>
+            ) : null}
+            {post.authorId ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {t('postedBy', { id: post.authorId })}
               </ThemedText>
             ) : null}
             <MetaChips items={post.tags?.length ? post.tags : [post.audience]} />
@@ -392,7 +404,10 @@ function NewsModal({ visible, post, onClose }) {
       else await addPost(payload);
       handleClose();
     } catch (error) {
-      Alert.alert(isEdit ? t('couldNotSave') : t('couldNotPublish'), error.message ?? t('tryAgain'));
+      Alert.alert(
+        isEdit ? t('couldNotSave') : t('couldNotPublish'),
+        cooldownMessage(error, t, error.message ?? t('tryAgain'))
+      );
     } finally {
       setIsSaving(false);
     }

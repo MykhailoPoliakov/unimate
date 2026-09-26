@@ -110,6 +110,15 @@ def enable_sqlite_foreign_keys(dbapi_connection, _):
             "ALTER TABLE news ADD COLUMN author_id CHAR(32) "
             "REFERENCES users (id) ON DELETE SET NULL"
         )
+    cursor.execute("PRAGMA table_info(socials)")
+    social_columns = {row[1] for row in cursor.fetchall()}
+    if social_columns and "author_id" not in social_columns:
+        cursor.execute(
+            "ALTER TABLE socials ADD COLUMN author_id CHAR(32) "
+            "REFERENCES users (id) ON DELETE SET NULL"
+        )
+    if social_columns and "created_at" not in social_columns:
+        cursor.execute("ALTER TABLE socials ADD COLUMN created_at DATETIME")
     if news_columns and "created_at" not in news_columns:
         cursor.execute("ALTER TABLE news ADD COLUMN created_at DATETIME")
         cursor.execute(

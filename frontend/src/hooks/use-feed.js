@@ -51,6 +51,7 @@ function toPost(item, language) {
     linkUrl: translation.cta_url ?? '',
     linkLabel: translation.cta_label ?? '',
     createdAt: item.created_at ?? null,
+    authorId: item.author_id ?? null,
     canManage: false,
   };
 }
@@ -162,6 +163,7 @@ export function FeedProvider({ children }) {
       postsById.set(managedPost.id, {
         ...managedPost,
         poll: visiblePost?.poll ?? managedPost.poll,
+        authorId: visiblePost?.authorId ?? managedPost.authorId,
         canManage: true,
       });
     }

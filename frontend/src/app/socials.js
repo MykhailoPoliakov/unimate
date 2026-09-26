@@ -25,7 +25,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
 import { LANGUAGES } from '@/i18n/translations';
-import { createSocial, deleteSocial, listManageSocials, listSocials, updateSocial, listInstitutions, listPrograms } from '@/lib/api';
+import { cooldownMessage, createSocial, deleteSocial, listManageSocials, listSocials, updateSocial, listInstitutions, listPrograms } from '@/lib/api';
 import {
   brandColor,
   detectService,
@@ -258,7 +258,7 @@ function SocialModal({ item, onClose, onSaved }) {
       onSaved();
       onClose();
     } catch (error) {
-      Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
+      Alert.alert(t('couldNotSave'), cooldownMessage(error, t, error.message ?? t('tryAgain')));
     } finally {
       setIsSaving(false);
     }
@@ -485,7 +485,7 @@ export default function SocialsScreen() {
   const { profile } = useProfile();
   const [items, setItems] = useState([]);
   const [composer, setComposer] = useState(null);
-  const isAdmin = profile?.role === 'admin';
+  const canManageSocials = ['admin', 'moderator'].includes(profile?.role);
 
   const refresh = useCallback(async () => {
     if (!profile?.userId) {
@@ -493,13 +493,13 @@ export default function SocialsScreen() {
       return;
     }
     const language = profile.language ?? 'en';
-    if (profile.role === 'admin') {
+    if (['admin', 'moderator'].includes(profile.role)) {
       const next = await listManageSocials(profile.userId);
       setItems(next.map((row) => flattenAdminSocial(row, language)));
       return;
     }
     setItems(await listSocials(profile.userId));
-  }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language]);
+  }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language, profile?.role]);
 
   useFocusEffect(
     useCallback(() => {
@@ -526,7 +526,7 @@ export default function SocialsScreen() {
             await deleteSocial(profile.userId, item.id);
             await refresh();
           } catch (error) {
-            Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
+            Alert.alert(t('couldNotSave'), cooldownMessage(error, t, error.message ?? t('tryAgain')));
           }
         },
       },
@@ -538,7 +538,7 @@ export default function SocialsScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <ThemedView className="flex-row items-center justify-between px-four pt-three pb-two bg-transparent">
           <ThemedText type="subtitle">{t('socials')}</ThemedText>
-          {isAdmin ? (
+          {canManageSocials ? (
             <Pressable onPress={() => setComposer({})} className="active:opacity-70">
               <ThemedView
                 type="backgroundSelected"
@@ -565,7 +565,7 @@ export default function SocialsScreen() {
             <ThemedView className="items-center py-six bg-transparent">
               <ThemedText themeColor="textSecondary" className="text-center">
                 {t('noSocials')}
-                {isAdmin ? t('tapToAddSocial') : ''}
+                {canManageSocials ? t('tapToAddSocial') : ''}
               </ThemedText>
             </ThemedView>
           ) : (
@@ -573,7 +573,7 @@ export default function SocialsScreen() {
               <SocialRow
                 key={item.id}
                 item={item}
-                isAdmin={isAdmin}
+                isAdmin={canManageSocials}
                 onEdit={setComposer}
                 onDelete={handleDelete}
               />
