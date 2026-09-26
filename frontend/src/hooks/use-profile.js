@@ -31,7 +31,7 @@ export function mapRemoteUser(user, deviceId) {
     program: user.program,
     yearOfStudy: user.year_of_study,
     language: user.language ?? 'en',
-    role: user.role === 'admin' ? 'admin' : 'student',
+    role: ['admin', 'moderator'].includes(user.role) ? user.role : 'student',
     deviceId,
   };
 }
@@ -76,7 +76,7 @@ export function ProfileProvider({ children }) {
             setProfile({
               ...parsed,
               deviceId: id,
-              role: parsed.role === 'admin' ? 'admin' : 'student',
+              role: ['admin', 'moderator'].includes(parsed.role) ? parsed.role : 'student',
             });
           }
         }

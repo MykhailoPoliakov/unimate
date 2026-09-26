@@ -1,7 +1,5 @@
 seed:
-    stop uvicorn first, then:
     cd backend; python -m app.seed
-    then start uvicorn again
     (wipes backend/unimate.db including news and users, then seeds)
 
 launch backend:

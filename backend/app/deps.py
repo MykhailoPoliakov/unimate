@@ -21,3 +21,9 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != "admin":
         raise HTTPException(403, "Admin access required")
     return user
+
+
+def require_news_manager(user: User = Depends(get_current_user)) -> User:
+    if user.role not in {"admin", "moderator"}:
+        raise HTTPException(403, "News manager access required")
+    return user

@@ -51,6 +51,7 @@ async function request(path, { method = 'GET', body, userId } = {}) {
 export const api = {
   get: (path, userId) => request(path, { userId }),
   post: (path, body, userId) => request(path, { method: 'POST', body, userId }),
+  put: (path, body, userId) => request(path, { method: 'PUT', body, userId }),
   patch: (path, body, userId) => request(path, { method: 'PATCH', body, userId }),
   delete: (path, userId) => request(path, { method: 'DELETE', userId }),
 };
@@ -75,6 +76,14 @@ export function updateUser(userId, payload) {
   return api.patch(`/users/${userId}`, payload);
 }
 
+export function updateUserRole(adminId, userId, role) {
+  return api.patch(`/users/${encodeURIComponent(userId)}/role`, { role }, adminId);
+}
+
+export function updatePushDevice(userId, token, enabled) {
+  return api.put('/notifications/device', { token, enabled }, userId);
+}
+
 export function listButtons(userId) {
   return api.get('/buttons', userId);
 }
@@ -93,6 +102,10 @@ export function updateNews(userId, newsId, payload) {
 
 export function deleteNews(userId, newsId) {
   return api.delete(`/news/${newsId}`, userId);
+}
+
+export function listManagedNews(userId) {
+  return api.get('/news/manage', userId);
 }
 
 export function getNewsPoll(userId, newsId) {

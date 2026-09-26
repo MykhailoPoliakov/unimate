@@ -1,16 +1,23 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
-import { useNotifications } from '@/hooks/use-notifications';
 import { useProfile } from '@/hooks/use-profile';
 import { LANGUAGES } from '@/i18n/translations';
-import { createNews, deleteNews, listNews, updateNews } from '@/lib/api';
+import { createNews, deleteNews, listManagedNews, listNews, updateNews } from '@/lib/api';
 import { joinNewsBody, parseNewsBody } from '@/lib/poll';
 import { normalizeUrl } from '@/lib/social-service';
+
+const NEWS_NOTIFICATION_STORAGE_KEY = 'unimate.news-notification-preferences';
 
 const FeedContext = createContext({
   posts: [],
   isLoading: true,
+  unreadNewsCount: 0,
+  inAppNewsEnabled: true,
   refresh: async () => {},
+  markNewsRead: async () => {},
+  setInAppNewsEnabled: async () => {},
   addPost: async () => {},
   editPost: async () => {},
   removePost: async () => {},
@@ -22,8 +29,13 @@ function imageFromTranslation(translation) {
   return block?.url || translation.hero_image_url || '';
 }
 
-function toPost(item) {
-  const translation = item.translations?.[0] ?? {};
+function toPost(item, language) {
+  const translations = item.translations ?? [];
+  const translation =
+    translations.find((row) => row.lang === language) ??
+    translations.find((row) => row.lang === 'en') ??
+    translations[0] ??
+    {};
   const parsed = parseNewsBody(translation.body ?? '');
   return {
     id: item.id,
@@ -39,6 +51,7 @@ function toPost(item) {
     linkUrl: translation.cta_url ?? '',
     linkLabel: translation.cta_label ?? '',
     createdAt: item.created_at ?? null,
+    canManage: false,
   };
 }
 
@@ -76,9 +89,60 @@ function newsPayload(profile, data) {
 
 export function FeedProvider({ children }) {
   const { profile } = useProfile();
-  const { notifyNewPost } = useNotifications();
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [newsNotificationPreferences, setNewsNotificationPreferences] = useState({});
+  const newsNotificationPreferencesRef = useRef(newsNotificationPreferences);
+
+  useEffect(() => {
+    const userId = profile?.userId;
+    if (!userId) return undefined;
+
+    let active = true;
+    const loadPreferences = async () => {
+      let preferences = {};
+      try {
+        const stored = await AsyncStorage.getItem(NEWS_NOTIFICATION_STORAGE_KEY);
+        preferences = stored ? JSON.parse(stored) : {};
+      } catch {
+        preferences = {};
+      }
+
+      const existing = preferences[userId];
+      if (!existing || typeof existing.enabled !== 'boolean' || !Number.isFinite(existing.lastReadAt)) {
+        preferences = {
+          ...preferences,
+          [userId]: { enabled: true, lastReadAt: Date.now() },
+        };
+        await AsyncStorage.setItem(NEWS_NOTIFICATION_STORAGE_KEY, JSON.stringify(preferences)).catch(
+          () => {}
+        );
+      }
+
+      if (active) {
+        newsNotificationPreferencesRef.current = preferences;
+        setNewsNotificationPreferences(preferences);
+      }
+    };
+
+    loadPreferences();
+    return () => {
+      active = false;
+    };
+  }, [profile?.userId]);
+
+  const updateNewsNotificationPreferences = useCallback(async (userId, changes) => {
+    if (!userId) return;
+    const current = newsNotificationPreferencesRef.current;
+    const accountPreferences = current[userId] ?? { enabled: true, lastReadAt: Date.now() };
+    const next = {
+      ...current,
+      [userId]: { ...accountPreferences, ...changes },
+    };
+    newsNotificationPreferencesRef.current = next;
+    setNewsNotificationPreferences(next);
+    await AsyncStorage.setItem(NEWS_NOTIFICATION_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!profile?.userId) {
@@ -86,9 +150,27 @@ export function FeedProvider({ children }) {
       setIsLoading(false);
       return;
     }
-    const items = await listNews(profile.userId);
-    setPosts(items.map(toPost));
-  }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language]);
+    const canManageNews = ['admin', 'moderator'].includes(profile.role);
+    const [items, managedItems] = await Promise.all([
+      listNews(profile.userId),
+      canManageNews ? listManagedNews(profile.userId) : Promise.resolve([]),
+    ]);
+    const postsById = new Map(items.map((item) => [item.id, toPost(item, profile.language)]));
+    for (const item of managedItems) {
+      const managedPost = toPost(item, profile.language);
+      const visiblePost = postsById.get(managedPost.id);
+      postsById.set(managedPost.id, {
+        ...managedPost,
+        poll: visiblePost?.poll ?? managedPost.poll,
+        canManage: true,
+      });
+    }
+    setPosts(
+      [...postsById.values()].sort(
+        (first, second) => new Date(second.createdAt ?? 0) - new Date(first.createdAt ?? 0)
+      )
+    );
+  }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language, profile?.role]);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,17 +187,53 @@ export function FeedProvider({ children }) {
     };
   }, [refresh, profile?.language]);
 
+  useEffect(() => {
+    const refreshWhenActive = () => {
+      if (AppState.currentState === 'active') refresh().catch(() => {});
+    };
+    const timer = setInterval(refreshWhenActive, 15_000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh().catch(() => {});
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [refresh]);
+
+  const markNewsRead = useCallback(
+    () => updateNewsNotificationPreferences(profile?.userId, { lastReadAt: Date.now() }),
+    [profile?.userId, updateNewsNotificationPreferences]
+  );
+
+  const setInAppNewsEnabled = useCallback(
+    (enabled) => updateNewsNotificationPreferences(profile?.userId, { enabled }),
+    [profile?.userId, updateNewsNotificationPreferences]
+  );
+
+  const accountNotificationPreferences = newsNotificationPreferences[profile?.userId];
+  const inAppNewsEnabled = accountNotificationPreferences?.enabled ?? true;
+  const unreadNewsCount = inAppNewsEnabled
+    ? posts.filter((post) => {
+        const createdAt = Date.parse(post.createdAt ?? '');
+        return (
+          post.isPublished &&
+          Number.isFinite(createdAt) &&
+          createdAt > (accountNotificationPreferences?.lastReadAt ?? Date.now())
+        );
+      }).length
+    : 0;
+
   const addPost = useCallback(
     async (data) => {
       const created = await createNews(
         profile.userId,
         newsPayload(profile, data)
       );
-      await notifyNewPost({ type: 'news', title: data.title.trim() });
       await refresh();
-      return toPost(created);
+      return toPost(created, profile?.language);
     },
-    [notifyNewPost, profile, refresh]
+    [profile, refresh]
   );
 
   const editPost = useCallback(
@@ -141,7 +259,20 @@ export function FeedProvider({ children }) {
   );
 
   return (
-    <FeedContext.Provider value={{ posts, isLoading, refresh, addPost, editPost, removePost, applyPoll }}>
+    <FeedContext.Provider
+      value={{
+        posts,
+        isLoading,
+        unreadNewsCount,
+        inAppNewsEnabled,
+        refresh,
+        markNewsRead,
+        setInAppNewsEnabled,
+        addPost,
+        editPost,
+        removePost,
+        applyPoll,
+      }}>
       {children}
     </FeedContext.Provider>
   );

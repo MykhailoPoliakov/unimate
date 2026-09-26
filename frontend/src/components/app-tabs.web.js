@@ -7,10 +7,12 @@ import { ThemedView } from './themed-view';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useFeed } from '@/hooks/use-feed';
 import { useI18n } from '@/hooks/use-i18n';
 
 export default function AppTabs() {
   const { t } = useI18n();
+  const { unreadNewsCount } = useFeed();
 
   return (
     <Tabs>
@@ -21,7 +23,7 @@ export default function AppTabs() {
             <TabButton icon="home">{t('home')}</TabButton>
           </TabTrigger>
           <TabTrigger name="news" href="/news" asChild>
-            <TabButton icon="newspaper">{t('news')}</TabButton>
+            <TabButton icon="newspaper" badgeCount={unreadNewsCount}>{t('news')}</TabButton>
           </TabTrigger>
           <TabTrigger name="socials" href="/socials" asChild>
             <TabButton icon="people">{t('socials')}</TabButton>
@@ -35,7 +37,7 @@ export default function AppTabs() {
   );
 }
 
-export function TabButton({ children, icon, isFocused, ...props }) {
+export function TabButton({ children, icon, isFocused, badgeCount = 0, ...props }) {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
 
@@ -54,6 +56,15 @@ export function TabButton({ children, icon, isFocused, ...props }) {
         <ThemedText type="small" themeColor={isFocused ? 'primary' : 'textSecondary'}>
           {children}
         </ThemedText>
+        {badgeCount > 0 ? (
+          <ThemedView
+            className="min-w-[18px] h-[18px] px-one items-center justify-center rounded-full"
+            style={{ backgroundColor: colors.error }}>
+            <ThemedText className="!text-white" type="smallBold">
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </ThemedText>
+          </ThemedView>
+        ) : null}
       </ThemedView>
     </Pressable>
   );

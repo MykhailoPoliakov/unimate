@@ -3,16 +3,17 @@ from datetime import datetime, timezone
 from collections import defaultdict
 from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.academic import year_of_study
 from app.content import pick_translation, visible_to
 from app.db import get_db
-from app.deps import get_current_user, require_admin
+from app.deps import get_current_user, require_news_manager
 from app.models import Institution, News, NewsTranslation, NewsVote, Program, User
 from app.poll import poll_options_from_news
+from app.push import send_news_pushes
 from app.schemas import Language, NewsCreate, NewsOut, NewsPollOut, NewsTranslationOut, NewsVoteIn
 
 router = APIRouter(prefix="/news", tags=["news"])
@@ -32,6 +33,14 @@ def _serialize_json(value: list[Any] | dict[str, Any] | None) -> str | None:
     if value in (None, [], {}):
         return None
     return json.dumps(value, ensure_ascii=False)
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _poll_snapshot(news: News, counts_by_option: dict[int, int], your_vote: int | None) -> NewsPollOut | None:
@@ -68,7 +77,7 @@ def news_out(news: News, language: str, poll: NewsPollOut | None = None) -> News
                 blocks=_parse_json_list(translation.blocks),
             )
         ],
-        created_at=news.created_at or news.published_at,
+        created_at=_as_utc(news.created_at or news.published_at),
         poll=poll,
     )
 
@@ -118,6 +127,20 @@ def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_
     ]
 
 
+@router.get("/manage", response_model=list[NewsOut])
+def list_managed_news(
+    user: User = Depends(require_news_manager),
+    db: Session = Depends(get_db),
+):
+    query = select(News).options(selectinload(News.translations))
+    if user.role != "admin":
+        query = query.where(News.author_id == user.id)
+    news_items = db.scalars(
+        query.order_by(News.created_at.desc(), News.id.desc())
+    ).all()
+    return [_created_out(item) for item in news_items]
+
+
 def _resolve_program(data: NewsCreate, db: Session):
     if data.institution is None and data.program is None:
         return None
@@ -131,6 +154,11 @@ def _resolve_program(data: NewsCreate, db: Session):
     if program is None:
         raise HTTPException(404, "Unknown institution or program")
     return program
+
+
+def _ensure_can_manage(news: News, user: User) -> None:
+    if user.role == "moderator" and news.author_id != user.id:
+        raise HTTPException(404, "Not found")
 
 
 def _translation_row(item) -> NewsTranslation:
@@ -152,7 +180,7 @@ def _created_out(news: News) -> NewsOut:
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
-        created_at=news.created_at or news.published_at,
+        created_at=_as_utc(news.created_at or news.published_at),
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, item.lang),
@@ -174,7 +202,8 @@ def _created_out(news: News) -> NewsOut:
 @router.post("", response_model=NewsOut, status_code=201)
 def create_news(
     data: NewsCreate,
-    _: User = Depends(require_admin),
+    background_tasks: BackgroundTasks,
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
     program = _resolve_program(data, db)
@@ -190,11 +219,14 @@ def create_news(
         program_id=program.id if program else None,
         year_min=data.year_min,
         year_max=data.year_max,
+        author_id=user.id,
         translations=[_translation_row(item) for item in data.translations],
     )
     db.add(news)
     db.commit()
     db.refresh(news)
+    if news.is_published:
+        background_tasks.add_task(send_news_pushes, news.id)
     return _created_out(news)
 
 
@@ -202,7 +234,8 @@ def create_news(
 def update_news(
     news_id: int,
     data: NewsCreate,
-    _: User = Depends(require_admin),
+    background_tasks: BackgroundTasks,
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
     news = db.scalar(
@@ -210,11 +243,13 @@ def update_news(
     )
     if news is None:
         raise HTTPException(404, "Not found")
+    _ensure_can_manage(news, user)
 
     if data.year_min is not None and data.year_max is not None and data.year_min > data.year_max:
         raise HTTPException(422, "year_min cannot exceed year_max")
 
     program = _resolve_program(data, db)
+    was_published = news.is_published
     news.is_published = data.is_published
     if data.is_published and news.published_at is None:
         news.published_at = datetime.now(timezone.utc)
@@ -226,18 +261,21 @@ def update_news(
     news.translations.extend(_translation_row(item) for item in data.translations)
     db.commit()
     db.refresh(news)
+    if data.is_published and not was_published:
+        background_tasks.add_task(send_news_pushes, news.id)
     return _created_out(news)
 
 
 @router.delete("/{news_id}", status_code=204)
 def delete_news(
     news_id: int,
-    _: User = Depends(require_admin),
+    user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
     news = db.get(News, news_id)
     if news is None:
         raise HTTPException(404, "Not found")
+    _ensure_can_manage(news, user)
     db.delete(news)
     db.commit()
 

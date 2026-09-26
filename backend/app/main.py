@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import buttons, institutions, news, socials, users
+from app.routers import buttons, institutions, news, notifications, socials, users
 
 
 app = FastAPI(title="UniMate API")
@@ -16,6 +16,7 @@ app.include_router(buttons.router)
 app.include_router(institutions.router)
 app.include_router(users.router)
 app.include_router(news.router)
+app.include_router(notifications.router)
 app.include_router(socials.router)
 
 
