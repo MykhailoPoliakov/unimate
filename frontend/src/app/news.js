@@ -662,7 +662,9 @@ export default function NewsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void markNewsRead();
+      return () => {
+        void markNewsRead();
+      };
     }, [markNewsRead])
   );
 
