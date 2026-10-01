@@ -13,7 +13,7 @@ UniMate is a student-focused mobile app for finding institution resources, cours
 ## Project Structure
 
 ```text
-backend/   FastAPI API, SQLite database, and seed data
+backend/   FastAPI API, PostgreSQL database setup, and seed data
 frontend/  Expo and React Native app
 ```
 
@@ -22,21 +22,24 @@ The backend serves the API on port `8000`. The frontend calls it using `EXPO_PUB
 ## Requirements
 
 - Python
+- Docker Engine and Docker Compose, or a local PostgreSQL 17 server
 - Node.js and npm
 - For Android testing: Android Studio with an emulator, or an Android device with Expo Go/development build
 
 ## Run Locally
 
-Start the backend first. From the repository root:
+Start PostgreSQL from the repository root. Copy `.env.example` to `.env`, set a strong `POSTGRES_PASSWORD`, then run:
+
+```sh
+docker compose up -d db
+```
+
+Create and activate a Python environment in `backend/`, then install dependencies:
 
 ```powershell
 cd backend
 python -m venv .venv
-```
 
-Activate the environment, install dependencies, and initialize the local database:
-
-```powershell
 # Windows PowerShell
 .\.venv\Scripts\Activate.ps1
 
@@ -44,12 +47,15 @@ Activate the environment, install dependencies, and initialize the local databas
 # source .venv/bin/activate
 
 python -m pip install -r requirements.txt
-python -m app.seed
 ```
 
-Start the API:
+From `backend/`, the backend reads the repository-root `.env` automatically. Seed the database once, then start the API:
 
 ```powershell
+# Seed (destructive: drops and recreates all tables)
+python -m app.seed
+
+# Start the backend (run this in its own terminal)
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -77,15 +83,31 @@ Replace `192.168.1.10` with the computer's actual LAN IP. Keep the backend bound
 
 ## Database and Admins
 
-The development database is `backend/unimate.db`. `python -m app.seed` creates it and loads institutions, buttons, and social links from `backend/seed-data.json`. News starts empty.
+The backend requires a PostgreSQL connection in `DATABASE_URL`. `python -m app.seed` creates the tables and loads institutions, buttons, and social links from `backend/seed-data.json`. News starts empty.
 
-**Seeding resets the database.** It deletes the existing database, including users, news, and poll votes, before creating and filling it again. Stop the backend before reseeding.
+**Seeding resets the configured database.** It deletes all existing tables and data, including users, news, and poll votes, before creating and filling it again. Stop the backend before reseeding. The Ubuntu Docker deployment steps, HTTPS setup, and first-time seed command are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-To inspect or change admin roles, run these commands from `backend/` while the database exists:
+Backend tests require a dedicated PostgreSQL database because they drop and recreate their tables. From the repository root, create it once, then run the tests from `backend/`:
+
+```powershell
+docker compose exec db createdb -U unimate unimate_test
+cd backend
+$env:TEST_DATABASE_URL = "postgresql+psycopg://unimate:YOUR_HEX_PASSWORD@127.0.0.1:5433/unimate_test"
+python -m unittest discover -s tests
+```
+
+Replace the password with the local `.env` value. On macOS/Linux, use `export TEST_DATABASE_URL='postgresql+psycopg://unimate:YOUR_HEX_PASSWORD@127.0.0.1:5433/unimate_test'`. Never point `TEST_DATABASE_URL` at a production database.
+
+From `backend/`, add an admin with one command using that user's ID:
+
+```powershell
+python -m app.admin grant USER_ID
+```
+
+To find the user ID or manage roles, use:
 
 ```powershell
 python -m app.admin list
-python -m app.admin grant USER_ID
 python -m app.admin revoke USER_ID
 ```
 

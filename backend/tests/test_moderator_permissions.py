@@ -1,14 +1,20 @@
 import json
+import os
 import unittest
-import sqlite3
 import uuid
 from unittest.mock import MagicMock, patch
 
-from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import create_engine, select
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+if not TEST_DATABASE_URL:
+    raise RuntimeError("Set TEST_DATABASE_URL to a dedicated PostgreSQL test database")
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db import Base, enable_sqlite_foreign_keys
+from app.db import Base
 from app.deps import require_admin, require_news_manager
 from app.models import Institution, News, NewsTranslation, Program, PushToken, User
 from app.push import _send_batch, build_news_push_messages
@@ -20,7 +26,8 @@ from app.schemas import NewsCreate, NewsTranslationIn, PushDeviceUpdate, UserRol
 
 class ModeratorPermissionTests(unittest.TestCase):
     def setUp(self):
-        self.engine = create_engine("sqlite:///:memory:")
+        self.engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+        Base.metadata.drop_all(self.engine)
         Base.metadata.create_all(self.engine)
         self.db = Session(self.engine)
 
@@ -42,6 +49,7 @@ class ModeratorPermissionTests(unittest.TestCase):
 
     def tearDown(self):
         self.db.close()
+        Base.metadata.drop_all(self.engine)
         self.engine.dispose()
 
     def _user(self, program, role):
@@ -245,59 +253,6 @@ class ModeratorPermissionTests(unittest.TestCase):
         self.assertEqual(json.loads(request.data.decode("utf-8")), [message])
         self.assertEqual(invalid_tokens, [token_value])
 
-    def test_existing_sqlite_database_migrates_role_and_author_columns(self):
-        connection = sqlite3.connect(":memory:")
-        cursor = connection.cursor()
-        cursor.executescript(
-            """
-            CREATE TABLE programs (id INTEGER PRIMARY KEY);
-            CREATE TABLE users (
-                id CHAR(32) NOT NULL PRIMARY KEY,
-                created_at DATETIME NOT NULL,
-                program_id INTEGER NOT NULL,
-                language VARCHAR(5) NOT NULL,
-                enrollment_year INTEGER NOT NULL,
-                role VARCHAR(10) NOT NULL DEFAULT 'student',
-                CONSTRAINT ck_users_role CHECK (role IN ('student', 'admin')),
-                FOREIGN KEY(program_id) REFERENCES programs (id)
-            );
-            CREATE TABLE news (
-                id INTEGER PRIMARY KEY,
-                published_at DATETIME,
-                updated_at DATETIME
-            );
-            CREATE TABLE socials (
-                id INTEGER PRIMARY KEY
-            );
-            INSERT INTO programs (id) VALUES (1);
-            INSERT INTO users
-                (id, created_at, program_id, language, enrollment_year, role)
-            VALUES ('user-1', '2026-01-01', 1, 'en', 2024, 'student');
-            """
-        )
-        connection.commit()
-
-        enable_sqlite_foreign_keys(connection, None)
-
-        cursor = connection.cursor()
-        self.assertEqual(cursor.execute("PRAGMA foreign_keys").fetchone()[0], 1)
-        self.assertEqual(
-            cursor.execute("SELECT role FROM users WHERE id = 'user-1'").fetchone()[0],
-            "student",
-        )
-        cursor.execute("UPDATE users SET role = 'moderator' WHERE id = 'user-1'")
-        connection.commit()
-        columns = {row[1] for row in cursor.execute("PRAGMA table_info(news)")}
-        self.assertIn("author_id", columns)
-        self.assertIn("created_at", columns)
-        social_columns = {row[1] for row in cursor.execute("PRAGMA table_info(socials)")}
-        self.assertIn("author_id", social_columns)
-        self.assertIn("created_at", social_columns)
-        self.assertIn(
-            "push_tokens",
-            {row[0] for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")},
-        )
-        connection.close()
 
 
 if __name__ == "__main__":

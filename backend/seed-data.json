@@ -145,5 +145,408 @@
         "ru": ["Украинский Telegram - 1-й курс", "Telegram-группа для украинских студентов первого курса KdG"]
       }
     }
+  ],
+  "news": [
+    {
+      "institution": "kdg",
+      "program": "acs",
+      "year_min": 1,
+      "year_max": 3,
+      "translations": {
+        "en": {
+          "title": "KdG launches a new AI innovation hub for students",
+          "excerpt": "The university has opened a dedicated space where students can experiment with AI, prototype projects and connect with industry partners.",
+          "body": "KdG University has officially opened its new AI Innovation Hub, giving students from Applied Computer Science and related programmes a place to experiment, prototype, and learn with emerging technologies. The hub includes workstations, maker equipment, and mentoring sessions led by faculty and external partners.\n\nThe project was developed in response to growing demand for practical AI skills across campus and aims to help students turn ideas into real-world projects. The first wave of initiatives includes chatbots, data dashboards, and machine-learning prototypes for local organisations.",
+          "hero_image_url": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students collaborating around laptops in a university innovation space",
+          "cta_label": "Explore the hub",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["AI", "Innovation", "Students"],
+          "blocks": [
+            {"type": "paragraph", "content": "The new space brings together coding, design, and research in one environment, creating more opportunities for cross-disciplinary collaboration."},
+            {"type": "paragraph", "content": "Students will also be able to join workshops covering prompt engineering, data ethics, and applied AI projects with community partners."}
+          ]
+        },
+        "nl": {
+          "title": "KdG opent een nieuw AI-innovatiecentrum voor studenten",
+          "excerpt": "De universiteit heeft een speciale ruimte geopend waar studenten kunnen experimenteren met AI, prototypen ontwikkelen en samenwerken met partners uit het bedrijfsleven.",
+          "body": "KdG University heeft officieel het nieuwe AI Innovation Hub geopend, waardoor studenten van Applied Computer Science en verwante opleidingen een plek krijgen om te experimenteren, prototype te ontwikkelen en te leren met nieuwe technologieën. Het centrum beschikt over werkstations, maakapparatuur en mentorgesprekken geleid door docenten en externe partners.\n\nHet project ontstond naar aanleiding van de groeiende vraag naar praktische AI-vaardigheden op de campus en heeft als doel om ideeën om te zetten in echte projecten. De eerste projecten omvatten chatbots, datadashboards en machine learning-prototypes voor lokale organisaties.",
+          "hero_image_url": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten die samenwerken aan laptops in een innovatieruimte aan de universiteit",
+          "cta_label": "Ontdek het centrum",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["AI", "Innovatie", "Studenten"],
+          "blocks": [
+            {"type": "paragraph", "content": "De nieuwe ruimte brengt programmeren, design en onderzoek samen in één omgeving, waardoor samenwerking tussen disciplines makkelijker wordt."},
+            {"type": "paragraph", "content": "Studenten kunnen ook workshops volgen over prompt engineering, data-ethiek en toegepaste AI-projecten met partners uit de gemeenschap."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Campus renovation starts as part of a greener student experience",
+          "excerpt": "Work is beginning on the next phase of the campus upgrade, including improved study spaces, energy efficiency and accessible facilities.",
+          "body": "A multi-phase renovation project is now underway across the KdG campus, with the first stage focused on improving learning spaces, common areas and circulation routes. The updates will include more sustainable building materials, improved lighting, and additional seating areas for students.\n\nThe project is designed to make campus life more comfortable and accessible while reducing energy consumption. Students can expect quieter study corners, better wayfinding, and more places to collaborate between classes.",
+          "hero_image_url": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "University campus renovation work in progress",
+          "cta_label": "View the plans",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Campus", "Sustainability", "Student Life"],
+          "blocks": [
+            {"type": "paragraph", "content": "The renovation will be delivered in stages to minimise disruption to classes and project work."},
+            {"type": "paragraph", "content": "Students are encouraged to share feedback on how the new spaces can support study, social life and wellbeing."}
+          ]
+        },
+        "nl": {
+          "title": "Campusrenovatie begint in het kader van een groenere studentervaring",
+          "excerpt": "Het werk aan de volgende fase van de campusupgrade is gestart, met verbeterde studieplekken, energie-efficiëntie en toegankelijke voorzieningen.",
+          "body": "Er is een renovatieproject in meerdere fases gestart op de campus van KdG, met als eerste doel het verbeteren van leslokalen, studieplekken en looproutes. De vernieuwingen omvatten duurzamere bouwmaterialen, betere verlichting en extra zitplaatsen voor studenten.\n\nHet project is bedoeld om het campusleven comfortabeler en toegankelijker te maken en tegelijkertijd energieverbruik te verminderen. Studenten kunnen rekenen op stillere studeerkamers, betere routebepaling en meer ruimtes om te werken en samen te studeren.",
+          "hero_image_url": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Renovatie van de universiteitscampus in uitvoering",
+          "cta_label": "Bekijk het plan",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Campus", "Duurzaamheid", "Studentenleven"],
+          "blocks": [
+            {"type": "paragraph", "content": "De renovatie verloopt in stappen om verstoringen van lessen en projecten te beperken."},
+            {"type": "paragraph", "content": "Studenten worden aangemoedigd om feedback te geven over hoe de nieuwe ruimtes studie, sociaal leven en welzijn kunnen ondersteunen."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "International exchange fair draws record attendance",
+          "excerpt": "Students met representatives from partner universities and learned more about exchange opportunities for the next academic year.",
+          "body": "The annual international exchange fair attracted a record number of students this week, with more participants than in previous years. Representatives from partner institutions across Europe presented exchange programmes, scholarship opportunities, and practical advice on studying abroad.\n\nThe event also included student testimonials to help prospective participants understand what daily life looks like while studying in another country. Organisers say the strong turnout reflects growing interest in mobility, international experience and multilingual professional development.",
+          "hero_image_url": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students speaking with exchange programme representatives",
+          "cta_label": "Learn about mobility",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["International", "Exchange", "Students"],
+          "blocks": [
+            {"type": "paragraph", "content": "Visitors were able to compare programmes, deadlines and living arrangements before making their application plans."},
+            {"type": "paragraph", "content": "The fair reinforced KdG's commitment to internationalisation and cross-cultural learning."}
+          ]
+        },
+        "nl": {
+          "title": "Internationale uitwisselingsbeurs trekt recordaantal bezoekers",
+          "excerpt": "Studenten spraken met vertegenwoordigers van partneruniversiteiten en kregen meer inzicht in uitwisselingsmogelijkheden voor het volgende academische jaar.",
+          "body": "De jaarlijkse internationale uitwisselingsbeurs trok deze week een recordaantal studenten, meer dan in voorgaande jaren. Vertegenwoordigers van partnerinstellingen in Europa presenteerden uitwisselingsprogramma's, beurzen en praktische tips voor een studie in het buitenland.\n\nHet evenement omvatte ook getuigenissen van studenten om aspirant-deelnemers een beter beeld te geven van het dagelijks leven tijdens een studie in een ander land. De organisatoren zeggen dat de sterke opkomst laat zien dat er meer interesse is in mobiliteit, internationale ervaring en meertalige professionele ontwikkeling.",
+          "hero_image_url": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten die praten met vertegenwoordigers van uitwisselingsprogramma's",
+          "cta_label": "Meer over mobiliteit",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Internationaal", "Uitwisseling", "Studenten"],
+          "blocks": [
+            {"type": "paragraph", "content": "Bezoekers konden programma's, deadlines en woonopties vergelijken voordat ze hun plannen maakten."},
+            {"type": "paragraph", "content": "De beurs onderstreepte KdG's inzet voor internationalisering en intercultureel leren."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Student council secures funding for wellbeing initiatives",
+          "excerpt": "New money will support peer mentoring, mental health programming and practical support for students during busy exam periods.",
+          "body": "The KdG student council has secured additional funding for a new wellbeing programme aimed at reducing stress and improving support for students across the university. The initiative includes peer mentoring, guided study sessions, and expanded mental health resources.\n\nThe funding will be used during the upcoming exam season, when demand for student support is highest. Organisers say the measure reflects a meaningful effort to create a healthier, more resilient campus culture.",
+          "hero_image_url": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students meeting together in a campus wellbeing session",
+          "cta_label": "Read the announcement",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Wellbeing", "Students", "Support"],
+          "blocks": [
+            {"type": "paragraph", "content": "The council will work closely with student services to match resources to student needs."},
+            {"type": "paragraph", "content": "Additional events will also focus on stress management and healthy routines."}
+          ]
+        },
+        "nl": {
+          "title": "Studentenraad haalt financiering binnen voor welzijnsinitiatieven",
+          "excerpt": "Nieuw geld wordt gebruikt voor peer mentoring, mentale gezondheidsprogramma's en praktische steun voor studenten tijdens drukke toetsperioden.",
+          "body": "De studentenraad van KdG heeft extra financiering binnengehaald voor een nieuw welzijnsprogramma gericht op het verminderen van stress en het verbeteren van de ondersteuning van studenten. Het initiatief omvat peer mentoring, begeleide studiemomenten en meer middelen voor mentale gezondheid.\n\nDe financiering wordt gebruikt tijdens de komende examentijd, wanneer de vraag naar studentondersteuning het grootst is. Organisatoren zeggen dat deze maatregel een belangrijke stap is naar een gezondere en weerbare campuscultuur.",
+          "hero_image_url": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten die samenkomen voor een welzijnssessie op de campus",
+          "cta_label": "Lees het bericht",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Welzijn", "Studenten", "Ondersteuning"],
+          "blocks": [
+            {"type": "paragraph", "content": "De raad werkt nauw samen met de studentenservice om middelen op de juiste behoeften af te stemmen."},
+            {"type": "paragraph", "content": "Er komen ook extra activiteiten over stressmanagement en gezonde routines."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Career fair connects 1,800 students with employers",
+          "excerpt": "The annual event brought together employers, alumni and students seeking internships, graduate roles and practical career advice.",
+          "body": "This year's university career fair was the biggest yet, attracting more than 1,800 students who met employers from technology, healthcare, business and creative industries. Companies used the event to recruit interns and graduates while giving students direct access to career advice and application guidance.\n\nThe fair also featured alumni panels and networking sessions designed to help students understand what employers are looking for after graduation. Organisers say the event is a key part of KdG's career preparation strategy.",
+          "hero_image_url": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students meeting recruiters at a university career fair",
+          "cta_label": "See employer partners",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Career", "Jobs", "Students"],
+          "blocks": [
+            {"type": "paragraph", "content": "Employers highlighted internship opportunities, trainee roles and graduate schemes tailored to current student needs."},
+            {"type": "paragraph", "content": "Students were also able to ask practical questions about CVs, interviews and portfolio building."}
+          ]
+        },
+        "nl": {
+          "title": "Carrièrebeurs verbindt 1.800 studenten met werkgevers",
+          "excerpt": "Het jaarlijkse evenement bracht werkgevers, alumni en studenten samen die op zoek waren naar stages, banen en praktische loopbaanadvies.",
+          "body": "De carrièrebeurs van deze jaargang was de grootste tot nu toe, met meer dan 1.800 studenten die in contact kwamen met werkgevers uit technologie, gezondheidszorg, zakelijke dienstverlening en creatieve sectoren. Bedrijven gebruikten de beurs om stagiairs en starters te werven en studenten directe loopbaanadviezen te geven.\n\nDe beurs bevatte ook alumni-panelen en netwerksessies om studenten te helpen begrijpen waar werkgevers naar zoeken na hun diploma. Organisatoren zeggen dat het evenement een kernonderdeel is van de loopbaanvoorbereiding van KdG.",
+          "hero_image_url": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten die recruiters ontmoeten op een carrièrebeurs",
+          "cta_label": "Bekijk werkgevers",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Carrière", "Banen", "Studenten"],
+          "blocks": [
+            {"type": "paragraph", "content": "Werkgevers benadrukten stages, traineeship-rollen en graduele programma's die aansluiten bij de behoefte van huidige studenten."},
+            {"type": "paragraph", "content": "Studenten konden ook praktische vragen stellen over CV's, interviews en portfolio's."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Digital skills week helps first years build confidence",
+          "excerpt": "Workshops focused on spreadsheets, design tools and safe online practices were delivered across the campus this week.",
+          "body": "A digital skills week was organised for first-year students to help them develop practical knowledge in software, design tools and online safety. Sessions were delivered by lecturers and student mentors, with hands-on support for tasks students are likely to encounter in their courses.\n\nThe programme covered spreadsheet basics, presentation tools and responsible use of AI in academic work. Organisers say the goal is to reduce the stress of starting university and help students feel more confident from day one.",
+          "hero_image_url": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students attending a digital skills workshop",
+          "cta_label": "See the programme",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Digital Skills", "First Year", "Learning"],
+          "blocks": [
+            {"type": "paragraph", "content": "The sessions were designed to make practical tasks feel less intimidating for new students."},
+            {"type": "paragraph", "content": "Students also learned about cybersecurity basics and how to organise study files more efficiently."}
+          ]
+        },
+        "nl": {
+          "title": "Digitale vaardigheidsweek helpt eerstejaars met meer zelfvertrouwen",
+          "excerpt": "Workshops over spreadsheets, ontwerptools en veilig online gedrag werden deze week op de campus gegeven.",
+          "body": "Er was een week met digitale vaardigheden voor eerstejaars georganiseerd om hen praktische kennis te geven over software, ontwerptools en online veiligheid. Sessies werden gegeven door docenten en mentorstudenten, met hands-on ondersteuning bij taken die studenten waarschijnlijk in hun opleiding tegenkomen.\n\nHet programma behandelde spreadsheetbasis, presentatiehulpmiddelen en verantwoord gebruik van AI in academisch werk. Organisatoren zeggen dat het doel is om stress bij het begin van de studie te verminderen en studenten vanaf dag één meer zelfvertrouwen te geven.",
+          "hero_image_url": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten die deelnemen aan een workshop digitale vaardigheden",
+          "cta_label": "Bekijk het programma",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Digitale vaardigheden", "Eerste jaar", "Leren"],
+          "blocks": [
+            {"type": "paragraph", "content": "De sessies waren ontworpen om praktische taken minder intimiderend te maken voor nieuwe studenten."},
+            {"type": "paragraph", "content": "Studenten leerden ook over cyberveiligheid en het efficiënter organiseren van studiebestanden."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "New bike parking and solar panels expand the green campus plan",
+          "excerpt": "The university is investing in sustainable mobility and cleaner energy to support its environmental goals.",
+          "body": "The green campus initiative is expanding with the installation of additional bicycle parking and a new solar panel array on the main building. The project aims to reduce car use, improve campus accessibility and lower the university's environmental footprint.\n\nStudents and staff are expected to benefit from a cleaner, calmer campus environment, while the new infrastructure also supports KdG's goals for sustainable growth. It is one of a series of measures introduced this year to strengthen environmental responsibility on campus.",
+          "hero_image_url": "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Bicycle parking and solar panels on a university building",
+          "cta_label": "Read about sustainability",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Sustainability", "Campus", "Environment"],
+          "blocks": [
+            {"type": "paragraph", "content": "The upgrades are part of a wider strategy to make daily campus life more sustainable and student-friendly."},
+            {"type": "paragraph", "content": "A pilot survey will also help identify where transport and energy changes can have the biggest impact."}
+          ]
+        },
+        "nl": {
+          "title": "Nieuw fietsparkeren en zonnepanelen verbreden het groene campusplan",
+          "excerpt": "De universiteit investeert in duurzame mobiliteit en schonere energie om de milieudoelstellingen te ondersteunen.",
+          "body": "Het groene campusinitiatief wordt uitgebreid met extra fietsparkeerplaatsen en een nieuw zonnepaneelveld op het hoofdgebouw. Het project heeft als doel het autogebruik te verminderen, de toegankelijkheid van de campus te verbeteren en de ecologische voetafdruk van de universiteit te verkleinen.\n\nStudenten en medewerkers profiteren van een schonere en rustiger campusomgeving, terwijl de nieuwe infrastructuur ook bijdraagt aan de duurzaamheidsdoelstellingen van KdG. Het is één van de maatregelen die dit jaar zijn aangekondigd om de milieuzorg op de campus te versterken.",
+          "hero_image_url": "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Fietsparkeren en zonnepanelen op een universitair gebouw",
+          "cta_label": "Lees meer over duurzaamheid",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Duurzaamheid", "Campus", "Milieu"],
+          "blocks": [
+            {"type": "paragraph", "content": "De upgrades maken deel uit van een bredere strategie om dagelijks campusleven duurzamer en studentenvriendelijker te maken."},
+            {"type": "paragraph", "content": "Een pilotsurvey helpt bepalen waar transport- en energieveranderingen het grootste effect hebben."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Health and wellbeing centre opens to support student life",
+          "excerpt": "The new centre offers guidance, drop-in support and practical resources for mental health, fitness and everyday wellbeing.",
+          "body": "A new health and wellbeing centre has opened on campus, bringing together advice, consultations and drop-in support for students who need help with stress, motivation, sleep or general wellbeing. The centre is designed to provide a welcoming place for guidance without requiring a formal appointment.\n\nThe service includes sessions on healthy routines, exam pressure and personal balance. University staff say the centre is part of a broader effort to make student wellbeing visible and accessible throughout the academic year.",
+          "hero_image_url": "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students in a wellbeing support centre on campus",
+          "cta_label": "Visit the centre",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Wellbeing", "Health", "Support"],
+          "blocks": [
+            {"type": "paragraph", "content": "The centre will work with study advisors, counselling services and student organisations to improve holistic support."},
+            {"type": "paragraph", "content": "Students can access sessions and guidance throughout the academic year, not only in crisis moments."}
+          ]
+        },
+        "nl": {
+          "title": "Gezondheids- en welzijnscentrum opent om het studentenleven te ondersteunen",
+          "excerpt": "Het nieuwe centrum biedt begeleiding, drop-in ondersteuning en praktische middelen voor mentale gezondheid, fitness en dagelijks welzijn.",
+          "body": "Een nieuw gezondheids- en welzijnscentrum is geopend op de campus, waar advies, consulten en drop-in ondersteuning samenkomen voor studenten die hulp nodig hebben bij stress, motivatie, slaap of algemeen welzijn. Het centrum is ontworpen als een gastvrije plek voor begeleiding zonder formeel afspraak.\n\nDe dienst omvat sessies over gezonde routines, examentruk en persoonlijke balans. Personeel zegt dat het centrum deel uitmaakt van een bredere inspanning om het welzijn van studenten zichtbaar en toegankelijk te maken tijdens het academische jaar.",
+          "hero_image_url": "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten in een welzijnscentrum op de campus",
+          "cta_label": "Bezoek het centrum",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Welzijn", "Gezondheid", "Ondersteuning"],
+          "blocks": [
+            {"type": "paragraph", "content": "Het centrum werkt samen met studieadvisers, counselingdiensten en studentenorganisaties om een holistische ondersteuning te bieden."},
+            {"type": "paragraph", "content": "Studenten kunnen gedurende het academische jaar terecht voor sessies en begeleiding, niet alleen in crisismomenten."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "program": "acs",
+      "translations": {
+        "en": {
+          "title": "Three KdG teams advance to startup pitch finals",
+          "excerpt": "Student founders presented ideas in sustainability, health-tech and education as part of the university innovation challenge.",
+          "body": "Three student-led teams from KdG have reached the finals of the regional startup pitch competition after presenting innovative concepts in sustainability, health technology and education. The projects were developed through student workshops and mentorship sessions led by faculty and entrepreneurs.\n\nJudges were impressed by the practical problem-solving and the readiness of the teams to test their ideas in the real world. Organisers say the achievement highlights the strong entrepreneurial culture at the university.",
+          "hero_image_url": "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students presenting at a startup pitch event",
+          "cta_label": "Support the teams",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Startups", "Innovation", "ACS"],
+          "blocks": [
+            {"type": "paragraph", "content": "Each team was judged on originality, market relevance and readiness to build a real venture."},
+            {"type": "paragraph", "content": "The finals are expected to attract investors, mentors and community partners from across the region."}
+          ]
+        },
+        "nl": {
+          "title": "Drie KdG-teams gaan door naar de finale van startup-pitches",
+          "excerpt": "Studentenondernemers presenteerden ideeën over duurzaamheid, health-tech en onderwijs in de universiteitsinnovatiechallenge.",
+          "body": "Drie studententeams van KdG hebben de finale bereikt van de regionale startup-pitchcompetitie na het presenteren van innovatieve concepten over duurzaamheid, health technology en onderwijs. De projecten zijn ontwikkeld in student workshops en mentorgesprekken met docenten en ondernemers.\n\nDe jury was onder de indruk van de praktische probleemoplossing en het vermogen van de teams om hun ideeën in de echte wereld te testen. Organisatoren zeggen dat deze prestatie de sterke ondernemende cultuur van de universiteit laat zien.",
+          "hero_image_url": "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten presenteren op een startup-pitch-evenement",
+          "cta_label": "Steun de teams",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Startups", "Innovatie", "ACS"],
+          "blocks": [
+            {"type": "paragraph", "content": "Elk team werd beoordeeld op originaliteit, marktrelevantie en bereidheid om echt bedrijf te bouwen."},
+            {"type": "paragraph", "content": "De finale verwacht investeerders, mentoren en partners uit de regio."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "program": "nur",
+      "translations": {
+        "en": {
+          "title": "Nursing students support community vaccination drive",
+          "excerpt": "Students helped deliver practical support during a local public health campaign in the wider community.",
+          "body": "Final-year nursing students from KdG took part in a community vaccination drive organised in collaboration with local health services. They supported registration, patient guidance and health education, gaining valuable experience while helping the public access essential healthcare services.\n\nThe project was welcomed by local partners and gave students a practical opportunity to apply classroom learning in a real community setting. It also highlighted the important role of nursing students in public health support.",
+          "hero_image_url": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Nursing students supporting a community health event",
+          "cta_label": "Read the story",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Nursing", "Community", "Health"],
+          "blocks": [
+            {"type": "paragraph", "content": "Students said the experience strengthened their confidence in patient communication and health education."},
+            {"type": "paragraph", "content": "Local health teams praised the organisation and the professionalism of the student volunteers."}
+          ]
+        },
+        "nl": {
+          "title": "Verpleegkunde-studenten ondersteunen vaccinatiecampagne in de gemeenschap",
+          "excerpt": "Studenten hielpen mee aan een lokale gezondheidscampagne en gaven praktische ondersteuning aan het publiek.",
+          "body": "Studenten verpleegkunde van KdG namen deel aan een vaccinatiecampagne in samenwerking met lokale gezondheidsdiensten. Ze ondersteunden bij registratie, patiëntbegeleiding en voorlichting, en kregen daardoor waardevolle ervaring terwijl ze de gemeenschap hielpen bij toegang tot essentiële zorg.\n\nHet project werd positief ontvangen door lokale partners en gaf studenten een praktische kans om schoolkennis toe te passen in een echte setting. Het bracht ook de belangrijke rol van verpleegkundestudenten in de publieke gezondheid duidelijk naar voren.",
+          "hero_image_url": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Verpleegkundestudenten ondersteunen een gezondheidsactie in de gemeenschap",
+          "cta_label": "Lees het verhaal",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Verpleegkunde", "Gemeenschap", "Gezondheid"],
+          "blocks": [
+            {"type": "paragraph", "content": "Studenten zeiden dat de ervaring hun vertrouwen in patiëntcommunicatie en gezondheidsvoorlichting vergrootte."},
+            {"type": "paragraph", "content": "Lokale gezondheidsorganisaties prezen de organisatie en professionaliteit van de studentvrijwilligers."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Erasmus week brings culture, music and connection to campus",
+          "excerpt": "Students celebrated international exchange and diversity with a packed programme of events across the week.",
+          "body": "Erasmus Week at KdG brought together students from different programmes and countries for a lively series of cultural activities, music performances and networking sessions. The programme included food tastings, language exchanges and a student-led showcase of international traditions.\n\nThe week was designed to help students connect beyond their study groups and build a stronger sense of belonging across campus. Organisers say the event is an important reminder of the value of international and multicultural exchange.",
+          "hero_image_url": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students celebrating culture and music at Erasmus week",
+          "cta_label": "Explore the activities",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Erasmus", "Culture", "Students"],
+          "blocks": [
+            {"type": "paragraph", "content": "The programme created space for students to share food, stories and traditions from their home countries."},
+            {"type": "paragraph", "content": "Many participants said the event helped them feel more connected to the wider campus community."}
+          ]
+        },
+        "nl": {
+          "title": "Erasmusweek brengt cultuur, muziek en verbinding naar de campus",
+          "excerpt": "Studenten vierden internationale uitwisseling en diversiteit met een druk programma aan activiteiten gedurende de week.",
+          "body": "Erasmus Week op KdG bracht studenten uit verschillende opleidingen en landen samen voor een levendige reeks culturele activiteiten, muziekoptredens en netwerksessies. Het programma omvatte voedselproeverijen, taaluitwisselingen en een door studenten geleid overzicht van internationale tradities.\n\nDe week was bedoeld om studenten buiten hun studiegroepen met elkaar in contact te brengen en een sterker gevoel van verbondenheid op de campus te ontwikkelen. Organisatoren zeggen dat het evenement een belangrijke herinnering is aan de waarde van internationale en multiculturele uitwisseling.",
+          "hero_image_url": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten vieren cultuur en muziek tijdens Erasmusweek",
+          "cta_label": "Bekijk de activiteiten",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Erasmus", "Cultuur", "Studenten"],
+          "blocks": [
+            {"type": "paragraph", "content": "Het programma gaf studenten ruimte om eten, verhalen en tradities uit hun thuislanden te delen."},
+            {"type": "paragraph", "content": "Veel deelnemers zeiden dat het evenement hen dichter bij de bredere campusgemeenschap bracht."}
+          ]
+        }
+      }
+    },
+    {
+      "institution": "kdg",
+      "translations": {
+        "en": {
+          "title": "Winter exam timetable published for all programmes",
+          "excerpt": "Students can now check room allocations, examination dates and preparation guidance for the coming assessment period.",
+          "body": "The winter exam timetable has now been published across all KdG programmes. Students can review dates, room allocations and answer format details for their courses, with additional guidance available on how to prepare effectively for the assessment period.\n\nAcademic services have also highlighted support options for students who need extra planning help or revisions to their study schedule. The university says it is prioritising clarity and accessibility in the timetable process.",
+          "hero_image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Students checking exam schedules on a university noticeboard",
+          "cta_label": "Check the timetable",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Exams", "Academic", "Planning"],
+          "blocks": [
+            {"type": "paragraph", "content": "Students are encouraged to check the timetable carefully, especially if they have multiple assessments in the same week."},
+            {"type": "paragraph", "content": "Study support services remain available for revision planning and time management guidance."}
+          ]
+        },
+        "nl": {
+          "title": "Winterexamentijdschema gepubliceerd voor alle opleidingen",
+          "excerpt": "Studenten kunnen nu data, lokalen en voorbereidingsinformatie voor de komende toetsperiode bekijken.",
+          "body": "Het winterexamentijdschema is nu gepubliceerd voor alle opleidingen van KdG. Studenten kunnen data, zalen en details over de toetsvormen voor hun vakken bekijken, en er is extra informatie beschikbaar over hoe ze zich goed kunnen voorbereiden op de evaluatieperiode.\n\nDe academische dienst heeft ook steunopties benadrukt voor studenten die extra hulp nodig hebben bij planning of studieplanning. De universiteit zegt dat het prioriteit geeft aan duidelijkheid en toegankelijkheid in het tijdschema.",
+          "hero_image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+          "hero_image_alt": "Studenten controleren examenschema's op een mededelingenbord",
+          "cta_label": "Bekijk het tijdschema",
+          "cta_url": "https://www.kdg.be/en",
+          "tags": ["Examens", "Academisch", "Planning"],
+          "blocks": [
+            {"type": "paragraph", "content": "Studenten worden aangemoedigd om het tijdschema goed te controleren, vooral als ze meerdere toetsen in dezelfde week hebben."},
+            {"type": "paragraph", "content": "Studiebegeleiding blijft beschikbaar voor herhalingsplanning en tijdmanagement."}
+          ]
+        }
+      }
+    }
   ]
 }

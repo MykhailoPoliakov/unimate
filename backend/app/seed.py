@@ -1,9 +1,10 @@
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import select
 
-from app.db import DB_PATH, Base, SessionLocal, engine
+from app.db import Base, SessionLocal, engine
 from app.models import (  # noqa: F401 — register every table for drop_all
     Button,
     ButtonTranslation,
@@ -25,28 +26,23 @@ def load_seed_data() -> dict:
     with SEED_DATA_PATH.open(encoding="utf-8") as file:
         data = json.load(file)
 
-    for key in ("institutions", "buttons", "socials"):
+    for key in ("institutions", "buttons", "socials", "news"):
         if not isinstance(data.get(key), list):
             raise ValueError(f"Seed data field {key!r} must be a list")
     return data
 
 
 def reset_database() -> None:
-    print(f"Resetting {DB_PATH.resolve()}")
+    print("Resetting configured database")
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
-    for extra in ("", "-wal", "-shm"):
-        file = Path(f"{DB_PATH.resolve()}{extra}") if extra else DB_PATH.resolve()
-        if file.exists():
-            file.unlink()
-            print(f"Deleted {file}")
 
 
 def seed():
     reset_database()
     data = load_seed_data()
     Base.metadata.create_all(engine)
-    print("Seeded institutions, buttons, and socials. News table is empty.")
+    print("Seeded institutions, buttons, socials, and news.")
     with SessionLocal() as db:
         for inst_data in data["institutions"]:
             inst = db.scalar(
@@ -75,6 +71,7 @@ def seed():
         db.flush()
         seed_buttons(db, data["buttons"])
         seed_socials(db, data["socials"])
+        seed_news(db, data["news"])
         db.commit()
 
 
@@ -185,6 +182,61 @@ def seed_socials(db, socials):
             for lang, values in data["translations"].items()
             if lang not in existing_languages
         )
+
+
+def seed_news(db, news_items):
+    for index, item in enumerate(news_items):
+        institution = None
+        if item.get("institution") is not None:
+            institution = db.scalar(
+                select(Institution).where(Institution.slug == item["institution"])
+            )
+            if institution is None:
+                raise ValueError(f"Unknown institution {item['institution']!r}")
+
+        program = None
+        if item.get("program") is not None:
+            if institution is None:
+                raise ValueError(
+                    f"Program {item['program']!r} requires an institution slug for news seed item"
+                )
+            program = db.scalar(
+                select(Program).where(
+                    Program.institution_id == institution.id,
+                    Program.slug == item["program"],
+                )
+            )
+            if program is None:
+                raise ValueError(
+                    f"Unknown program {item['program']!r} for institution "
+                    f"{item.get('institution')!r}"
+                )
+
+        news = News(
+            is_published=True,
+            created_at=datetime.now(timezone.utc) - timedelta(days=index * 3 + 1),
+            published_at=datetime.now(timezone.utc) - timedelta(days=index * 3 + 1),
+            institution_id=institution.id if institution is not None else None,
+            program_id=program.id if program is not None else None,
+            year_min=item.get("year_min"),
+            year_max=item.get("year_max"),
+            translations=[
+                NewsTranslation(
+                    lang=lang,
+                    title=translation["title"],
+                    excerpt=translation.get("excerpt"),
+                    body=translation["body"],
+                    hero_image_url=translation.get("hero_image_url"),
+                    hero_image_alt=translation.get("hero_image_alt"),
+                    cta_label=translation.get("cta_label"),
+                    cta_url=translation.get("cta_url"),
+                    tags=json.dumps(translation.get("tags", [])),
+                    blocks=json.dumps(translation.get("blocks", [])),
+                )
+                for lang, translation in item["translations"].items()
+            ],
+        )
+        db.add(news)
 
 
 if __name__ == "__main__":

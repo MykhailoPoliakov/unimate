@@ -1,25 +1,26 @@
-seed:
-    cd backend; python -m app.seed
-    (wipes backend/unimate.db including news and users, then seeds)
+start local PostgreSQL:
+    docker compose up -d db
 
-launch backend:
-    cd backend; python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-    
-    backend url:
-        http://127.0.0.1:8000
+set backend DATABASE_URL to the PostgreSQL connection in .env, then:
+    cd backend
+    python -m app.seed
+    (drops and recreates all configured tables, then seeds institution data)
+    python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-open database:
-    cd backend; python -m sqlite3 .\unimate.db
+backend url:
+    http://127.0.0.1:8000
 
-    add admin:
-        python -m app.admin grant USER_ID_HERE
+open database shell:
+    docker compose exec db psql -U unimate -d unimate
 
-    remove admin:
-        python -m app.admin revoke USER_ID_HERE
+add admin:
+    python -m app.admin grant USER_ID_HERE
 
-    list users:
-        python -m app.admin list
-        
+remove admin:
+    python -m app.admin revoke USER_ID_HERE
+
+list users:
+    python -m app.admin list
 
 launch frontend:
     cd frontend; npx expo start
