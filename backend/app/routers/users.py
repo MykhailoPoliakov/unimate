@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.academic import enrollment_year_for, year_of_study
+from app.audience import moderator_scope, serialize_moderator_scope
 from app.db import get_db
 from app.deps import require_admin
 from app.models import Institution, Program, User
@@ -23,6 +24,7 @@ def find_program(db: Session, institution_slug: str, program_slug: str) -> Progr
 
 
 def to_out(user: User) -> UserOut:
+    scope = moderator_scope(user) if user.role == "moderator" else {"institutions": [], "programs": [], "years": []}
     return UserOut(
         id=user.id,
         institution=user.program.institution.slug,
@@ -30,6 +32,9 @@ def to_out(user: User) -> UserOut:
         year_of_study=year_of_study(user.enrollment_year),
         language=cast(Language, user.language),
         role=cast(Literal["student", "moderator", "admin"], user.role),
+        moderator_institutions=scope["institutions"],
+        moderator_programs=scope["programs"],
+        moderator_years=scope["years"],
     )
 
 
@@ -114,6 +119,20 @@ def update_user_role(
             raise HTTPException(409, "Cannot remove the last admin")
 
     user.role = data.role
+    if data.role == "moderator":
+        institutions = [slug for slug in data.institutions if slug] or [user.program.institution.slug]
+        programs = [slug for slug in data.programs if slug] or [user.program.slug]
+        found_programs = db.scalars(
+            select(Program).join(Institution).where(
+                Institution.slug.in_(institutions),
+                Program.slug.in_(programs),
+            )
+        ).all()
+        if {row.slug for row in found_programs} != set(programs):
+            raise HTTPException(404, "Unknown institution or program")
+        user.moderator_scope = serialize_moderator_scope(institutions, programs, data.years)
+    else:
+        user.moderator_scope = None
     db.commit()
     db.refresh(user)
     return to_out(user)

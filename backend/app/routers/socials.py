@@ -6,10 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.academic import year_of_study
-from app.content import pick_translation, visible_to
+from app.audience import audience_fields, constrain_moderator_audience, resolve_audience
+from app.content import matches_audience, pick_translation, visible_to_institution
 from app.db import get_db
 from app.deps import get_current_user, require_news_manager
-from app.models import Institution, Program, Social, SocialTranslation, User
+from app.models import Social, SocialTranslation, User
 from app.rate_limit import enforce_create_cooldown
 from app.schemas import (
     SocialAdminOut,
@@ -29,39 +30,28 @@ def _validate_translations(translations) -> None:
         raise HTTPException(422, "translations must contain each language only once")
 
 
-def _find_program(
-    db: Session,
-    institution_slug: str | None,
-    program_slug: str | None,
-) -> Program | None:
-    if (institution_slug is None) != (program_slug is None):
-        raise HTTPException(422, "institution and program must be provided together")
-    if institution_slug is None:
-        return None
-    program = db.scalar(
-        select(Program)
-        .join(Institution)
-        .where(
-            Institution.slug == institution_slug,
-            Program.slug == program_slug,
-        )
+def _apply_audience(social: Social, db: Session, user, institution, programs, years, legacy_program=None):
+    institution, programs, years, legacy_program = constrain_moderator_audience(
+        user, db, institution, programs, years, legacy_program
     )
-    if program is None:
-        raise HTTPException(404, "Unknown institution or program")
-    return program
+    (
+        institution_id,
+        program_id,
+        program_slugs,
+        year_list,
+        year_min,
+        year_max,
+    ) = resolve_audience(db, institution, programs, years, legacy_program)
+    social.institution_id = institution_id
+    social.program_id = program_id
+    social.program_slugs = program_slugs
+    social.year_list = year_list
+    social.year_min = year_min
+    social.year_max = year_max
 
 
-def _validate_years(year_min: int | None, year_max: int | None) -> None:
-    if year_min is not None and year_max is not None and year_min > year_max:
-        raise HTTPException(422, "year_min cannot exceed year_max")
-
-
-def _admin_out(social: Social) -> SocialAdminOut:
-    program = None
-    institution = None
-    if social.program is not None:
-        program = social.program.slug
-        institution = social.program.institution.slug
+def _admin_out(social: Social, db: Session) -> SocialAdminOut:
+    institution, programs, years = audience_fields(social, db)
     return SocialAdminOut(
         id=social.id,
         url=social.url,
@@ -70,7 +60,9 @@ def _admin_out(social: Social) -> SocialAdminOut:
         sort_order=social.sort_order,
         is_active=social.is_active,
         institution=institution,
-        program=program,
+        program=programs[0] if programs else None,
+        programs=programs,
+        years=years,
         year_min=social.year_min,
         year_max=social.year_max,
         translations=[
@@ -89,21 +81,21 @@ def list_socials(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    rules = visible_to(
-        Social,
-        user.program.institution_id,
-        user.program_id,
-        year_of_study(user.enrollment_year),
-    )
+    rules = visible_to_institution(Social, user.program.institution_id)
     socials = db.scalars(
         select(Social)
         .options(selectinload(Social.translations))
         .where(Social.is_active, *rules)
         .order_by(Social.sort_order, Social.id)
     ).all()
+    year = year_of_study(user.enrollment_year)
 
     result = []
     for social in socials:
+        if not matches_audience(
+            social, user.program.institution_id, user.program_id, user.program.slug, year
+        ):
+            continue
         translation = pick_translation(social.translations, user.language)
         if translation is None:
             continue
@@ -132,16 +124,13 @@ def manage_socials(
 ):
     query = (
         select(Social)
-        .options(
-            selectinload(Social.translations),
-            selectinload(Social.program).selectinload(Program.institution),
-        )
+        .options(selectinload(Social.translations))
         .order_by(Social.sort_order, Social.id)
     )
     if user.role != "admin":
         query = query.where(Social.author_id == user.id)
     socials = db.scalars(query).all()
-    return [_admin_out(social) for social in socials]
+    return [_admin_out(social, db) for social in socials]
 
 
 @router.post("", response_model=SocialAdminOut, status_code=201)
@@ -152,9 +141,6 @@ def create_social(
 ):
     enforce_create_cooldown(db, user, Social)
     _validate_translations(data.translations)
-    _validate_years(data.year_min, data.year_max)
-    program = _find_program(db, data.institution, data.program)
-
     social = Social(
         url=data.url,
         icon=data.icon,
@@ -163,10 +149,6 @@ def create_social(
         is_active=data.is_active,
         created_at=datetime.now(timezone.utc),
         author_id=user.id,
-        institution_id=program.institution_id if program else None,
-        program_id=program.id if program else None,
-        year_min=data.year_min,
-        year_max=data.year_max,
         translations=[
             SocialTranslation(
                 lang=item.lang,
@@ -176,9 +158,10 @@ def create_social(
             for item in data.translations
         ],
     )
+    _apply_audience(social, db, user, data.institution, data.programs, data.years, data.program)
     db.add(social)
     db.commit()
-    return _admin_out(_get_social(db, social.id))
+    return _admin_out(_get_social(db, social.id), db)
 
 
 @router.patch("/{social_id}", response_model=SocialAdminOut)
@@ -205,18 +188,23 @@ def update_social(
             for item in data.translations or []
         ]
 
-    if "institution" in changes or "program" in changes:
-        program = _find_program(db, data.institution, data.program)
-        social.institution_id = program.institution_id if program else None
-        social.program_id = program.id if program else None
+    if any(field in changes for field in ("institution", "program", "programs", "years")):
+        _apply_audience(
+            social,
+            db,
+            user,
+            data.institution,
+            data.programs or ([data.program] if data.program else []),
+            data.years,
+            data.program,
+        )
 
-    for field in ("url", "icon", "platform", "sort_order", "is_active", "year_min", "year_max"):
+    for field in ("url", "icon", "platform", "sort_order", "is_active"):
         if field in changes:
             setattr(social, field, changes[field])
 
-    _validate_years(social.year_min, social.year_max)
     db.commit()
-    return _admin_out(_get_social(db, social.id))
+    return _admin_out(_get_social(db, social.id), db)
 
 
 @router.delete("/{social_id}", status_code=204)
@@ -236,10 +224,7 @@ def delete_social(
 def _get_social(db: Session, social_id: int) -> Social:
     social = db.scalar(
         select(Social)
-        .options(
-            selectinload(Social.translations),
-            selectinload(Social.program).selectinload(Program.institution),
-        )
+        .options(selectinload(Social.translations))
         .where(Social.id == social_id)
     )
     if social is None:

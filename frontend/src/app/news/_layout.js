@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { useI18n } from '@/hooks/use-i18n';
 import { useTheme } from '@/hooks/use-theme';
 
-export default function SettingsLayout() {
+export default function NewsLayout() {
   const theme = useTheme();
   const { t } = useI18n();
 
@@ -20,10 +20,8 @@ export default function SettingsLayout() {
         contentStyle: { backgroundColor: theme.background },
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="languages" options={{ title: t('languages') }} />
-      <Stack.Screen name="privacy" options={{ title: t('privacyPolicy') }} />
-      <Stack.Screen name="terms" options={{ title: t('termsOfUse') }} />
-      <Stack.Screen name="about" options={{ title: t('aboutUnimate') }} />
+      <Stack.Screen name="[id]" options={{ title: t('news'), headerBackTitle: t('news') }} />
+      <Stack.Screen name="compose" options={{ headerBackTitle: t('news') }} />
     </Stack>
   );
 }

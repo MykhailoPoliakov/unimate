@@ -1,11 +1,15 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
+function isTunnelHost(host) {
+  return /exp\.direct|exp\.host|ngrok|expo\.dev/i.test(host ?? '');
+}
+
 function defaultBaseUrl() {
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
-  if (host && Platform.OS !== 'web') return `http://${host}:8000`;
-  return 'http://127.0.0.1:8000';
+  if (host && Platform.OS !== 'web' && !isTunnelHost(host)) return `http://${host}:8001`;
+  return 'http://127.0.0.1:8001';
 }
 
 export const API_BASE_URL = defaultBaseUrl();
@@ -92,8 +96,9 @@ export function updateUser(userId, payload) {
   return api.patch(`/users/${userId}`, payload);
 }
 
-export function updateUserRole(adminId, userId, role) {
-  return api.patch(`/users/${encodeURIComponent(userId)}/role`, { role }, adminId);
+export function updateUserRole(adminId, userId, payload) {
+  const body = typeof payload === 'string' ? { role: payload } : payload;
+  return api.patch(`/users/${encodeURIComponent(userId)}/role`, body, adminId);
 }
 
 export function updatePushDevice(userId, token, enabled) {
@@ -102,6 +107,30 @@ export function updatePushDevice(userId, token, enabled) {
 
 export function listButtons(userId) {
   return api.get('/buttons', userId);
+}
+
+export function listManageButtons(userId) {
+  return api.get('/buttons/manage', userId);
+}
+
+export function previewButton(userId, url) {
+  return api.post('/buttons/preview', { url }, userId);
+}
+
+export function createButton(userId, payload) {
+  return api.post('/buttons', payload, userId);
+}
+
+export function updateButton(userId, buttonId, payload) {
+  return api.patch(`/buttons/${buttonId}`, payload, userId);
+}
+
+export function deleteButton(userId, buttonId) {
+  return api.delete(`/buttons/${buttonId}`, userId);
+}
+
+export function reorderButtons(userId, serviceIds, extraIds) {
+  return api.put('/buttons/reorder', { service_ids: serviceIds, extra_ids: extraIds }, userId);
 }
 
 export function listNews(userId) {

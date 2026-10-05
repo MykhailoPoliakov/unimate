@@ -1,4 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useTheme } from '@/hooks/use-theme';
 
@@ -52,4 +53,57 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
   },
+  circle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
 });
+
+export function GlassCircleButton({ onPress, icon, accessibilityLabel }) {
+  const theme = useTheme();
+  const circle = [
+    styles.circle,
+    {
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.glass,
+    },
+  ];
+  const glyph = <Ionicons name={icon} size={20} color={theme.text} />;
+
+  const button = (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      className="active:opacity-70"
+      style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+      {glyph}
+    </Pressable>
+  );
+
+  if (GlassView && isLiquidGlassAvailable()) {
+    return (
+      <GlassView glassEffectStyle="regular" style={circle}>
+        {button}
+      </GlassView>
+    );
+  }
+
+  return <View style={circle}>{button}</View>;
+}
+
+export function GlassBackButton({ onPress }) {
+  return (
+    <GlassCircleButton
+      onPress={onPress}
+      icon={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
+      accessibilityLabel="Back"
+    />
+  );
+}

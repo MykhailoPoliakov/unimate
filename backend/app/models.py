@@ -55,6 +55,7 @@ class User(Base):
     language: Mapped[str] = mapped_column(String(5), default="en")
     enrollment_year: Mapped[int]
     role: Mapped[str] = mapped_column(String(10), default="student", server_default="student")
+    moderator_scope: Mapped[str | None] = mapped_column(Text)
 
     program: Mapped[Program] = relationship()
 
@@ -78,15 +79,18 @@ class Button(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     url: Mapped[str] = mapped_column(String(500))
-    icon: Mapped[str | None] = mapped_column(String(100))
+    icon: Mapped[str | None] = mapped_column(String(500))
     color: Mapped[str | None] = mapped_column(String(32))
     platform: Mapped[str | None] = mapped_column(String(30))
     sort_order: Mapped[int] = mapped_column(default=0)
     is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=utcnow)
+    author_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
-    # targeting: NULL means "everyone"
     institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"))
     program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"))
+    program_slugs: Mapped[str | None] = mapped_column(Text)
+    year_list: Mapped[str | None] = mapped_column(Text)
     year_min: Mapped[int | None]
     year_max: Mapped[int | None]
 
@@ -125,6 +129,8 @@ class Social(Base):
 
     institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"))
     program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"))
+    program_slugs: Mapped[str | None] = mapped_column(Text)
+    year_list: Mapped[str | None] = mapped_column(Text)
     year_min: Mapped[int | None]
     year_max: Mapped[int | None]
 
@@ -164,6 +170,8 @@ class News(Base):
 
     institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"))
     program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"))
+    program_slugs: Mapped[str | None] = mapped_column(Text)
+    year_list: Mapped[str | None] = mapped_column(Text)
     year_min: Mapped[int | None]
     year_max: Mapped[int | None]
 

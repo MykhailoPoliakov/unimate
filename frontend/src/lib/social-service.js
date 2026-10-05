@@ -32,6 +32,23 @@ export function normalizeUrl(value) {
   return `https://${trimmed}`;
 }
 
+export function isValidHttpUrl(value) {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  try {
+    const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(href);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const host = parsed.hostname.replace(/^www\./, '');
+    if (!host.includes('.')) return false;
+    const labels = host.split('.');
+    if (labels.some((label) => !label || !/^[a-z0-9-]+$/i.test(label))) return false;
+    return /^[a-z]{2,}$/i.test(labels[labels.length - 1]);
+  } catch {
+    return false;
+  }
+}
+
 export function detectService(url) {
   try {
     const host = new URL(normalizeUrl(url)).hostname.replace(/^www\./, '').toLowerCase();

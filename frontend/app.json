@@ -8,9 +8,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "unimate",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#E4E1DB",
     "ios": {
       "icon": "./assets/expo.icon",
       "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"],
         "LSApplicationQueriesSchemes": [
           "instagram",
           "fb",
@@ -39,7 +41,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
       ]
     },
     "web": {

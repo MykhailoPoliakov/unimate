@@ -53,6 +53,9 @@ function toPost(item, language) {
     createdAt: item.created_at ?? null,
     authorId: item.author_id ?? null,
     canManage: false,
+    institution: item.institution ?? null,
+    programs: item.programs ?? (item.program ? [item.program] : []),
+    years: item.years ?? [],
   };
 }
 
@@ -77,14 +80,15 @@ function newsPayload(profile, data) {
     blocks: image ? [{ type: 'image', url: image, caption: data.title.trim() }] : [],
   };
   const translations = LANGUAGES.map((item) => ({ ...translation, lang: item.id }));
-  const targeted = data.institution && data.program;
+  const programs = data.programs ?? (data.program ? [data.program] : []);
+  const years = data.years ?? [];
+  const targeted = Boolean(data.institution && programs.length && years.length);
   return {
     translations,
     is_published: true,
     institution: targeted ? data.institution : undefined,
-    program: targeted ? data.program : undefined,
-    year_min: data.yearMin || undefined,
-    year_max: data.yearMax || undefined,
+    programs: targeted ? programs : undefined,
+    years: targeted ? years : undefined,
   };
 }
 

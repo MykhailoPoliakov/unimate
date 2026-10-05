@@ -13,7 +13,7 @@ const I18nContext = createContext({
 export function I18nProvider({ children }) {
   const { profile } = useProfile();
   const [override, setOverride] = useState(null);
-  const language = profile?.language ?? override ?? 'en';
+  const language = override ?? profile?.language ?? 'en';
 
   const setLanguage = useCallback((next) => {
     setOverride(next);

@@ -20,16 +20,16 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon="home">{t('home')}</TabButton>
+            <TabButton icon="home-outline" selectedIcon="home">{t('home')}</TabButton>
           </TabTrigger>
           <TabTrigger name="news" href="/news" asChild>
-            <TabButton icon="newspaper" badgeCount={unreadNewsCount}>{t('news')}</TabButton>
+            <TabButton icon="newspaper-outline" selectedIcon="newspaper" badgeCount={unreadNewsCount}>{t('news')}</TabButton>
           </TabTrigger>
           <TabTrigger name="socials" href="/socials" asChild>
-            <TabButton icon="people">{t('socials')}</TabButton>
+            <TabButton icon="people-outline" selectedIcon="people">{t('socials')}</TabButton>
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton icon="settings">{t('settings')}</TabButton>
+            <TabButton icon="ellipsis-horizontal-circle-outline" selectedIcon="ellipsis-horizontal-circle">{t('menu')}</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
@@ -37,7 +37,7 @@ export default function AppTabs() {
   );
 }
 
-export function TabButton({ children, icon, isFocused, badgeCount = 0, ...props }) {
+export function TabButton({ children, icon, selectedIcon, isFocused, badgeCount = 0, ...props }) {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
 
@@ -48,7 +48,7 @@ export function TabButton({ children, icon, isFocused, badgeCount = 0, ...props 
         className="py-one px-three rounded-three flex-row items-center gap-one">
         {icon && (
           <Ionicons
-            name={icon}
+            name={isFocused ? selectedIcon ?? icon : icon}
             size={14}
             color={isFocused ? colors.primary : colors.textSecondary}
           />

@@ -14,8 +14,11 @@ export default function AppTabs() {
 
   return (
     <NativeTabs
-      backgroundColor={colors.backgroundElement}
-      indicatorColor={colors.backgroundSelected}
+      backgroundColor={colors.background}
+      blurEffect={scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterial'}
+      disableTransparentOnScrollEdge
+      minimizeBehavior="never"
+      tintColor={colors.primary}
       badgeBackgroundColor={colors.error}
       badgeTextColor="#FFFFFF"
       iconColor={{ default: colors.textSecondary, selected: colors.primary }}
@@ -23,7 +26,11 @@ export default function AppTabs() {
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="home" />}
+          sf={{ default: 'house', selected: 'house.fill' }}
+          src={{
+            default: <NativeTabs.Trigger.VectorIcon family={Ionicons} name="home-outline" />,
+            selected: <NativeTabs.Trigger.VectorIcon family={Ionicons} name="home" />,
+          }}
         />
       </NativeTabs.Trigger>
 
@@ -35,21 +42,37 @@ export default function AppTabs() {
           </NativeTabs.Trigger.Badge>
         ) : null}
         <NativeTabs.Trigger.Icon
-          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="newspaper" />}
+          sf={{ default: 'newspaper', selected: 'newspaper.fill' }}
+          src={{
+            default: <NativeTabs.Trigger.VectorIcon family={Ionicons} name="newspaper-outline" />,
+            selected: <NativeTabs.Trigger.VectorIcon family={Ionicons} name="newspaper" />,
+          }}
         />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="socials">
         <NativeTabs.Trigger.Label>{t('socials')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="people" />}
+          sf={{ default: 'person.2', selected: 'person.2.fill' }}
+          src={{
+            default: <NativeTabs.Trigger.VectorIcon family={Ionicons} name="people-outline" />,
+            selected: <NativeTabs.Trigger.VectorIcon family={Ionicons} name="people" />,
+          }}
         />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="settings">
-        <NativeTabs.Trigger.Label>{t('settings')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('menu')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="settings" />}
+          sf={{ default: 'ellipsis.circle', selected: 'ellipsis.circle.fill' }}
+          src={{
+            default: (
+              <NativeTabs.Trigger.VectorIcon family={Ionicons} name="ellipsis-horizontal-circle-outline" />
+            ),
+            selected: (
+              <NativeTabs.Trigger.VectorIcon family={Ionicons} name="ellipsis-horizontal-circle" />
+            ),
+          }}
         />
       </NativeTabs.Trigger>
     </NativeTabs>

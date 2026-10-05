@@ -8,10 +8,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.academic import year_of_study
-from app.content import pick_translation, visible_to
+from app.audience import audience_fields, constrain_moderator_audience, resolve_audience
+from app.content import matches_audience, pick_translation, visible_to_institution
 from app.db import get_db
 from app.deps import get_current_user, require_news_manager
-from app.models import Institution, News, NewsTranslation, NewsVote, Program, User
+from app.models import News, NewsTranslation, NewsVote, User
 from app.poll import poll_options_from_news
 from app.rate_limit import enforce_create_cooldown
 from app.push import send_news_pushes
@@ -92,18 +93,19 @@ def news_out(
 
 @router.get("", response_model=list[NewsOut])
 def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rules = visible_to(
-        News,
-        user.program.institution_id,
-        user.program_id,
-        year_of_study(user.enrollment_year),
-    )
+    rules = visible_to_institution(News, user.program.institution_id)
     news_items = db.scalars(
         select(News)
         .options(selectinload(News.translations))
         .where(News.is_published, *rules)
         .order_by(News.created_at.desc(), News.published_at.desc(), News.id.desc())
     ).all()
+    year = year_of_study(user.enrollment_year)
+    news_items = [
+        item
+        for item in news_items
+        if matches_audience(item, user.program.institution_id, user.program_id, user.program.slug, year)
+    ]
     news_ids = [item.id for item in news_items]
     counts_by_news: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
     yours_by_news: dict[int, int] = {}
@@ -147,22 +149,14 @@ def list_managed_news(
     news_items = db.scalars(
         query.order_by(News.created_at.desc(), News.id.desc())
     ).all()
-    return [_created_out(item, viewer=user) for item in news_items]
+    return [_created_out(item, db, viewer=user) for item in news_items]
 
 
-def _resolve_program(data: NewsCreate, db: Session):
-    if data.institution is None and data.program is None:
-        return None
-    if data.institution is None or data.program is None:
-        raise HTTPException(422, "institution and program must be provided together")
-    program = db.scalar(
-        select(Program)
-        .join(Institution)
-        .where(Institution.slug == data.institution, Program.slug == data.program)
+def _resolve_audience(data: NewsCreate, db: Session, user: User):
+    institution, programs, years, legacy = constrain_moderator_audience(
+        user, db, data.institution, data.programs, data.years, data.program
     )
-    if program is None:
-        raise HTTPException(404, "Unknown institution or program")
-    return program
+    return resolve_audience(db, institution, programs, years, legacy)
 
 
 def _ensure_can_manage(news: News, user: User) -> None:
@@ -185,12 +179,17 @@ def _translation_row(item) -> NewsTranslation:
     )
 
 
-def _created_out(news: News, viewer: User | None = None) -> NewsOut:
+def _created_out(news: News, db: Session, viewer: User | None = None) -> NewsOut:
+    institution_slug, programs, years = audience_fields(news, db)
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
         created_at=_as_utc(news.created_at or news.published_at),
         author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
+        institution=institution_slug,
+        program=programs[0] if programs else None,
+        programs=programs,
+        years=years,
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, item.lang),
@@ -217,19 +216,25 @@ def create_news(
     db: Session = Depends(get_db),
 ):
     enforce_create_cooldown(db, user, News)
-    program = _resolve_program(data, db)
-
-    if data.year_min is not None and data.year_max is not None and data.year_min > data.year_max:
-        raise HTTPException(422, "year_min cannot exceed year_max")
+    (
+        institution_id,
+        program_id,
+        program_slugs,
+        year_list,
+        year_min,
+        year_max,
+    ) = _resolve_audience(data, db, user)
 
     news = News(
         is_published=data.is_published,
         created_at=datetime.now(timezone.utc),
         published_at=datetime.now(timezone.utc) if data.is_published else None,
-        institution_id=program.institution_id if program else None,
-        program_id=program.id if program else None,
-        year_min=data.year_min,
-        year_max=data.year_max,
+        institution_id=institution_id,
+        program_id=program_id,
+        program_slugs=program_slugs,
+        year_list=year_list,
+        year_min=year_min,
+        year_max=year_max,
         author_id=user.id,
         translations=[_translation_row(item) for item in data.translations],
     )
@@ -238,7 +243,7 @@ def create_news(
     db.refresh(news)
     if news.is_published:
         background_tasks.add_task(send_news_pushes, news.id)
-    return _created_out(news, viewer=user)
+    return _created_out(news, db, viewer=user)
 
 
 @router.patch("/{news_id}", response_model=NewsOut)
@@ -256,25 +261,31 @@ def update_news(
         raise HTTPException(404, "Not found")
     _ensure_can_manage(news, user)
 
-    if data.year_min is not None and data.year_max is not None and data.year_min > data.year_max:
-        raise HTTPException(422, "year_min cannot exceed year_max")
-
-    program = _resolve_program(data, db)
+    (
+        institution_id,
+        program_id,
+        program_slugs,
+        year_list,
+        year_min,
+        year_max,
+    ) = _resolve_audience(data, db, user)
     was_published = news.is_published
     news.is_published = data.is_published
     if data.is_published and news.published_at is None:
         news.published_at = datetime.now(timezone.utc)
-    news.institution_id = program.institution_id if program else None
-    news.program_id = program.id if program else None
-    news.year_min = data.year_min
-    news.year_max = data.year_max
+    news.institution_id = institution_id
+    news.program_id = program_id
+    news.program_slugs = program_slugs
+    news.year_list = year_list
+    news.year_min = year_min
+    news.year_max = year_max
     news.translations.clear()
     news.translations.extend(_translation_row(item) for item in data.translations)
     db.commit()
     db.refresh(news)
     if data.is_published and not was_published:
         background_tasks.add_task(send_news_pushes, news.id)
-    return _created_out(news, viewer=user)
+    return _created_out(news, db, viewer=user)
 
 
 @router.delete("/{news_id}", status_code=204)
@@ -292,18 +303,16 @@ def delete_news(
 
 
 def _visible_news(news_id: int, user: User, db: Session) -> News:
-    rules = visible_to(
-        News,
-        user.program.institution_id,
-        user.program_id,
-        year_of_study(user.enrollment_year),
-    )
+    rules = visible_to_institution(News, user.program.institution_id)
     news = db.scalar(
         select(News)
         .options(selectinload(News.translations))
         .where(News.id == news_id, News.is_published, *rules)
     )
-    if news is None:
+    year = year_of_study(user.enrollment_year)
+    if news is None or not matches_audience(
+        news, user.program.institution_id, user.program_id, user.program.slug, year
+    ):
         raise HTTPException(404, "Not found")
     return news
 
