@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, Switch, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import support from 'unimate-docs/support.json';
+
 import { HalfSheet } from '@/components/half-sheet';
 import { useReload } from '@/components/reload-button';
 import { StudyFields, useStudySelection } from '@/components/study-picker';
@@ -26,7 +28,7 @@ const THEME_IDS = [
   { id: 'dark', icon: 'moon-outline' },
 ];
 
-const FEEDBACK_EMAIL = 'unimate.app@proton.me';
+const FEEDBACK_EMAIL = support.email;
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -582,7 +584,9 @@ export default function SettingsScreen() {
         title={t('contactSupport')}
         onClose={() => setSupportOpen(false)}>
         <ThemedView className="gap-three bg-transparent">
-          <ThemedText themeColor="textSecondary">{t('contactSupportBody')}</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            {support.intro?.[0] ?? t('contactSupportBody')}
+          </ThemedText>
           <ThemedText type="smallBold" selectable>
             {FEEDBACK_EMAIL}
           </ThemedText>

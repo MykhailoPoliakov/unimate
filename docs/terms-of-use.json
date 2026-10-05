@@ -1,0 +1,35 @@
+{
+  "title": "Terms of use",
+  "updated": "Last updated 6 October 2026",
+  "intro": [
+    "By using UniMate you agree to these terms. UniMate is an independent student app. It is not an official product of your university."
+  ],
+  "sections": [
+    {
+      "title": "What UniMate provides",
+      "paragraphs": [
+        "UniMate helps you find campus services, social links, and student news for the university and program you choose. Course content, timetables, and mail stay on university or Microsoft systems. UniMate is not responsible for those sites."
+      ]
+    },
+    {
+      "title": "Your account",
+      "paragraphs": [
+        "Your profile is tied to this install. You agree not to misuse the app or try to access another student's account. Polls and other actions are linked to your account id."
+      ]
+    },
+    {
+      "title": "Acceptable use",
+      "items": [
+        "Do not spam, scrape, or try to break the service.",
+        "Do not post unlawful or harmful content if you have a publisher role.",
+        "Do not impersonate another student, moderator, or admin."
+      ]
+    },
+    {
+      "title": "Changes",
+      "paragraphs": [
+        "We may update these terms. The date at the top of this page will change when we do."
+      ]
+    }
+  ]
+}

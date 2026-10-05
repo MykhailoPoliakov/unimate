@@ -1,0 +1,64 @@
+{
+  "title": "Privacy policy",
+  "updated": "Last updated 6 October 2026",
+  "intro": [
+    "UniMate is a student app for campus links, socials, and news. This policy explains what we collect and why. It is the privacy policy URL for the UniMate app on the App Store."
+  ],
+  "sections": [
+    {
+      "title": "Who we are",
+      "paragraphs": [
+        "UniMate is an independent student app. It is not an official product of your university. For privacy questions, email unimate.app@proton.me."
+      ]
+    },
+    {
+      "title": "Information we collect",
+      "items": [
+        "Device identifier. UniMate stores a device id on this install so we can create and recognise your student profile.",
+        "Study profile. University, program, year of study, and language that you choose in the app.",
+        "Role. Student, moderator, or admin, as set on the UniMate server for your account id.",
+        "Push notifications. If you allow notifications, we store a push token so we can send news alerts to this device.",
+        "Local links. Extra Home links you add yourself stay on this device (local storage). They are not uploaded as part of your server profile.",
+        "News images. Moderators and admins may attach a photo when publishing news. That image is stored so other students can see the post."
+      ],
+      "paragraphs": [
+        "We do not read your mailbox, campus timetable, or Microsoft account."
+      ]
+    },
+    {
+      "title": "How we use it",
+      "items": [
+        "Show Home buttons, social links, and news for your university and program.",
+        "Remember your language and notification preferences.",
+        "Let moderators and admins publish content for the audiences they manage."
+      ],
+      "paragraphs": [
+        "We do not sell your personal information."
+      ]
+    },
+    {
+      "title": "Third-party sites",
+      "paragraphs": [
+        "Home buttons and social links can open university websites, Canvas, email, or other services. Those sites have their own privacy policies. UniMate is not responsible for what they collect."
+      ]
+    },
+    {
+      "title": "Retention and your choices",
+      "paragraphs": [
+        "You can change university, year, and language in Menu. To ask us to delete server-side profile data tied to your account id, email unimate.app@proton.me and include the id shown at the bottom of Menu."
+      ]
+    },
+    {
+      "title": "Children",
+      "paragraphs": [
+        "UniMate is made for higher-education students. It is not directed at children under 13, and we do not knowingly collect personal information from children under 13."
+      ]
+    },
+    {
+      "title": "Changes",
+      "paragraphs": [
+        "If this policy changes, we will update this page and the date above."
+      ]
+    }
+  ]
+}

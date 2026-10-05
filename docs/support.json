@@ -1,0 +1,31 @@
+{
+  "title": "Support",
+  "email": "unimate.app@proton.me",
+  "intro": [
+    "Questions or a problem? Write to us and we will get back to you."
+  ],
+  "sections": [
+    {
+      "title": "Contact",
+      "paragraphs": [
+        "Email unimate.app@proton.me.",
+        "In the app, open Menu and tap Contact support. Please include the id shown at the bottom of Menu so we can find your account."
+      ]
+    },
+    {
+      "title": "What UniMate is",
+      "paragraphs": [
+        "UniMate helps students find campus services, social links, and news for their university and program. It is an independent student app, not an official university product.",
+        "Course content, timetables, and mail stay on university or Microsoft systems. If a campus site is down, contact that service directly."
+      ]
+    },
+    {
+      "title": "Common help",
+      "items": [
+        "Wrong university or year: open Menu and update Studies, then save.",
+        "Notifications: enable them in Menu if you want news alerts.",
+        "Privacy and data: see the privacy policy."
+      ]
+    }
+  ]
+}

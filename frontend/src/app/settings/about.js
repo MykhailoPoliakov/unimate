@@ -1,21 +1,22 @@
 import Constants from 'expo-constants';
 
+import about from 'unimate-docs/about.json';
+
 import { LegalDocument } from '@/components/legal-document';
 import { ThemedText } from '@/components/themed-text';
-import { useI18n } from '@/hooks/use-i18n';
 
 export default function AboutScreen() {
-  const { t } = useI18n();
+  const version = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
-    <LegalDocument>
+    <LegalDocument
+      document={{
+        ...about,
+        updated: `Version ${version}`,
+      }}>
       <ThemedText type="subtitle" themeColor="primary">
-        UniMate
+        {about.name}
       </ThemedText>
-      <ThemedText themeColor="textSecondary">
-        {t('version')} {Constants.expoConfig?.version ?? '1.0.0'}
-      </ThemedText>
-      <ThemedText>{t('aboutBody')}</ThemedText>
     </LegalDocument>
   );
 }

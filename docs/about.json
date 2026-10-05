@@ -1,0 +1,18 @@
+{
+  "title": "About UniMate",
+  "name": "UniMate",
+  "updated": "Version 1.0.0",
+  "intro": [
+    "UniMate is a central point for students to find study information. It supports multiple universities and languages."
+  ],
+  "sections": [
+    {
+      "title": "What you can do",
+      "items": [
+        "See campus services and personal links on Home.",
+        "Open official social accounts for your university.",
+        "Read news and polls aimed at your program and year."
+      ]
+    }
+  ]
+}
