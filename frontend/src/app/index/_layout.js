@@ -11,8 +11,7 @@ export default function HomeLayout() {
     <Stack
       screenOptions={{
         headerTintColor: theme.primary,
-        headerTransparent: true,
-        headerStyle: { backgroundColor: 'transparent' },
+        headerStyle: { backgroundColor: theme.background },
         headerTitleStyle: { color: theme.text },
         headerBackButtonDisplayMode: 'minimal',
         headerShadowVisible: false,

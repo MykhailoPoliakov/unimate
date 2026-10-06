@@ -1,19 +1,16 @@
 import { Fragment } from 'react';
 import { ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
 export function LegalDocument({ children, document }) {
-  const insets = useSafeAreaInsets();
-
   return (
     <ThemedView className="flex-1">
       <ScrollView
         className="flex-1"
-        contentContainerClassName="px-four gap-three pb-bottom-tab-gap max-w-content self-center w-full"
-        contentContainerStyle={{ paddingTop: (insets.top || 59) + 52, paddingBottom: 40 }}
+        contentContainerClassName="px-four py-four gap-three pb-bottom-tab-gap max-w-content self-center w-full"
+        contentContainerStyle={{ paddingBottom: 40 }}
         alwaysBounceVertical>
         {children}
         {document ? <LegalSections document={document} /> : null}
