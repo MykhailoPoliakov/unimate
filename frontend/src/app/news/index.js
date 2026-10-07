@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
+import { useCallback, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,21 +20,25 @@ export default function NewsScreen() {
   const { t } = useI18n();
   const router = useRouter();
   const { profile, refreshUser } = useProfile();
-  const { posts, removePost, refresh, markNewsRead } = useFeed();
+  const { posts, removePost, refresh, markNewsBadgeSeen } = useFeed();
+  const pathname = usePathname();
   const canManageNews = ['admin', 'moderator'].includes(profile?.role);
 
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        void markNewsRead();
-      };
-    }, [markNewsRead])
+      void markNewsBadgeSeen();
+    }, [markNewsBadgeSeen])
   );
+
+  useEffect(() => {
+    if (pathname === '/news') void markNewsBadgeSeen();
+  }, [pathname, markNewsBadgeSeen]);
 
   const { refreshing: isRefreshing, reload: handleRefresh } = useReload(async () => {
     try {
       await refreshUser();
       await refresh();
+      await markNewsBadgeSeen();
     } catch {
       // Keep the current list if the API is unreachable.
     }

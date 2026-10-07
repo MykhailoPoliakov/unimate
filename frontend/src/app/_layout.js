@@ -1,8 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import '@/global.css';
 import '@/nativewind-interop';
@@ -19,6 +20,10 @@ import { ThemePreferenceProvider, useThemePreference } from '@/hooks/use-theme-p
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
+
+if (Platform.OS !== 'web') {
+  ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+}
 
 function navigationTheme(scheme) {
   const dark = scheme === 'dark';

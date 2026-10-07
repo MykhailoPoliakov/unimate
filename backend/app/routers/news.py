@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from collections import defaultdict
 from typing import Any, cast
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -15,7 +15,7 @@ from app.deps import get_current_user, require_news_manager
 from app.models import News, NewsTranslation, NewsVote, User
 from app.poll import poll_options_from_news
 from app.rate_limit import enforce_create_cooldown
-from app.push import send_news_pushes
+from app.push import schedule_news_pushes
 from app.schemas import Language, NewsCreate, NewsOut, NewsPollOut, NewsTranslationOut, NewsVoteIn
 
 router = APIRouter(prefix="/news", tags=["news"])
@@ -211,7 +211,6 @@ def _created_out(news: News, db: Session, viewer: User | None = None) -> NewsOut
 @router.post("", response_model=NewsOut, status_code=201)
 def create_news(
     data: NewsCreate,
-    background_tasks: BackgroundTasks,
     user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
@@ -242,7 +241,7 @@ def create_news(
     db.commit()
     db.refresh(news)
     if news.is_published:
-        background_tasks.add_task(send_news_pushes, news.id)
+        schedule_news_pushes(news.id)
     return _created_out(news, db, viewer=user)
 
 
@@ -250,7 +249,6 @@ def create_news(
 def update_news(
     news_id: int,
     data: NewsCreate,
-    background_tasks: BackgroundTasks,
     user: User = Depends(require_news_manager),
     db: Session = Depends(get_db),
 ):
@@ -284,7 +282,7 @@ def update_news(
     db.commit()
     db.refresh(news)
     if data.is_published and not was_published:
-        background_tasks.add_task(send_news_pushes, news.id)
+        schedule_news_pushes(news.id)
     return _created_out(news, db, viewer=user)
 
 

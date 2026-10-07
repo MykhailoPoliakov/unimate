@@ -11,7 +11,10 @@
     "backgroundColor": "#E4E1DB",
     "ios": {
       "icon": "./assets/expo.icon",
+      "requireFullScreen": true,
       "infoPlist": {
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait"],
         "UIBackgroundModes": ["remote-notification"],
         "LSApplicationQueriesSchemes": [
           "instagram",
@@ -54,6 +57,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT_UP"
+        }
+      ],
       [
         "expo-splash-screen",
         {

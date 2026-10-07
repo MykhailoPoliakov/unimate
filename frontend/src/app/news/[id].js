@@ -1,4 +1,5 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -13,9 +14,15 @@ import { useI18n } from '@/hooks/use-i18n';
 export default function NewsDetailScreen() {
   const { id } = useLocalSearchParams();
   const { t, language } = useI18n();
-  const { posts } = useFeed();
+  const { posts, markNewsItemRead } = useFeed();
   const post = posts.find((item) => String(item.id) === String(id));
   const created = formatNewsTime(post?.createdAt, language);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (id) void markNewsItemRead(id);
+    }, [id, markNewsItemRead])
+  );
 
   return (
     <ThemedView className="flex-1">
@@ -45,7 +52,7 @@ export default function NewsDetailScreen() {
             {post.body ? <ThemedText themeColor="textSecondary">{post.body}</ThemedText> : null}
             {post.options?.length ? <PollChoices post={post} /> : null}
             {post.linkUrl ? (
-              <ExternalLink href={post.linkUrl}>
+              <ExternalLink href={post.linkUrl} onPress={() => markNewsItemRead(post.id)}>
                 <ThemedText type="small" themeColor="primary">
                   {post.linkLabel || t('openLink')}
                 </ThemedText>

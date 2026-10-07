@@ -23,16 +23,19 @@ export function glassShadow(theme) {
   };
 }
 
-export function GlassCard({ children, style, contentClassName }) {
+export function GlassCard({ children, style, contentClassName, solid = false }) {
   const theme = useTheme();
   const frame = [
     styles.frame,
     glassShadow(theme),
-    { borderColor: theme.glassBorder, backgroundColor: theme.glass },
+    {
+      borderColor: solid ? theme.border : theme.glassBorder,
+      backgroundColor: solid ? theme.backgroundElement : theme.glass,
+    },
     style,
   ];
 
-  if (GlassView && isLiquidGlassAvailable()) {
+  if (!solid && GlassView && isLiquidGlassAvailable()) {
     return (
       <GlassView glassEffectStyle="regular" style={frame}>
         {children}

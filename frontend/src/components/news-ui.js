@@ -184,24 +184,40 @@ export function PollChoices({ post }) {
 export function PostCard({ post, onOpen, onEdit, onDelete }) {
   const theme = useTheme();
   const { t, language } = useI18n();
+  const { isNewsUnread, markNewsItemRead } = useFeed();
+  const unread = isNewsUnread(post);
   const created = formatNewsTime(post.createdAt, language);
 
   return (
-    <GlassCard>
+    <GlassCard
+      solid
+      style={{
+        backgroundColor: unread ? theme.backgroundElement : theme.cardMuted,
+        borderColor: unread ? theme.border : theme.background,
+      }}>
       <PressScale onPress={() => onOpen(post)}>
         <NewsImage uri={post.imageUrl} />
         <ThemedView className="gap-one px-three pt-three pb-two bg-transparent">
-          <ThemedText type="default" className="text-[22px] font-semibold leading-7">
+          <ThemedText
+            type="default"
+            className="text-[22px] leading-7"
+            style={{
+              fontWeight: unread ? '700' : '500',
+              color: unread ? theme.text : theme.textSecondary,
+            }}>
             {post.title}
           </ThemedText>
           {post.body ? (
-            <ThemedText themeColor="textSecondary" numberOfLines={3}>
+            <ThemedText
+              themeColor="textSecondary"
+              numberOfLines={3}
+              style={{ opacity: unread ? 1 : 0.78 }}>
               {post.body}
             </ThemedText>
           ) : null}
           <ThemedView className="flex-row items-center justify-between bg-transparent mt-half">
             {post.linkUrl ? (
-              <ExternalLink href={post.linkUrl}>
+              <ExternalLink href={post.linkUrl} onPress={() => markNewsItemRead(post.id)}>
                 <ThemedText type="small" themeColor="primary">
                   {t('openLink')}
                 </ThemedText>
@@ -211,12 +227,12 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
             )}
             <ThemedView className="items-end bg-transparent">
               {created ? (
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.55 }}>
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: unread ? 0.8 : 0.55 }}>
                   {created}
                 </ThemedText>
               ) : null}
               {post.authorId ? (
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.55 }}>
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: unread ? 0.8 : 0.55 }}>
                   {t('postedBy', { id: post.authorId })}
                 </ThemedText>
               ) : null}

@@ -11,7 +11,7 @@ if not TEST_DATABASE_URL:
     raise RuntimeError("Set TEST_DATABASE_URL to a dedicated PostgreSQL test database")
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import Base
@@ -46,6 +46,9 @@ class ModeratorPermissionTests(unittest.TestCase):
         self.moderator = self._user(program, "moderator")
         self.other_moderator = self._user(program, "moderator")
         self.db.commit()
+        self.push_patch = patch("app.routers.news.schedule_news_pushes")
+        self.schedule_pushes = self.push_patch.start()
+        self.addCleanup(self.push_patch.stop)
 
     def tearDown(self):
         self.db.close()
@@ -72,11 +75,8 @@ class ModeratorPermissionTests(unittest.TestCase):
         )
 
     def test_moderator_can_manage_only_news_they_authored(self):
-        background_tasks = BackgroundTasks()
-        created = create_news(
-            self._news_data(), background_tasks, self.moderator, self.db
-        )
-        self.assertEqual(len(background_tasks.tasks), 1)
+        created = create_news(self._news_data(), self.moderator, self.db)
+        self.schedule_pushes.assert_called_once_with(created.id)
         stored = self.db.get(News, created.id)
         self.assertEqual(stored.author_id, self.moderator.id)
         self.assertEqual(created.created_at.utcoffset().total_seconds(), 0)
@@ -87,7 +87,6 @@ class ModeratorPermissionTests(unittest.TestCase):
         updated = update_news(
             created.id,
             self._news_data("Updated by author"),
-            BackgroundTasks(),
             self.moderator,
             self.db,
         )
@@ -97,7 +96,6 @@ class ModeratorPermissionTests(unittest.TestCase):
             update_news(
                 created.id,
                 self._news_data(),
-                BackgroundTasks(),
                 self.other_moderator,
                 self.db,
             )
@@ -111,9 +109,7 @@ class ModeratorPermissionTests(unittest.TestCase):
         self.assertIsNone(self.db.get(News, created.id))
 
     def test_admin_can_manage_all_news_and_grant_roles(self):
-        created = create_news(
-            self._news_data(), BackgroundTasks(), self.moderator, self.db
-        )
+        created = create_news(self._news_data(), self.moderator, self.db)
         self.assertEqual(len(list_managed_news(self.admin, self.db)), 1)
 
         updated_user = update_user_role(
@@ -132,16 +128,16 @@ class ModeratorPermissionTests(unittest.TestCase):
         delete_news(created.id, self.admin, self.db)
 
     def test_moderator_news_create_is_rate_limited(self):
-        create_news(self._news_data("First"), BackgroundTasks(), self.moderator, self.db)
+        create_news(self._news_data("First"), self.moderator, self.db)
         with self.assertRaises(HTTPException) as error:
-            create_news(self._news_data("Second"), BackgroundTasks(), self.moderator, self.db)
+            create_news(self._news_data("Second"), self.moderator, self.db)
         self.assertEqual(error.exception.status_code, 429)
         self.assertEqual(error.exception.detail["code"], "cooldown")
-        create_news(self._news_data("Admin first"), BackgroundTasks(), self.admin, self.db)
-        create_news(self._news_data("Admin second"), BackgroundTasks(), self.admin, self.db)
+        create_news(self._news_data("Admin first"), self.admin, self.db)
+        create_news(self._news_data("Admin second"), self.admin, self.db)
 
     def test_only_admin_sees_news_author(self):
-        create_news(self._news_data(), BackgroundTasks(), self.moderator, self.db)
+        create_news(self._news_data(), self.moderator, self.db)
         student = self._user(self.db.get(Program, self.moderator.program_id), "student")
         public = list_news(student, self.db)
         self.assertTrue(public)

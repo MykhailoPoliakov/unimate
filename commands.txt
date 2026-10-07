@@ -1,27 +1,91 @@
-start local PostgreSQL:
+UniMate command cheat sheet
+===========================
+Run Compose from the repo root (the folder with docker-compose.yml).
+Services: db (Postgres), backend (FastAPI on container port 8000).
+On the Droplet the API is only on localhost:8001; Caddy serves https://api.unimate.be.
+
+
+LOCAL (laptop)
+--------------
+
+Start Postgres:
     docker compose up -d db
 
-set backend DATABASE_URL to the PostgreSQL connection in .env, then:
-    cd backend
+First-time backend (from backend/ with venv on):
     python -m app.seed
-    (drops and recreates all configured tables, then seeds institution data)
+        Wipes ALL tables then loads seed data. Use once on an empty DB.
     python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+        API at http://127.0.0.1:8000   docs at http://127.0.0.1:8000/docs
 
-backend url:
-    http://127.0.0.1:8000
+Or run API in Docker too (port 8001 on the host):
+    docker compose up -d --build
+    curl http://127.0.0.1:8001/health
 
-open database shell:
+Database shell:
     docker compose exec db psql -U unimate -d unimate
 
-add admin:
+Grant yourself admin (copy UUID from Menu at the bottom of the app):
+    python -m app.admin list
     python -m app.admin grant USER_ID_HERE
-
-remove admin:
     python -m app.admin revoke USER_ID_HERE
 
-list users:
-    python -m app.admin list
+Frontend:
+    cd frontend
+    npm install
+    npx expo start
+        Scan QR with Expo Go. Leave EXPO_PUBLIC_API_URL unset so the phone
+        hits this Mac on port 8001, or set it in frontend/.env for a fixed URL.
 
-launch frontend:
-    cd frontend; npx expo start
-    
+iOS / Android / web shortcuts:
+    npm run ios
+    npm run android
+    npm run web
+
+
+DROPLET (api.unimate.be)
+------------------------
+SSH in, then:  cd unimate
+
+See if containers are up:
+    sudo docker compose ps
+    curl http://127.0.0.1:8001/health
+        Expect {"status":"ok"}
+
+Update backend after git push:
+    git pull
+    sudo docker compose up -d --build
+        Rebuilds the image and restarts. Does not wipe the database.
+
+Logs:
+    sudo docker compose logs -f backend
+    sudo docker compose logs -f db
+
+Admin (same CLI, inside the container):
+    sudo docker compose exec backend python -m app.admin list
+    sudo docker compose exec backend python -m app.admin grant USER_ID_HERE
+    sudo docker compose exec backend python -m app.admin revoke USER_ID_HERE
+        Then pull-to-refresh Menu in the app.
+
+Caddy (HTTPS in front of localhost:8001):
+    sudo caddy validate --config /etc/caddy/Caddyfile
+    sudo systemctl reload caddy
+    curl --fail https://api.unimate.be/health
+
+From your Mac, DNS check:
+    dig +short api.unimate.be
+
+
+STORE BUILD
+-----------
+Production URL is baked into the binary. Set in Expo EAS production env:
+    EXPO_PUBLIC_API_URL=https://api.unimate.be
+Then from frontend/:
+    npx eas-cli@latest build --platform ios --profile production --environment production
+Do not put that URL in local frontend/.env (that is for Expo Go on the laptop).
+
+
+DO NOT
+------
+    python -m app.seed                 on a live DB (destroys users, news, votes)
+    docker compose down -v             deletes the Postgres volume
+    open port 8001 on the Droplet      Caddy on 80/443 is the public entry

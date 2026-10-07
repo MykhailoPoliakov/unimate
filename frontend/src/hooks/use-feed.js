@@ -16,13 +16,47 @@ const FeedContext = createContext({
   unreadNewsCount: 0,
   inAppNewsEnabled: true,
   refresh: async () => {},
-  markNewsRead: async () => {},
+  isNewsUnread: () => false,
+  markNewsItemRead: async () => {},
+  markNewsBadgeSeen: async () => {},
   setInAppNewsEnabled: async () => {},
   addPost: async () => {},
   editPost: async () => {},
   removePost: async () => {},
   applyPoll: () => {},
 });
+
+function newsIdKey(id) {
+  return String(id);
+}
+
+function readIdList(preferences) {
+  const ids = preferences?.readIds;
+  if (!Array.isArray(ids)) return [];
+  return ids.map(newsIdKey);
+}
+
+function postCreatedAt(post) {
+  const createdAt = Date.parse(post?.createdAt ?? '');
+  return Number.isFinite(createdAt) ? createdAt : null;
+}
+
+function isVisuallyUnread(post, preferences) {
+  if (!post?.isPublished || post.id == null) return false;
+  if (readIdList(preferences).includes(newsIdKey(post.id))) return false;
+  const createdAt = postCreatedAt(post);
+  if (createdAt == null) return false;
+  const baseline = preferences?.seenBaseline ?? preferences?.lastReadAt;
+  if (Number.isFinite(baseline) && createdAt <= baseline) return false;
+  return true;
+}
+
+function isBadgeUnread(post, preferences) {
+  if (!post?.isPublished) return false;
+  const createdAt = postCreatedAt(post);
+  if (createdAt == null) return false;
+  return createdAt > (preferences?.lastReadAt ?? Date.now());
+}
 
 function imageFromTranslation(translation) {
   const block = (translation.blocks ?? []).find((item) => item?.type === 'image' && item.url);
@@ -67,19 +101,24 @@ function newsPayload(profile, data) {
   const excerpt = data.audience?.trim() || null;
   const shortUrl = image && image.length <= 500 && !image.startsWith('data:') ? image : null;
   const linkUrl = data.linkUrl?.trim() ? normalizeUrl(data.linkUrl) : null;
-  const translation = {
-    lang: language,
+  const base = {
     title: data.title.trim(),
     body: fullBody,
     excerpt,
-    hero_image_url: shortUrl,
     hero_image_alt: image ? data.title.trim() : null,
     cta_url: linkUrl,
     cta_label: data.linkLabel?.trim() || (linkUrl ? 'Open link' : null),
     tags,
-    blocks: image ? [{ type: 'image', url: image, caption: data.title.trim() }] : [],
   };
-  const translations = LANGUAGES.map((item) => ({ ...translation, lang: item.id }));
+  const translations = LANGUAGES.map((item) => {
+    const imageForLang = item.id === language ? image : shortUrl;
+    return {
+      ...base,
+      lang: item.id,
+      hero_image_url: shortUrl,
+      blocks: imageForLang ? [{ type: 'image', url: imageForLang, caption: data.title.trim() }] : [],
+    };
+  });
   const programs = data.programs ?? (data.program ? [data.program] : []);
   const years = data.years ?? [];
   const targeted = Boolean(data.institution && programs.length && years.length);
@@ -92,12 +131,44 @@ function newsPayload(profile, data) {
   };
 }
 
+function sortPosts(items) {
+  return [...items].sort(
+    (first, second) => new Date(second.createdAt ?? 0) - new Date(first.createdAt ?? 0)
+  );
+}
+
+function localPostFromInput(profile, data, id) {
+  const linkUrl = data.linkUrl?.trim() ? normalizeUrl(data.linkUrl) : '';
+  return {
+    id,
+    title: data.title.trim(),
+    body: data.body ?? '',
+    options: data.options ?? [],
+    imageUrl: data.imageUrl ?? '',
+    tags: data.tags ?? [],
+    audience: data.audience ?? '',
+    lang: profile?.language,
+    isPublished: true,
+    poll: null,
+    linkUrl,
+    linkLabel: data.linkLabel?.trim() || (linkUrl ? 'Open link' : ''),
+    createdAt: new Date().toISOString(),
+    authorId: profile?.userId ?? null,
+    canManage: true,
+    institution: data.institution ?? null,
+    programs: data.programs ?? [],
+    years: data.years ?? [],
+  };
+}
+
 export function FeedProvider({ children }) {
   const { profile } = useProfile();
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newsNotificationPreferences, setNewsNotificationPreferences] = useState({});
   const newsNotificationPreferencesRef = useRef(newsNotificationPreferences);
+  const postsRef = useRef(posts);
+  postsRef.current = posts;
 
   useEffect(() => {
     const userId = profile?.userId;
@@ -114,10 +185,22 @@ export function FeedProvider({ children }) {
       }
 
       const existing = preferences[userId];
-      if (!existing || typeof existing.enabled !== 'boolean' || !Number.isFinite(existing.lastReadAt)) {
+      const lastReadAt = Number.isFinite(existing?.lastReadAt) ? existing.lastReadAt : Date.now();
+      const seenBaseline = Number.isFinite(existing?.seenBaseline) ? existing.seenBaseline : lastReadAt;
+      if (
+        !existing ||
+        typeof existing.enabled !== 'boolean' ||
+        !Number.isFinite(existing.lastReadAt) ||
+        !Number.isFinite(existing.seenBaseline)
+      ) {
         preferences = {
           ...preferences,
-          [userId]: { enabled: true, lastReadAt: Date.now() },
+          [userId]: {
+            enabled: existing?.enabled ?? true,
+            lastReadAt,
+            seenBaseline,
+            readIds: readIdList(existing),
+          },
         };
         await AsyncStorage.setItem(NEWS_NOTIFICATION_STORAGE_KEY, JSON.stringify(preferences)).catch(
           () => {}
@@ -139,7 +222,12 @@ export function FeedProvider({ children }) {
   const updateNewsNotificationPreferences = useCallback(async (userId, changes) => {
     if (!userId) return;
     const current = newsNotificationPreferencesRef.current;
-    const accountPreferences = current[userId] ?? { enabled: true, lastReadAt: Date.now() };
+    const accountPreferences = current[userId] ?? {
+      enabled: true,
+      lastReadAt: Date.now(),
+      seenBaseline: Date.now(),
+      readIds: [],
+    };
     const next = {
       ...current,
       [userId]: { ...accountPreferences, ...changes },
@@ -171,11 +259,7 @@ export function FeedProvider({ children }) {
         canManage: true,
       });
     }
-    setPosts(
-      [...postsById.values()].sort(
-        (first, second) => new Date(second.createdAt ?? 0) - new Date(first.createdAt ?? 0)
-      )
-    );
+    setPosts(sortPosts([...postsById.values()]));
   }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language, profile?.role]);
 
   useEffect(() => {
@@ -207,45 +291,87 @@ export function FeedProvider({ children }) {
     };
   }, [refresh]);
 
-  const markNewsRead = useCallback(
-    () => updateNewsNotificationPreferences(profile?.userId, { lastReadAt: Date.now() }),
-    [profile?.userId, updateNewsNotificationPreferences]
-  );
-
   const setInAppNewsEnabled = useCallback(
     (enabled) => updateNewsNotificationPreferences(profile?.userId, { enabled }),
     [profile?.userId, updateNewsNotificationPreferences]
   );
 
+  const markNewsItemRead = useCallback(
+    (id) => {
+      if (!profile?.userId || id == null || String(id).trim() === '') return;
+      const current = newsNotificationPreferencesRef.current[profile.userId] ?? {
+        enabled: true,
+        lastReadAt: Date.now(),
+        seenBaseline: Date.now(),
+        readIds: [],
+      };
+      const key = newsIdKey(id);
+      const readIds = readIdList(current);
+      if (readIds.includes(key)) return;
+      return updateNewsNotificationPreferences(profile.userId, { readIds: [...readIds, key] });
+    },
+    [profile?.userId, updateNewsNotificationPreferences]
+  );
+
+  const markNewsBadgeSeen = useCallback(() => {
+    const latestPostAt = postsRef.current.reduce((latest, post) => {
+      const createdAt = postCreatedAt(post);
+      return createdAt != null && createdAt > latest ? createdAt : latest;
+    }, 0);
+    return updateNewsNotificationPreferences(profile?.userId, {
+      lastReadAt: Math.max(Date.now(), latestPostAt),
+    });
+  }, [profile?.userId, updateNewsNotificationPreferences]);
+
+  const isNewsUnread = useCallback(
+    (post) => isVisuallyUnread(post, newsNotificationPreferences[profile?.userId]),
+    [newsNotificationPreferences, profile?.userId]
+  );
+
   const accountNotificationPreferences = newsNotificationPreferences[profile?.userId];
   const inAppNewsEnabled = accountNotificationPreferences?.enabled ?? true;
   const unreadNewsCount = inAppNewsEnabled
-    ? posts.filter((post) => {
-        const createdAt = Date.parse(post.createdAt ?? '');
-        return (
-          post.isPublished &&
-          Number.isFinite(createdAt) &&
-          createdAt > (accountNotificationPreferences?.lastReadAt ?? Date.now())
-        );
-      }).length
+    ? posts.filter((post) => isBadgeUnread(post, accountNotificationPreferences)).length
     : 0;
 
   const addPost = useCallback(
     async (data) => {
-      const created = await createNews(
-        profile.userId,
-        newsPayload(profile, data)
-      );
-      await refresh();
-      return toPost(created, profile?.language);
+      const tempId = `tmp-${Date.now()}`;
+      const optimistic = localPostFromInput(profile, data, tempId);
+      setPosts((current) => [optimistic, ...current.filter((item) => item.id !== tempId)]);
+      void markNewsItemRead(tempId);
+      try {
+        const created = await createNews(profile.userId, newsPayload(profile, data));
+        const post = { ...toPost(created, profile?.language), canManage: true };
+        setPosts((current) =>
+          sortPosts([post, ...current.filter((item) => item.id !== tempId && item.id !== post.id)])
+        );
+        void markNewsItemRead(post.id);
+        return post;
+      } catch (error) {
+        setPosts((current) => current.filter((item) => item.id !== tempId));
+        throw error;
+      }
     },
-    [profile, refresh]
+    [markNewsItemRead, profile]
   );
 
   const editPost = useCallback(
     async ({ id, ...data }) => {
-      await updateNews(profile.userId, id, newsPayload(profile, data));
-      await refresh();
+      const optimistic = localPostFromInput(profile, data, id);
+      setPosts((current) =>
+        current.map((item) => (item.id === id ? { ...item, ...optimistic, poll: item.poll } : item))
+      );
+      try {
+        const updated = await updateNews(profile.userId, id, newsPayload(profile, data));
+        const post = { ...toPost(updated, profile?.language), canManage: true };
+        setPosts((current) =>
+          current.map((item) => (item.id === post.id ? { ...item, ...post, poll: item.poll } : item))
+        );
+      } catch (error) {
+        refresh().catch(() => {});
+        throw error;
+      }
     },
     [profile, refresh]
   );
@@ -258,10 +384,23 @@ export function FeedProvider({ children }) {
 
   const removePost = useCallback(
     async (id) => {
-      await deleteNews(profile.userId, id);
-      await refresh();
+      let removed = null;
+      setPosts((current) => {
+        removed = current.find((item) => item.id === id) ?? null;
+        return current.filter((item) => item.id !== id);
+      });
+      try {
+        await deleteNews(profile.userId, id);
+      } catch (error) {
+        if (removed) {
+          setPosts((current) =>
+            current.some((item) => item.id === id) ? current : sortPosts([removed, ...current])
+          );
+        }
+        throw error;
+      }
     },
-    [profile?.userId, refresh]
+    [profile?.userId]
   );
 
   return (
@@ -272,7 +411,9 @@ export function FeedProvider({ children }) {
         unreadNewsCount,
         inAppNewsEnabled,
         refresh,
-        markNewsRead,
+        isNewsUnread,
+        markNewsItemRead,
+        markNewsBadgeSeen,
         setInAppNewsEnabled,
         addPost,
         editPost,

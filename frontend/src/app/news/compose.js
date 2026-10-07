@@ -10,6 +10,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NewsImage } from '@/components/news-ui';
 import { ThemedText } from '@/components/themed-text';
@@ -24,6 +25,7 @@ import { moderatorScope, withinModeratorInstitutions, withinModeratorPrograms, w
 
 export default function NewsComposeScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useI18n();
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -42,7 +44,7 @@ export default function NewsComposeScreen() {
   const [institutionSlug, setInstitutionSlug] = useState(post?.institution ?? null);
   const [programSlugs, setProgramSlugs] = useState(post?.programs ?? []);
   const [selectedYears, setSelectedYears] = useState(post?.years ?? []);
-  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const filledFrom = useRef(post?.id ?? null);
 
   useEffect(() => {
@@ -65,9 +67,10 @@ export default function NewsComposeScreen() {
   const pollOn = options.length > 0;
   const filledOptions = options.map((item) => item.trim()).filter(Boolean);
   const pollValid = !pollOn || filledOptions.length >= 2;
+  const targetingEveryone = canTargetEveryone && everyone;
   const targetingValid =
-    everyone || (!!institutionSlug && programSlugs.length > 0 && selectedYears.length > 0);
-  const canSave = title.trim().length > 0 && pollValid && targetingValid && !isSaving;
+    targetingEveryone || (!!institutionSlug && programSlugs.length > 0 && selectedYears.length > 0);
+  const canSave = title.trim().length > 0 && pollValid && targetingValid;
   const isEdit = !!post;
   const selectedInstitution = institutions.find((item) => item.slug === institutionSlug);
   const selectedPrograms = programs.filter((item) => programSlugs.includes(item.slug));
@@ -84,11 +87,18 @@ export default function NewsComposeScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    const local = withinModeratorInstitutions(mergeInstitutions([]), scope);
-    setInstitutions(local);
+    const apply = (rows) => {
+      const next = withinModeratorInstitutions(mergeInstitutions(rows), scope);
+      setInstitutions(next);
+      setInstitutionSlug((current) => {
+        if (current && next.some((item) => item.slug === current)) return current;
+        return next.length === 1 ? next[0].slug : null;
+      });
+    };
+    apply([]);
     listInstitutions()
       .then((items) => {
-        if (!cancelled) setInstitutions(withinModeratorInstitutions(mergeInstitutions(items), scope));
+        if (!cancelled) apply(items);
       })
       .catch(() => {});
     return () => {
@@ -101,19 +111,52 @@ export default function NewsComposeScreen() {
       setPrograms([]);
       return;
     }
-    const local = withinModeratorPrograms(mergePrograms(institutionSlug, []), scope);
-    setPrograms(local);
+    const apply = (rows) => {
+      const next = withinModeratorPrograms(mergePrograms(institutionSlug, rows), scope);
+      setPrograms(next);
+      setProgramSlugs((current) => {
+        const allowed = current.filter((slug) => next.some((item) => item.slug === slug));
+        if (allowed.length) {
+          if (allowed.length === current.length && allowed.every((slug, index) => slug === current[index])) {
+            return current;
+          }
+          return allowed;
+        }
+        if (next.length === 1 && current.length === 1 && current[0] === next[0].slug) return current;
+        return next.length === 1 ? [next[0].slug] : current.length ? [] : current;
+      });
+    };
+    apply([]);
     let cancelled = false;
     listPrograms(institutionSlug)
       .then((items) => {
         if (cancelled) return;
-        setPrograms(withinModeratorPrograms(mergePrograms(institutionSlug, items), scope));
+        apply(items);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [everyone, institutionSlug, isModerator, profile?.moderatorPrograms]);
+
+  useEffect(() => {
+    if (everyone || !scope?.years?.length) return;
+    setSelectedYears((current) => {
+      const allowed = current.filter((year) => scope.years.includes(year));
+      if (allowed.length) {
+        if (allowed.length === current.length && allowed.every((year, index) => year === current[index])) {
+          return current;
+        }
+        return allowed;
+      }
+      if (isEdit) return current;
+      const fallback = [...scope.years].sort((a, b) => a - b);
+      if (fallback.length === current.length && fallback.every((year, index) => year === current[index])) {
+        return current;
+      }
+      return fallback;
+    });
+  }, [everyone, scope, isEdit]);
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -136,7 +179,7 @@ export default function NewsComposeScreen() {
   };
 
   const audienceTags = () => {
-    if (everyone) return [t('everyone')];
+    if (targetingEveryone) return [t('everyone')];
     const years = selectedYears
       .slice()
       .sort((a, b) => a - b)
@@ -148,33 +191,29 @@ export default function NewsComposeScreen() {
     ].filter(Boolean);
   };
 
-  const handleSave = async () => {
-    if (!canSave) return;
-    setIsSaving(true);
-    try {
-      const payload = {
-        title,
-        body,
-        options: pollOn ? filledOptions : [],
-        imageUrl,
-        linkUrl,
-        tags: audienceTags(),
-        audience: audienceTags().join(' · '),
-        institution: everyone ? null : institutionSlug,
-        programs: everyone ? [] : programSlugs,
-        years: everyone ? [] : selectedYears,
-      };
-      if (isEdit) await editPost({ id: post.id, ...payload });
-      else await addPost(payload);
-      router.back();
-    } catch (error) {
+  const handleSave = () => {
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
+    const payload = {
+      title,
+      body,
+      options: pollOn ? filledOptions : [],
+      imageUrl,
+      linkUrl,
+      tags: audienceTags(),
+      audience: audienceTags().join(' · '),
+      institution: targetingEveryone ? null : institutionSlug,
+      programs: targetingEveryone ? [] : programSlugs,
+      years: targetingEveryone ? [] : selectedYears,
+    };
+    router.back();
+    const save = isEdit ? editPost({ id: post.id, ...payload }) : addPost(payload);
+    save.catch((error) => {
       Alert.alert(
         isEdit ? t('couldNotSave') : t('couldNotPublish'),
         cooldownMessage(error, t, error.message ?? t('tryAgain'))
       );
-    } finally {
-      setIsSaving(false);
-    }
+    });
   };
 
   return (
@@ -193,7 +232,7 @@ export default function NewsComposeScreen() {
                 themeColor={canSave ? 'primary' : 'textSecondary'}
                 numberOfLines={1}
                 style={{ fontSize: 17, fontWeight: '600' }}>
-                {isSaving ? '…' : isEdit ? t('save') : t('publish')}
+                {isEdit ? t('save') : t('publish')}
               </ThemedText>
             </Pressable>
           ),
@@ -204,7 +243,9 @@ export default function NewsComposeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-four py-three gap-three pb-bottom-tab-gap"
+          contentContainerClassName="px-four py-three gap-three"
+          contentContainerStyle={{ paddingBottom: 96 + (insets.bottom || 24) }}
+          alwaysBounceVertical
           keyboardShouldPersistTaps="handled">
           <TextInput
             value={title}
@@ -290,7 +331,7 @@ export default function NewsComposeScreen() {
               </Pressable>
             </ThemedView>
           ) : null}
-          {!everyone ? (
+          {!targetingEveryone ? (
             <ThemedView className="gap-two bg-transparent">
               <ThemedText type="small" themeColor="textSecondary">
                 1. {t('pickUniversity')}
@@ -403,16 +444,39 @@ export default function NewsComposeScreen() {
                   ) : null}
                 </ThemedView>
               ))}
-              <Pressable onPress={() => setOptions([...options, ''])} className="active:opacity-70">
-                <ThemedText themeColor="primary">{t('addOption')}</ThemedText>
+              <Pressable
+                onPress={() => setOptions([...options, ''])}
+                accessibilityRole="button"
+                accessibilityLabel={t('addOption')}
+                hitSlop={8}
+                className="rounded-three py-three items-center active:opacity-70"
+                style={{ backgroundColor: theme.backgroundSelected }}>
+                <ThemedText type="smallBold" themeColor="primary">
+                  {t('addOption')}
+                </ThemedText>
               </Pressable>
-              <Pressable onPress={() => setOptions([])} className="active:opacity-70">
-                <ThemedText themeColor="textSecondary">{t('removePoll')}</ThemedText>
+              <Pressable
+                onPress={() => setOptions([])}
+                accessibilityRole="button"
+                accessibilityLabel={t('removePoll')}
+                hitSlop={8}
+                className="rounded-three py-three items-center active:opacity-70">
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  {t('removePoll')}
+                </ThemedText>
               </Pressable>
             </ThemedView>
           ) : (
-            <Pressable onPress={() => setOptions(['', ''])} className="active:opacity-70">
-              <ThemedText themeColor="primary">{t('addPoll')}</ThemedText>
+            <Pressable
+              onPress={() => setOptions(['', ''])}
+              accessibilityRole="button"
+              accessibilityLabel={t('addPoll')}
+              hitSlop={8}
+              className="rounded-three py-three items-center active:opacity-70"
+              style={{ backgroundColor: theme.backgroundSelected }}>
+              <ThemedText type="smallBold" themeColor="primary">
+                {t('addPoll')}
+              </ThemedText>
             </Pressable>
           )}
         </ScrollView>

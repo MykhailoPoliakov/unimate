@@ -87,7 +87,7 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
   };
 
   return (
-    <GlassCard>
+    <GlassCard solid>
       <ThemedView className="flex-row items-center bg-transparent">
         <PressScale
           onPress={handleOpen}

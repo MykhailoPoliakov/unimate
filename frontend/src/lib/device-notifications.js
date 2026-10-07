@@ -78,14 +78,14 @@ export async function getExpoPushToken() {
   return result.data;
 }
 
-export async function scheduleInfoNotification({ title, body }) {
+export async function scheduleInfoNotification({ title, body, newsId }) {
   if (!canUseNativeNotifications) return;
 
   await Notifications.scheduleNotificationAsync({
     content: {
       title,
       body,
-      data: { screen: 'news' },
+      data: { screen: 'news', ...(newsId != null ? { newsId } : {}) },
       sound: true,
       ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
     },

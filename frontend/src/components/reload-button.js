@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 
 const COOLDOWN_MS = 4000;
+const SPINNER_MS = 700;
 
 export function useReload(action) {
   const [refreshing, setRefreshing] = useState(false);
@@ -13,12 +14,13 @@ export function useReload(action) {
     busy.current = true;
     lastAt.current = now;
     setRefreshing(true);
-    try {
-      await action();
-    } finally {
-      busy.current = false;
-      setRefreshing(false);
-    }
+    const work = Promise.resolve()
+      .then(action)
+      .catch(() => {});
+    await Promise.race([work, new Promise((resolve) => setTimeout(resolve, SPINNER_MS))]);
+    setRefreshing(false);
+    busy.current = false;
+    void work;
   };
 
   return { refreshing, reload };

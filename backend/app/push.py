@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -83,7 +84,7 @@ def _send_batch(messages: list[dict]) -> list[str]:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=15) as response:
+            with urlopen(request, timeout=5) as response:
                 response_data = json.loads(response.read().decode("utf-8"))
             break
         except HTTPError as error:
@@ -108,6 +109,15 @@ def _send_batch(messages: list[dict]) -> list[str]:
             if details.get("error") == "DeviceNotRegistered":
                 invalid_tokens.append(message["to"])
     return invalid_tokens
+
+
+def schedule_news_pushes(news_id: int) -> None:
+    threading.Thread(
+        target=send_news_pushes,
+        args=(news_id,),
+        daemon=True,
+        name=f"news-push-{news_id}",
+    ).start()
 
 
 def send_news_pushes(news_id: int) -> None:
