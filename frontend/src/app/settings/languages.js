@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef } from 'react';
 import { Alert, Pressable, ScrollView } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { checkIn } from '@/components/motion';
 import { SettingsGroup } from '@/components/settings-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -37,6 +39,7 @@ export default function LanguagesScreen() {
         });
         setLanguage(null);
       } catch (error) {
+        setLanguage(null);
         Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
       }
     }, 600);
@@ -56,7 +59,9 @@ export default function LanguagesScreen() {
                 <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
                   <ThemedText className="flex-1">{item.nativeName}</ThemedText>
                   {selected ? (
-                    <Ionicons name="checkmark" size={20} color={theme.primary} />
+                    <Animated.View entering={checkIn}>
+                      <Ionicons name="checkmark" size={20} color={theme.primary} />
+                    </Animated.View>
                   ) : null}
                 </ThemedView>
               </Pressable>

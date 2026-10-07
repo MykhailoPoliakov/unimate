@@ -3,10 +3,12 @@ import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { openExternalUrl } from '@/components/external-link';
 import { GlassCard } from '@/components/glass-card';
+import { listEnter, PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { SocialBrandIcon } from '@/components/social-brand-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -87,11 +89,11 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
   return (
     <GlassCard>
       <ThemedView className="flex-row items-center bg-transparent">
-        <Pressable
+        <PressScale
           onPress={handleOpen}
           onLongPress={handleLongPress}
           delayLongPress={450}
-          className="flex-1 active:opacity-70">
+          style={{ flex: 1 }}>
           <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
             <SocialBrandIcon
               name={icon}
@@ -110,7 +112,7 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
             </ThemedView>
             <Ionicons name="open-outline" size={18} color={theme.textSecondary} />
           </ThemedView>
-        </Pressable>
+        </PressScale>
         <Pressable
           onPress={handleCopyPress}
           accessibilityRole="button"
@@ -142,7 +144,6 @@ export default function SocialsScreen() {
   const theme = useTheme();
   const { t } = useI18n();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const [items, setItems] = useState([]);
   const canManageSocials = ['admin', 'moderator'].includes(profile?.role);
@@ -207,7 +208,7 @@ export default function SocialsScreen() {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1" edges={[]}>
+      <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-four pb-bottom-tab-gap gap-two max-w-content self-center w-full"
@@ -221,16 +222,16 @@ export default function SocialsScreen() {
           }>
           <ThemedView
             className="flex-row items-center justify-between bg-transparent pb-four"
-            style={{ paddingTop: (insets.top || 59) + 8 }}>
+            style={{ paddingTop: 8 }}>
             <ThemedText type="subtitle">{t('socials')}</ThemedText>
             {canManageSocials ? (
-              <Pressable onPress={() => openComposer(null)} className="active:opacity-70">
+              <PressScale onPress={() => openComposer(null)} pressedScale={0.94}>
                 <ThemedView
                   type="backgroundSelected"
                   className="w-[40px] h-[40px] rounded-five items-center justify-center">
                   <Ionicons name="add" size={22} color={theme.primary} />
                 </ThemedView>
-              </Pressable>
+              </PressScale>
             ) : null}
           </ThemedView>
           <ThemedText themeColor="textSecondary">{t('socialsSubtitle')}</ThemedText>
@@ -242,14 +243,15 @@ export default function SocialsScreen() {
               </ThemedText>
             </ThemedView>
           ) : (
-            items.map((item) => (
-              <SocialRow
-                key={item.id}
-                item={item}
-                isAdmin={canManageSocials}
-                onEdit={openComposer}
-                onDelete={handleDelete}
-              />
+            items.map((item, index) => (
+              <Animated.View key={item.id} entering={listEnter(index)}>
+                <SocialRow
+                  item={item}
+                  isAdmin={canManageSocials}
+                  onEdit={openComposer}
+                  onDelete={handleDelete}
+                />
+              </Animated.View>
             ))
           )}
         </ScrollView>

@@ -2,7 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { checkIn, fadeIn, PressScale } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
@@ -18,7 +20,7 @@ export function Choice({ title, subtitle, isSelected, onSelect, icon, imageKey }
     : null;
 
   return (
-    <Pressable onPress={onSelect} className="active:opacity-70 self-stretch">
+    <PressScale onPress={onSelect} style={{ alignSelf: 'stretch' }}>
       <ThemedView
         type="backgroundElement"
         className="flex-row items-center gap-three px-three py-three rounded-three"
@@ -47,13 +49,15 @@ export function Choice({ title, subtitle, isSelected, onSelect, icon, imageKey }
             </ThemedText>
           ) : null}
         </ThemedView>
-        <Ionicons
-          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-          size={22}
-          color={isSelected ? theme.primary : theme.border}
-        />
+        {isSelected ? (
+          <Animated.View entering={checkIn}>
+            <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
+          </Animated.View>
+        ) : (
+          <Ionicons name="ellipse-outline" size={22} color={theme.border} />
+        )}
       </ThemedView>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -243,8 +247,8 @@ export function StudyFields({
           <ThemedText themeColor="textSecondary">{t('loading')}</ThemedText>
         </ThemedView>
       ) : programs.length > 0 ? (
-        <>
-          <ThemedText type="small" themeColor="textSecondary" className="mt-two">
+        <Animated.View key={institutionSlug} entering={fadeIn} style={{ gap: 12 }}>
+          <ThemedText type="small" themeColor="textSecondary">
             {t('yourProgram')}
           </ThemedText>
           {programs.map((program) => (
@@ -257,7 +261,7 @@ export function StudyFields({
             />
           ))}
 
-          <ThemedText type="small" themeColor="textSecondary" className="mt-two">
+          <ThemedText type="small" themeColor="textSecondary">
             {t('yearOfStudy')}
           </ThemedText>
           <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
@@ -280,7 +284,7 @@ export function StudyFields({
               );
             })}
           </ThemedView>
-        </>
+        </Animated.View>
       ) : null}
     </>
   );

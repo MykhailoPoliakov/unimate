@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { fadeInDown } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { ThemedText } from '@/components/themed-text';
@@ -77,12 +79,12 @@ export function Onboarding() {
                 colors={[theme.primary]}
               />
             }>
-            <ThemedView className="gap-two bg-transparent mb-four">
+            <Animated.View entering={fadeInDown} style={{ marginBottom: 16, gap: 8 }}>
               <ThemedText type="title">
                 {t('welcomeTo')} <ThemedText type="title" themeColor="primary">UniMate</ThemedText>
               </ThemedText>
               <ThemedText themeColor="textSecondary">{t('onboardingSubtitle')}</ThemedText>
-            </ThemedView>
+            </Animated.View>
 
             <ThemedText type="small" themeColor="textSecondary">
               {t('language')}

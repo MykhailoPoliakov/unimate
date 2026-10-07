@@ -3,11 +3,12 @@ import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, Switch, TextInput } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import support from 'unimate-docs/support.json';
 
 import { HalfSheet } from '@/components/half-sheet';
+import { PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { SettingsGroup, SettingsRow } from '@/components/settings-row';
@@ -32,7 +33,6 @@ const FEEDBACK_EMAIL = support.email;
 
 export default function SettingsScreen() {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const { t, language, languages } = useI18n();
   const { profile, saveProfile, refreshUser } = useProfile();
   const {
@@ -202,7 +202,7 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1" edges={[]}>
+      <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -220,7 +220,7 @@ export default function SettingsScreen() {
                 colors={[theme.primary]}
               />
             }>
-            <ThemedView className="bg-transparent pb-two" style={{ paddingTop: (insets.top || 59) + 8 }}>
+            <ThemedView className="bg-transparent pb-two" style={{ paddingTop: 8 }}>
               <ThemedText type="subtitle">{t('menu')}</ThemedText>
             </ThemedView>
             <SettingsGroup title={t('studies')}>
@@ -272,12 +272,12 @@ export default function SettingsScreen() {
                 {THEME_IDS.map((option) => {
                   const selected = preference === option.id;
                   return (
-                    <Pressable
+                    <PressScale
                       key={option.id}
                       onPress={() => setPreference(option.id)}
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
-                      className="flex-1 active:opacity-70">
+                      style={{ flex: 1 }}>
                       <ThemedView
                         type={selected ? 'backgroundSelected' : 'backgroundElement'}
                         className="items-center gap-one py-three rounded-two"
@@ -294,7 +294,7 @@ export default function SettingsScreen() {
                           {themeLabel[option.id]}
                         </ThemedText>
                       </ThemedView>
-                    </Pressable>
+                    </PressScale>
                   );
                 })}
               </ThemedView>

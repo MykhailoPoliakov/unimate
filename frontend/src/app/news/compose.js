@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -43,6 +43,21 @@ export default function NewsComposeScreen() {
   const [programSlugs, setProgramSlugs] = useState(post?.programs ?? []);
   const [selectedYears, setSelectedYears] = useState(post?.years ?? []);
   const [isSaving, setIsSaving] = useState(false);
+  const filledFrom = useRef(post?.id ?? null);
+
+  useEffect(() => {
+    if (!post?.id || filledFrom.current === post.id) return;
+    filledFrom.current = post.id;
+    setTitle(post.title ?? '');
+    setBody(post.body ?? '');
+    setImageUrl(post.imageUrl ?? '');
+    setLinkUrl(post.linkUrl ?? '');
+    setOptions(post.options?.length ? post.options : []);
+    setEveryone(!post.institution);
+    setInstitutionSlug(post.institution ?? null);
+    setProgramSlugs(post.programs ?? []);
+    setSelectedYears(post.years ?? []);
+  }, [post]);
 
   const isModerator = profile?.role === 'moderator';
   const scope = moderatorScope(profile);

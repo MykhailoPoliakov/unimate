@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
-import { useRef, useState } from 'react';
-import { Alert, Pressable } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ExternalLink } from '@/components/external-link';
 import { GlassCard } from '@/components/glass-card';
+import { PressScale } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFeed } from '@/hooks/use-feed';
@@ -49,6 +51,43 @@ export function MetaChips({ items }) {
         </ThemedView>
       ))}
     </ThemedView>
+  );
+}
+
+function PollFill({ percent, color }) {
+  const [track, setTrack] = useState(0);
+  const width = useSharedValue(0);
+
+  useEffect(() => {
+    width.value = withTiming(track * (percent / 100), { duration: 400 });
+  }, [percent, track, width]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: width.value,
+  }));
+
+  return (
+    <View
+      pointerEvents="none"
+      onLayout={(event) => setTrack(event.nativeEvent.layout.width)}
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+      }}>
+      <Animated.View
+        style={[
+          {
+            height: '100%',
+            backgroundColor: color,
+            opacity: 0.22,
+          },
+          fillStyle,
+        ]}
+      />
+    </View>
   );
 }
 
@@ -111,16 +150,7 @@ export function PollChoices({ post }) {
                 borderWidth: 1,
                 borderColor: isSelected ? theme.primary : theme.border,
               }}>
-              {submitted ? (
-                <ThemedView
-                  className="absolute left-0 top-0 bottom-0"
-                  style={{
-                    width: `${percent}%`,
-                    backgroundColor: theme.primary,
-                    opacity: 0.22,
-                  }}
-                />
-              ) : null}
+              {submitted ? <PollFill percent={percent} color={theme.primary} /> : null}
               <ThemedView className="flex-row items-center justify-between bg-transparent">
                 <ThemedText type="smallBold" themeColor={isSelected ? 'primary' : 'text'} className="flex-1 pr-two">
                   {label}
@@ -158,7 +188,7 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
 
   return (
     <GlassCard>
-      <Pressable onPress={() => onOpen(post)} className="active:opacity-80">
+      <PressScale onPress={() => onOpen(post)}>
         <NewsImage uri={post.imageUrl} />
         <ThemedView className="gap-one px-three pt-three pb-two bg-transparent">
           <ThemedText type="default" className="text-[22px] font-semibold leading-7">
@@ -193,7 +223,7 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
             </ThemedView>
           </ThemedView>
         </ThemedView>
-      </Pressable>
+      </PressScale>
       {post.options?.length ? <PollChoices post={post} /> : null}
       {post.canManage ? (
         <ThemedView className="flex-row gap-three px-three pb-three bg-transparent">

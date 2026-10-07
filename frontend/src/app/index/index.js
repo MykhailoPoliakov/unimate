@@ -5,10 +5,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, ActionSheetIOS, View } from 'react-native';
 import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DEFAULT_LINK_COLOR, linksStorageKey } from '@/components/button-modal';
 import { openExternalUrl } from '@/components/external-link';
+import { listEnter, PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { SortableSection } from '@/components/sortable-section';
 import { ThemedText } from '@/components/themed-text';
@@ -17,11 +19,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { campusServicesFor } from '@/constants/campus-services';
 import { listButtons } from '@/lib/api';
 import { LOCAL_ICONS } from '@/lib/local-icons';
 import { setLinkDraft } from '@/lib/nav-draft';
-
-const buttonsByInstitution = {};
 
 function labelFromSlug(slug) {
   return (slug ?? '')
@@ -56,15 +57,6 @@ const BRAND = {
     rgb: { r: 28, g: 28, b: 28 },
     lightRgb: { r: 52, g: 52, b: 54 },
   },
-};
-
-const SCHEDULE_SUBTITLE = {
-  nl: 'Lesrooster',
-  de: 'Stundenplan',
-  fr: 'Emploi du temps',
-  en: 'Class timetable',
-  uk: 'Розклад',
-  ru: 'Расписание',
 };
 
 function isCanvasButton(button) {
@@ -277,13 +269,8 @@ export default function HomeScreen() {
   const { t } = useI18n();
   const theme = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const institution = profile?.institution;
-  const institutionRef = useRef(institution);
-  institutionRef.current = institution;
-  const [services, setServices] = useState(() =>
-    institution ? buttonsByInstitution[institution] ?? [] : []
-  );
+  const services = campusServicesFor(institution, profile?.language);
   const [extras, setExtras] = useState([]);
 
   const persistLinks = useCallback(
@@ -297,46 +284,32 @@ export default function HomeScreen() {
   );
 
   const loadHome = useCallback(async () => {
-    if (!profile?.userId || !institution) {
-      setServices([]);
+    if (!profile?.userId) {
       setExtras([]);
       return;
     }
 
-    const requestedFor = institution;
-    setServices(buttonsByInstitution[requestedFor] ?? []);
     try {
       const stored = JSON.parse((await AsyncStorage.getItem(linksStorageKey(profile.userId))) ?? '[]');
       if (Array.isArray(stored) && stored.length) {
         setExtras(stored.map((item) => ({ ...item, canManage: true })));
-      } else {
-        const migrated = await AsyncStorage.getItem(linksMigratedKey(profile.userId));
-        if (!migrated) {
-          const items = await listButtons(profile.userId);
-          const copied = items
-            .filter((item) => isCustomButton(item))
-            .map((item) => ({ ...item, platform: 'custom', canManage: true }));
-          await persistLinks(copied);
-          await AsyncStorage.setItem(linksMigratedKey(profile.userId), '1');
-        } else {
-          setExtras([]);
-        }
+        return;
       }
+      const migrated = await AsyncStorage.getItem(linksMigratedKey(profile.userId));
+      if (migrated) {
+        setExtras([]);
+        return;
+      }
+      const items = await listButtons(profile.userId);
+      const copied = items
+        .filter((item) => isCustomButton(item))
+        .map((item) => ({ ...item, platform: 'custom', canManage: true }));
+      await persistLinks(copied);
+      await AsyncStorage.setItem(linksMigratedKey(profile.userId), '1');
     } catch {
       setExtras([]);
     }
-
-    try {
-      const items = await listButtons(profile.userId);
-      if (requestedFor !== institutionRef.current) return;
-      const next = items.filter((item) => !isCustomButton(item));
-      buttonsByInstitution[requestedFor] = next;
-      setServices(next);
-    } catch {
-      if (requestedFor !== institutionRef.current) return;
-      setServices(buttonsByInstitution[requestedFor] ?? []);
-    }
-  }, [profile?.userId, institution, persistLinks]);
+  }, [profile?.userId, persistLinks]);
 
   const { refreshing, reload } = useReload(loadHome);
 
@@ -366,11 +339,7 @@ export default function HomeScreen() {
   const renderButton = (button, { blockHeldPress } = {}) => (
     <ServiceLink
       title={button.title}
-      subtitle={
-        isScheduleButton(button)
-          ? SCHEDULE_SUBTITLE[profile?.language] ?? SCHEDULE_SUBTITLE.en
-          : button.description
-      }
+      subtitle={button.description}
       icon={buttonIcon(button)}
       href={button.url}
       color={button.color ?? DEFAULT_LINK_COLOR}
@@ -382,7 +351,7 @@ export default function HomeScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.background }}>
       <ThemedView className="flex-1">
-        <SafeAreaView className="flex-1" edges={[]}>
+        <SafeAreaView className="flex-1" edges={['top']}>
           <ScrollView
             className="flex-1"
             contentContainerClassName="px-four pb-bottom-tab-gap max-w-content self-center w-full"
@@ -397,17 +366,17 @@ export default function HomeScreen() {
             }>
             <ThemedView
               className="flex-row items-center justify-between bg-transparent pb-four"
-              style={{ paddingTop: (insets.top || 59) + 8 }}>
+              style={{ paddingTop: 8 }}>
               <ThemedText type="subtitle">
                 {profile?.institutionName || labelFromSlug(institution) || t('homeCampus')}
               </ThemedText>
-              <Pressable onPress={() => openComposer(null)} className="active:opacity-70">
+              <PressScale onPress={() => openComposer(null)} pressedScale={0.94}>
                   <ThemedView
                     type="backgroundSelected"
                     className="w-[40px] h-[40px] rounded-five items-center justify-center">
                     <Ionicons name="add" size={22} color={theme.primary} />
                   </ThemedView>
-                </Pressable>
+                </PressScale>
             </ThemedView>
 
             <ThemedText type="small" themeColor="textSecondary" className="uppercase mb-two">
@@ -418,10 +387,10 @@ export default function HomeScreen() {
                 {t('noServices')}
               </ThemedText>
             ) : (
-              services.map((button) => (
-                <View key={button.id} style={{ marginBottom: 8 }}>
+              services.map((button, index) => (
+                <Animated.View key={button.id} entering={listEnter(index)} style={{ marginBottom: 8 }}>
                   {renderButton(button)}
-                </View>
+                </Animated.View>
               ))
             )}
             {extras.length > 0 ? (

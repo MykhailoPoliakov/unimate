@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, RefreshControl, ScrollView } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { listEnter, PressScale } from '@/components/motion';
 import { PostCard } from '@/components/news-ui';
 import { useReload } from '@/components/reload-button';
 import { ThemedText } from '@/components/themed-text';
@@ -17,7 +19,6 @@ export default function NewsScreen() {
   const theme = useTheme();
   const { t } = useI18n();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { profile, refreshUser } = useProfile();
   const { posts, removePost, refresh, markNewsRead } = useFeed();
   const canManageNews = ['admin', 'moderator'].includes(profile?.role);
@@ -58,7 +59,7 @@ export default function NewsScreen() {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1" edges={[]}>
+      <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-four pb-bottom-tab-gap gap-two max-w-content self-center w-full"
@@ -73,16 +74,16 @@ export default function NewsScreen() {
           }>
           <ThemedView
             className="flex-row items-center justify-between bg-transparent pb-four"
-            style={{ paddingTop: (insets.top || 59) + 8 }}>
+            style={{ paddingTop: 8 }}>
             <ThemedText type="subtitle">{t('news')}</ThemedText>
             {canManageNews ? (
-              <Pressable onPress={() => router.push('/news/compose')} className="active:opacity-70">
+              <PressScale onPress={() => router.push('/news/compose')} pressedScale={0.94}>
                 <ThemedView
                   type="backgroundSelected"
                   className="w-[40px] h-[40px] rounded-five items-center justify-center">
                   <Ionicons name="add" size={22} color={theme.primary} />
                 </ThemedView>
-              </Pressable>
+              </PressScale>
             ) : null}
           </ThemedView>
           {posts.length === 0 ? (
@@ -93,14 +94,15 @@ export default function NewsScreen() {
               </ThemedText>
             </ThemedView>
           ) : (
-            posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onOpen={(item) => router.push(`/news/${item.id}`)}
-                onEdit={(item) => router.push({ pathname: '/news/compose', params: { id: String(item.id) } })}
-                onDelete={handleDelete}
-              />
+            posts.map((post, index) => (
+              <Animated.View key={post.id} entering={listEnter(index)}>
+                <PostCard
+                  post={post}
+                  onOpen={(item) => router.push(`/news/${item.id}`)}
+                  onEdit={(item) => router.push({ pathname: '/news/compose', params: { id: String(item.id) } })}
+                  onDelete={handleDelete}
+                />
+              </Animated.View>
             ))
           )}
         </ScrollView>

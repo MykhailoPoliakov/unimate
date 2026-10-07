@@ -3,6 +3,8 @@ import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
+import { listEnter } from '@/components/motion';
+
 const HOLD_MS = 240;
 const MENU_MS = 500;
 const DRAG_WINDOW_MS = 800;
@@ -181,13 +183,14 @@ function SortableRow({ index, itemId, hidden, origins, dragY, enabled, onHold, o
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
+        entering={listEnter(index)}
         onLayout={(event) => {
           const { y: top, height } = event.nativeEvent.layout;
           y.value = top;
           origins.value = { ...origins.value, [itemId]: height };
         }}
-        style={{ marginBottom: GAP, opacity: hidden ? 0 : 1 }}>
-        {children}
+        style={{ marginBottom: GAP }}>
+        <View style={{ opacity: hidden ? 0 : 1 }}>{children}</View>
       </Animated.View>
     </GestureDetector>
   );

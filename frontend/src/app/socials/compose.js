@@ -46,7 +46,7 @@ export default function SocialComposeScreen() {
   const [institutionSlug, setInstitutionSlug] = useState(item?.institution ?? null);
   const [programSlugs, setProgramSlugs] = useState(item?.programs ?? []);
   const [selectedYears, setSelectedYears] = useState(item?.years ?? []);
-  const isEdit = !!item;
+  const isEdit = !!item?.id;
 
   const detected = useMemo(() => detectService(url), [url]);
   const hasLink = Boolean(url.trim());
