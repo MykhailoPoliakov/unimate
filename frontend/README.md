@@ -10,9 +10,9 @@ The frontend is an Expo Router app for iOS, Android, and web. See the [repositor
 - `src/lib/` contains API clients, device helpers, and domain utilities.
 - `src/i18n/` contains user-facing translations; legal copy belongs here so it stays localized.
 - `assets/` contains app imagery and bundled institution/service icons.
-- `docs/` contains the static support, about, privacy, and terms pages.
+- The repository-root [`docs/`](../docs/) folder contains the static support, about, privacy, and terms pages.
 
-For GitHub Pages, configure publishing to use `frontend/docs/` as the site source.
+GitHub Pages publishes the repository-root `docs/` folder. Configure the repository's Pages source to use the `main` branch and `/docs`.
 
 ## Run
 

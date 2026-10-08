@@ -7,12 +7,15 @@ UniMate is a student-focused mobile app for finding institution resources, cours
 ```text
 backend/    Backend project: API source, database setup, and deployment
   api/      FastAPI application, tests, dependencies, and seed data
-frontend/   Expo and React Native app, including the static legal/support site
+frontend/   Expo and React Native app
+docs/       Static legal, support, and about pages published with GitHub Pages
 README.md   Project overview and quick start
 LICENSE     UniMate license
 ```
 
 The backend project has its own [README](backend/README.md) and [deployment guide](backend/DEPLOYMENT.md). Frontend setup details are in [frontend/README.md](frontend/README.md).
+
+GitHub Pages serves the static site from the repository's root `docs/` folder. Configure Pages in the repository settings to deploy from the `main` branch and `/docs` folder.
 
 ## Requirements
 
