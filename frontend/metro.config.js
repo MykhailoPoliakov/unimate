@@ -6,7 +6,7 @@ const { withNativeWind } = require('nativewind/metro');
 const config = getDefaultConfig(__dirname);
 const frontendModules = path.resolve(__dirname, 'node_modules');
 const parentModules = path.resolve(__dirname, '..', 'node_modules');
-const docsFolder = path.resolve(__dirname, '..', 'docs');
+const docsFolder = path.resolve(__dirname, 'docs');
 
 config.watchFolders = [docsFolder];
 config.resolver.nodeModulesPaths = [frontendModules];

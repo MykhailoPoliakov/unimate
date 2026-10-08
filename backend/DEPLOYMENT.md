@@ -2,11 +2,11 @@
 
 This guide runs the UniMate FastAPI backend and PostgreSQL in Docker Compose, with Caddy installed on Ubuntu providing public HTTPS. The frontend is a separate Expo mobile app and is built for users' phones; it is not served by this backend deployment.
 
-The Compose services are named `backend` and `db`. PostgreSQL has no public port, and the backend is published only on `127.0.0.1:8001`; Caddy proxies requests from ports 80 and 443 to it. Run Compose commands from the repository root, where `docker-compose.yml` and `.env` are located. Use `sudo` with Docker unless you intentionally configure Docker access for your account. Membership in the `docker` group grants root-equivalent access.
+The Compose project is `unimate`; its services are named `backend` and `db`. PostgreSQL and the backend are published only on loopback (`127.0.0.1:5433` and `127.0.0.1:8001`); Caddy proxies requests from ports 80 and 443 to the backend. Run Compose commands from the repository root using `backend/docker-compose.yml` and `backend/.env`. Use `sudo` with Docker unless you intentionally configure Docker access for your account. Membership in the `docker` group grants root-equivalent access.
 
 ## Current deployment: finish setup
 
-If Docker Compose has already started `db` and `backend` and the database has already been seeded, **do not seed again**. Follow these steps to finish HTTPS and verify the deployment.
+If Compose has already started `db` and `backend` and the database has already been seeded, **do not seed again**. Follow these steps to finish HTTPS and verify the deployment.
 
 ### 1. Check DNS and the API
 
@@ -15,14 +15,14 @@ Make sure the A record for the API hostname (for example, `api.unimate.be`) poin
 ```bash
 getent ahostsv4 api.unimate.be
 curl -fsS http://127.0.0.1:8001/health
-sudo docker compose ps
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml ps
 ```
 
 The health endpoint should return `{"status":"ok"}`, and `db` should be healthy. Replace `api.unimate.be` in commands and configuration below if using another hostname. Ports 80 and 443 must be allowed by both UFW and the hosting provider's firewall; SSH must remain allowed.
 
 ### 2. Rotate the database password if it has been shared
 
-If the current database password was posted in chat, email, a screenshot, or another shared place, treat it as compromised and replace it. Changing `.env` alone does **not** change the password inside an already-initialized PostgreSQL volume.
+If the current database password was posted in chat, email, a screenshot, or another shared place, treat it as compromised and replace it. Changing `backend/.env` alone does **not** change the password inside an already-initialized PostgreSQL volume.
 
 Generate a fresh password:
 
@@ -30,10 +30,10 @@ Generate a fresh password:
 openssl rand -hex 32
 ```
 
-Copy it privately. First update `POSTGRES_PASSWORD` in `.env` to the new value and save the file. Then change the password stored in the running database; `\password` prompts without echoing the value:
+Copy it privately. First update `POSTGRES_PASSWORD` in `backend/.env` to the new value and save the file. Then change the password stored in the running database; `\password` prompts without echoing the value:
 
 ```bash
-sudo docker compose exec db psql -U unimate -d unimate
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec db psql -U unimate -d unimate
 ```
 
 At the `psql` prompt, enter:
@@ -45,25 +45,25 @@ At the `psql` prompt, enter:
 Enter the same new password twice, then exit with `\q`. Recreate the backend container so it reads the updated `.env`:
 
 ```bash
-sudo docker compose up -d --force-recreate backend
-sudo docker compose ps
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml up -d --force-recreate backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml ps
 curl -fsS http://127.0.0.1:8001/health
 ```
 
-If the database role or database has a different name, use the values of `POSTGRES_USER` and `POSTGRES_DB` in `.env`. If the password has already been rotated this way, do not repeat these steps.
+If the database role or database has a different name, use the values of `POSTGRES_USER` and `POSTGRES_DB` in `backend/.env`. If the password has already been rotated this way, do not repeat these steps.
 
-Protect `.env` and keep it out of version control:
+Protect `backend/.env` and keep it out of version control:
 
 ```bash
-chmod 600 .env
+chmod 600 backend/.env
 git status --short
 ```
 
-Never paste `.env`, database passwords, or unredacted `docker compose config` output into chat or public logs.
+Never paste `backend/.env`, database passwords, or unredacted `docker compose --env-file backend/.env -f backend/docker-compose.yml config` output into chat or public logs.
 
 ### 3. Install and configure Caddy for HTTPS
 
-Install Caddy using its official [Debian/Ubuntu instructions](https://caddyserver.com/docs/install#debian-ubuntu-raspbian). The repository [Caddyfile](Caddyfile) is an example; replace `api.example.com` with your real hostname before using it. The system service does not automatically read the project's `.env`. Create `/etc/caddy/Caddyfile` with the real hostname:
+Install Caddy using its official [Debian/Ubuntu instructions](https://caddyserver.com/docs/install#debian-ubuntu-raspbian). The repository [Caddyfile](Caddyfile) is an example; replace `api.example.com` with your real hostname before using it. The system service does not automatically read the project's `backend/.env`. Create `/etc/caddy/Caddyfile` with the real hostname:
 
 ```caddyfile
 api.unimate.be {
@@ -138,10 +138,10 @@ Use this section only when setting up a new server and empty database. If the da
    ```bash
    git clone <your-repository-url> unimate
    cd unimate
-   cp .env.example .env
+   cp backend/.env.example backend/.env
    openssl rand -hex 32
-   nano .env
-   chmod 600 .env
+   nano backend/.env
+   chmod 600 backend/.env
    ```
 
    Put the generated password in `POSTGRES_PASSWORD` and the API hostname in `DOMAIN`. Keep the generated password private. `WEB_CONCURRENCY` is set to `1` by Compose for the API container; this is suitable as a conservative starting point for a 1-vCPU, 1-GB server.
@@ -149,18 +149,18 @@ Use this section only when setting up a new server and empty database. If the da
 5. Validate without printing resolved secrets, build the backend, and start PostgreSQL:
 
    ```bash
-   sudo docker compose config --quiet
-   sudo docker compose build backend
-   sudo docker compose up -d db
-   sudo docker compose ps
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml config --quiet
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml build backend
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml up -d db
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml ps
    ```
 
-   Wait until `db` reports healthy before proceeding. If it does not, inspect `sudo docker compose logs --tail=100 db`.
+   Wait until `db` reports healthy before proceeding. If it does not, inspect `sudo docker compose --env-file backend/.env -f backend/docker-compose.yml logs --tail=100 db`.
 
 6. Seed a new, empty database once:
 
    ```bash
-   sudo docker compose run --rm backend python -m app.seed
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml run --rm backend python -m app.seed
    ```
 
    **Seeding drops and recreates application tables and deletes app data**, including users, news, and poll votes. Never run this for normal starts, updates, or troubleshooting.
@@ -168,8 +168,8 @@ Use this section only when setting up a new server and empty database. If the da
 7. Start and check the backend:
 
    ```bash
-   sudo docker compose up -d backend
-   sudo docker compose ps
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml up -d backend
+   sudo docker compose --env-file backend/.env -f backend/docker-compose.yml ps
    curl -fsS http://127.0.0.1:8001/health
    ```
 
@@ -177,25 +177,25 @@ Use this section only when setting up a new server and empty database. If the da
 
 ## Day-to-day management
 
-Run these commands from `~/unimate`:
+Run Compose commands from `~/unimate` (the repository root):
 
 ```bash
 # Show service state (db should be healthy)
-sudo docker compose ps
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml ps
 
 # Follow logs; Ctrl+C stops following, not the services
-sudo docker compose logs -f backend
-sudo docker compose logs -f db
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml logs -f backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml logs -f db
 
 # Restart one service
-sudo docker compose restart backend
-sudo docker compose restart db
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml restart backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml restart db
 
 # Stop containers but retain database files
-sudo docker compose down
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml down
 
 # Start existing services again
-sudo docker compose up -d
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml up -d
 ```
 
 To check the API externally, use `curl -fsS https://api.unimate.be/health` from a machine with network access. Replace the example hostname with yours. The backend's local-only port can also be checked on the server using `curl -fsS http://127.0.0.1:8001/health`.
@@ -206,9 +206,9 @@ Before updating, make a database backup using the instructions below. Then, from
 
 ```bash
 git pull
-sudo docker compose build backend
-sudo docker compose up -d backend
-sudo docker compose ps
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml build backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml up -d backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml ps
 curl -fsS https://api.unimate.be/health
 ```
 
@@ -216,12 +216,12 @@ Routine code updates do not need a database seed or volume removal. If a change 
 
 ### Manage admin accounts
 
-From the server:
+From the repository root on the server:
 
 ```bash
-sudo docker compose exec backend python -m app.admin list
-sudo docker compose exec backend python -m app.admin grant USER_ID
-sudo docker compose exec backend python -m app.admin revoke USER_ID
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec backend python -m app.admin list
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec backend python -m app.admin grant USER_ID
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec backend python -m app.admin revoke USER_ID
 ```
 
 Replace `USER_ID` with the user's ID. Grant admin access only to trusted accounts. This app's current identity mechanism is not safe for public admin access until real authentication is implemented.
@@ -234,7 +234,7 @@ Store backups outside the repository, restrict access, and copy them off the ser
 mkdir -p "$HOME/unimate-backups"
 chmod 700 "$HOME/unimate-backups"
 umask 077
-sudo docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
   > "$HOME/unimate-backups/unimate-$(date +%F-%H%M%S).sql"
 ```
 
@@ -243,19 +243,19 @@ Verify that the backup file is non-empty and arrange encrypted off-server storag
 Restoring replaces the current database contents. Only do this deliberately after preserving a current backup. The commands below **delete and recreate the configured database** before restoring; replace the path with the exact backup to restore:
 
 ```bash
-sudo docker compose stop backend
-sudo docker compose exec db sh -c 'dropdb --if-exists -U "$POSTGRES_USER" --maintenance-db=postgres "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" -O "$POSTGRES_USER" "$POSTGRES_DB"'
-sudo docker compose exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml stop backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec db sh -c 'dropdb --if-exists -U "$POSTGRES_USER" --maintenance-db=postgres "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" -O "$POSTGRES_USER" "$POSTGRES_DB"'
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < "$HOME/unimate-backups/backup-to-restore.sql"
-sudo docker compose start backend
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml start backend
 ```
 
-If the restore command fails, keep the backend stopped and resolve the restore error before restarting it. Do not use `docker compose down -v` to troubleshoot: it deletes the persistent database volume.
+If the restore command fails, keep the backend stopped and resolve the restore error before restarting it. Do not use `docker compose --env-file backend/.env -f backend/docker-compose.yml down -v` to troubleshoot: it deletes the persistent database volume.
 
 ## Security and capacity notes
 
-- Keep ports 5432 and 8001 private. Compose binds the API port to loopback for host-installed Caddy, while the database has no published port.
-- `.env` contains the database password. Keep it private, use strong unique secrets, and rotate any secret that has been shared.
+- Keep ports 5433 and 8001 private. Compose binds both services to loopback; only Caddy should provide the public API entry point.
+- `backend/.env` contains the database password. Keep it private, use strong unique secrets, and rotate any secret that has been shared.
 - Docker-published ports can bypass assumptions about UFW filtering; the loopback bind is intentional.
 - The current API trusts a client-provided `X-User-Id` header as identity. It is not proof of identity and may permit impersonation. Implement verified authentication and authorization before public use with real user data or admin actions.
 - This is a single small server, not a highly available deployment. Monitor disk space, memory, logs, and backups. The Compose configuration uses one API worker to limit memory use on a 1-GB server.

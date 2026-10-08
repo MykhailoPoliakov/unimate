@@ -6,8 +6,8 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(REPOSITORY_ROOT / ".env")
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(BACKEND_ROOT / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -16,7 +16,7 @@ if not DATABASE_URL:
     if missing_settings:
         missing = ", ".join(missing_settings)
         raise RuntimeError(
-            f"Set DATABASE_URL or add {missing} to the repository .env file"
+            f"Set DATABASE_URL or add {missing} to backend/.env"
         )
     DATABASE_URL = URL.create(
         "postgresql+psycopg",

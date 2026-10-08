@@ -10,6 +10,9 @@ The frontend is an Expo Router app for iOS, Android, and web. See the [repositor
 - `src/lib/` contains API clients, device helpers, and domain utilities.
 - `src/i18n/` contains user-facing translations; legal copy belongs here so it stays localized.
 - `assets/` contains app imagery and bundled institution/service icons.
+- `docs/` contains the static support, about, privacy, and terms pages.
+
+For GitHub Pages, configure publishing to use `frontend/docs/` as the site source.
 
 ## Run
 
@@ -24,4 +27,4 @@ Use `npm run ios` or `npm run android` for native development targets.
 
 ## Licensing
 
-UniMate source is licensed under MIT in the repository-root [`LICENSE`](../LICENSE). Expo's MIT notice is separate at `../THIRD-PARTY-LICENSES/EXPO-MIT.txt` and applies to Expo-authored material.
+UniMate source is licensed under MIT in the repository-root [`LICENSE`](../LICENSE). Expo's MIT notice is in [`THIRD-PARTY-LICENSES/`](THIRD-PARTY-LICENSES/) and applies to Expo-authored material.

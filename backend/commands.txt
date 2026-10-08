@@ -1,0 +1,41 @@
+UniMate backend command reference
+=================================
+
+Run Compose commands from the repository root. Local/deployment secrets belong
+in backend/.env (copy backend/.env.example there first).
+
+LOCAL DEVELOPMENT
+-----------------
+
+Start PostgreSQL:
+    docker compose --env-file backend/.env -f backend/docker-compose.yml up -d db
+
+Run the API from backend/api/ with its virtual environment activated:
+    python -m app.seed
+        Destructive: drops and recreates all tables. Use only for an empty DB.
+    python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+Run the API and database in Docker (API on 127.0.0.1:8001):
+    docker compose --env-file backend/.env -f backend/docker-compose.yml up -d --build
+
+Database shell:
+    docker compose --env-file backend/.env -f backend/docker-compose.yml exec db psql -U unimate -d unimate
+
+Admin commands (from backend/api/):
+    python -m app.admin list
+    python -m app.admin grant USER_ID
+    python -m app.admin revoke USER_ID
+
+DEPLOYMENT
+----------
+
+See DEPLOYMENT.md for server provisioning, Caddy/HTTPS, updates, backups, and
+database recovery procedures. Compose commands in that guide are run from the
+repository root.
+
+NEVER
+-----
+    python -m app.seed       on a live database; it deletes users, news, and votes
+    docker compose ... down -v
+                             deletes the persistent PostgreSQL volume
+    expose port 8001         Caddy should be the public API entry point

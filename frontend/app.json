@@ -5,7 +5,11 @@
     "owner": "unimate-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": {
+      "light": "./assets/images/app-icon-light.png",
+      "dark": "./assets/images/app-icon-dark.png",
+      "tinted": "./assets/images/app-icon-tinted.png"
+    },
     "scheme": "unimate",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#E4E1DB",

@@ -1,0 +1,17 @@
+# Local backend environment and credentials; use .env.example as a template.
+.env
+
+# Local Python virtual environments; recreate these from requirements.txt.
+.venv/
+
+# Python bytecode and interpreter caches; these are generated automatically.
+__pycache__/
+*.py[cod]
+
+# Local editor settings; they vary by developer and machine.
+.idea/
+.vscode/
+.cursor/
+
+# macOS Finder metadata; it is unrelated to the application.
+.DS_Store
