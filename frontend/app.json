@@ -5,16 +5,16 @@
     "owner": "unimate-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": {
-      "light": "./assets/images/app-icon-light.png",
-      "dark": "./assets/images/app-icon-dark.png",
-      "tinted": "./assets/images/app-icon-tinted.png"
-    },
+    "icon": "./assets/images/app-icon-dark.png",
     "scheme": "unimate",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#E4E1DB",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": {
+        "light": "./assets/images/app-icon-light.png",
+        "dark": "./assets/images/app-icon-dark.png",
+        "tinted": "./assets/images/app-icon-tinted.png"
+      },
       "requireFullScreen": true,
       "infoPlist": {
         "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
