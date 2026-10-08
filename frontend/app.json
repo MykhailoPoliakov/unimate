@@ -10,6 +10,7 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#E4E1DB",
     "ios": {
+      "bundleIdentifier": "com.unimate.app",
       "icon": {
         "light": "./assets/images/app-icon-light.png",
         "dark": "./assets/images/app-icon-dark.png",
