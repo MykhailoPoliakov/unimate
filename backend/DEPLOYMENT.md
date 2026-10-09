@@ -4,6 +4,30 @@ This guide runs the UniMate FastAPI backend and PostgreSQL in Docker Compose, wi
 
 The Compose project is `unimate`; its services are named `backend` and `db`. PostgreSQL and the backend are published only on loopback (`127.0.0.1:5433` and `127.0.0.1:8001`); Caddy proxies requests from ports 80 and 443 to the backend. Run Compose commands from the repository root using `backend/docker-compose.yml` and `backend/.env`. Use `sudo` with Docker unless you intentionally configure Docker access for your account. Membership in the `docker` group grants root-equivalent access.
 
+## Quick helper command: `unimate`
+
+Install the helper from the repository root:
+
+```bash
+source backend/ops/install.sh
+```
+
+Then use the shortcut for common operations:
+
+```bash
+unimate start
+unimate status
+unimate logs backend
+unimate logs db
+unimate update
+unimate list
+unimate grant USER_ID
+unimate revoke USER_ID
+unimate backup
+```
+
+The helper finds the repository relative to its own location, so `unimate` works from any directory. It uses `sudo docker compose` for Compose commands and `git pull --ff-only` for updates.
+
 ## Current deployment: finish setup
 
 If Compose has already started `db` and `backend` and the database has already been seeded, **do not seed again**. Follow these steps to finish HTTPS and verify the deployment.

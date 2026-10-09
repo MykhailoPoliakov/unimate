@@ -26,6 +26,19 @@ Admin commands (from backend/api/):
     python -m app.admin grant USER_ID
     python -m app.admin revoke USER_ID
 
+Helper command for Docker operations:
+    source backend/ops/install.sh
+    unimate start
+    unimate status
+    unimate logs backend
+    unimate logs db
+    unimate update
+    unimate list
+    unimate grant USER_ID
+    unimate revoke USER_ID
+    unimate backup
+    unimate seed
+
 DEPLOYMENT
 ----------
 

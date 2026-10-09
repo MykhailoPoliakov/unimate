@@ -1,0 +1,84 @@
+#!/bin/bash
+set -e # exit if error
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE="sudo docker compose --env-file backend/.env -f backend/docker-compose.yml"
+
+cd "$REPO"
+
+case "$1" in
+  start)
+    echo "Starting containers..."
+    $COMPOSE up -d
+    ;;
+
+  stop)
+    echo "Stopping containers..."
+    $COMPOSE down
+    ;;
+
+  status)
+    $COMPOSE ps
+    ;;
+
+  logs)
+    # Usage: unimate logs backend or unimate logs db
+    $COMPOSE logs -f "${2:-backend}"
+    ;;
+
+  update)
+    echo "Pulling latest code from git and rebuilding backend..."
+    git pull --ff-only
+    $COMPOSE build backend
+    $COMPOSE up -d backend
+    curl -fsS https://api.unimate.be/health
+    ;;
+
+  list)
+    echo "Accounts:"
+    $COMPOSE exec backend python -m app.admin list
+    ;;
+
+  grant)
+    if [ -z "$2" ]; then
+      echo "Usage: unimate grant <user_id>"
+      exit 1
+    fi
+    $COMPOSE exec backend python -m app.admin grant "$2"
+    ;;
+
+  revoke)
+    if [ -z "$2" ]; then
+      echo "Usage: unimate revoke <user_id>"
+      exit 1
+    fi
+    $COMPOSE exec backend python -m app.admin revoke "$2"
+    ;;
+
+  seed)
+    echo "WARNING: this drops and recreates all tables, deleting real user data, news and votes."
+    read -p "Type YES to confirm: " confirm
+    if [ "$confirm" = "YES" ]; then
+      $COMPOSE run --rm backend python -m app.seed
+    else
+      echo "Cancelled."
+    fi
+    ;;
+
+  backup)
+    mkdir -p "$HOME/unimate-backups"
+    $COMPOSE exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "$HOME/unimate-backups/unimate-$(date +%F-%H%M%S).sql"
+    echo "Backup saved to $HOME/unimate-backups/"
+    ;;
+
+  help)
+    echo "Usage: unimate {start|stop|status|logs [backend|db]|update|list|grant <user_id>|revoke <user_id>|seed|backup|help}"
+    ;;
+
+  *)
+    echo "Unknown command: $1"
+    echo "Usage: unimate {start|stop|status|logs [backend|db]|update|list|grant <user_id>|revoke <user_id>|seed|backup|help}"
+    exit 1
+    ;;
+esac
