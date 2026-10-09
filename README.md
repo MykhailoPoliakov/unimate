@@ -64,6 +64,19 @@ To run the API in Docker instead of locally:
 docker compose --env-file backend/.env -f backend/docker-compose.yml up -d --build
 ```
 
+A Bash helper command is available for Docker and admin operations. Install it from the repository root:
+
+```bash
+source backend/ops/install.sh
+unimate start
+unimate status
+unimate logs backend
+unimate logs db
+unimate backup
+```
+
+After installation, `unimate` works from any directory. The helper finds the repository relative to its own location.
+
 The container API is published on `127.0.0.1:8001`. For Ubuntu deployment, HTTPS, backups, and operations, follow [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md).
 
 ## Database and administration
