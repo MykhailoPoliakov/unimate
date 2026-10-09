@@ -11,12 +11,12 @@ import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
 import { mapRemoteUser, useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-import { ApiError, createUser, updateUser } from '@/lib/api';
+import { createUser } from '@/lib/api';
 import { getDeviceId } from '@/lib/device-id';
 
 export function Onboarding() {
   const theme = useTheme();
-  const { saveProfile, lastUserId } = useProfile();
+  const { saveProfile } = useProfile();
   const { t, language, setLanguage, languages } = useI18n();
   const study = useStudySelection({ programsDelayMs: 700 });
   const [isSaving, setIsSaving] = useState(false);
@@ -37,17 +37,7 @@ export function Onboarding() {
         year_of_study: study.yearOfStudy,
         language,
       };
-      let user;
-      if (lastUserId) {
-        try {
-          user = await updateUser(lastUserId, studyPayload);
-        } catch (error) {
-          if (!(error instanceof ApiError && error.status === 404)) throw error;
-          user = await createUser(studyPayload);
-        }
-      } else {
-        user = await createUser(studyPayload);
-      }
+      const user = await createUser(studyPayload);
       await saveProfile({
         institutionName: study.selectedInstitution?.name,
         programName: study.selectedProgram?.name,

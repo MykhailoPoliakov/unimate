@@ -47,7 +47,7 @@ export const CAMPUS_SERVICES = {
     },
     {
       id: 'schedule',
-      url: 'https://cloud.timeedit.net/be_kdg/web/student/ri1Y315Q655Z54Q81.html',
+      url: 'https://timeedit.kdg.be/',
       icon: 'timeedit',
       color: '140, 232, 196',
       platform: 'schedule',

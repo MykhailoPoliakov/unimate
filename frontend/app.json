@@ -18,9 +18,18 @@
       },
       "requireFullScreen": true,
       "infoPlist": {
-        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
-        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait"],
-        "UIBackgroundModes": ["remote-notification"],
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UIBackgroundModes": [
+          "remote-notification",
+          "remote-notification"
+        ],
         "LSApplicationQueriesSchemes": [
           "instagram",
           "fb",
@@ -36,8 +45,24 @@
           "slack",
           "twitch",
           "spotify",
+          "msteams",
+          "instagram",
+          "fb",
+          "linkedin",
+          "youtube",
+          "tiktok",
+          "twitter",
+          "discord",
+          "whatsapp",
+          "tg",
+          "snapchat",
+          "reddit",
+          "slack",
+          "twitch",
+          "spotify",
           "msteams"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
