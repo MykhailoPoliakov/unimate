@@ -13,6 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useFeed } from '@/hooks/use-feed';
 import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
+import { BottomTabGap } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function NewsScreen() {
@@ -66,7 +67,8 @@ export default function NewsScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-four pb-bottom-tab-gap gap-two max-w-content self-center w-full"
+          contentContainerClassName="px-four gap-two max-w-content self-center w-full"
+          contentContainerStyle={{ paddingBottom: BottomTabGap }}
           alwaysBounceVertical
           refreshControl={
             <RefreshControl

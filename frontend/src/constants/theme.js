@@ -80,4 +80,6 @@ export const Spacing = {
 };
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+/** Clears the tab bar and home indicator, and leaves a gap under the last control. */
+export const BottomTabGap = Platform.select({ ios: 128, android: 144, default: 112 }) ?? 112;
 export const MaxContentWidth = 800;

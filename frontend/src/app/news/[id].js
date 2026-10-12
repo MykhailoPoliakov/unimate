@@ -3,12 +3,12 @@ import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { ExternalLink } from '@/components/external-link';
 import { fadeIn } from '@/components/motion';
-import { formatNewsTime, MetaChips, NewsImage, PollChoices } from '@/components/news-ui';
+import { formatNewsTime, MetaChips, NewsImage, NewsLinkButton, PollChoices } from '@/components/news-ui';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFeed } from '@/hooks/use-feed';
+import { BottomTabGap } from '@/constants/theme';
 import { useI18n } from '@/hooks/use-i18n';
 
 export default function NewsDetailScreen() {
@@ -32,9 +32,12 @@ export default function NewsDetailScreen() {
           <ThemedText themeColor="textSecondary">{t('noNews')}</ThemedText>
         </ThemedView>
       ) : (
-        <ScrollView className="flex-1" contentContainerClassName="px-four py-three gap-three pb-bottom-tab-gap">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-four py-three gap-three"
+          contentContainerStyle={{ paddingBottom: BottomTabGap }}>
           <Animated.View entering={fadeIn} style={{ gap: 12 }}>
-            <NewsImage uri={post.imageUrl} height={120} />
+            <NewsImage uri={post.imageUrl} />
             <ThemedText type="default" className="text-[22px] font-semibold leading-7">
               {post.title}
             </ThemedText>
@@ -52,11 +55,11 @@ export default function NewsDetailScreen() {
             {post.body ? <ThemedText themeColor="textSecondary">{post.body}</ThemedText> : null}
             {post.options?.length ? <PollChoices post={post} /> : null}
             {post.linkUrl ? (
-              <ExternalLink href={post.linkUrl} onPress={() => markNewsItemRead(post.id)}>
-                <ThemedText type="small" themeColor="primary">
-                  {post.linkLabel || t('openLink')}
-                </ThemedText>
-              </ExternalLink>
+              <NewsLinkButton
+                href={post.linkUrl}
+                label={post.linkLabel}
+                onPress={() => markNewsItemRead(post.id)}
+              />
             ) : null}
           </Animated.View>
         </ScrollView>

@@ -67,7 +67,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E4E1DB",
+        "backgroundColor": "#91020E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -96,15 +96,16 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1A1C1F",
+          "backgroundColor": "#91020E",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 220
         }
       ],
       [
         "expo-notifications",
         {
-          "color": "#1A1C1F",
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#91020E",
           "defaultChannel": "unimate-info"
         }
       ],

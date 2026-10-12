@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
@@ -22,13 +23,19 @@ export function formatNewsTime(iso, language) {
   return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-export function NewsImage({ uri, height = 96 }) {
+const NEWS_IMAGE_RATIO = 3 / 2;
+
+export function NewsImage({ uri, height }) {
   const [failed, setFailed] = useState(false);
   if (!uri?.trim() || failed) return null;
   return (
     <Image
       source={{ uri: uri.trim() }}
-      style={{ width: '100%', height, backgroundColor: 'transparent' }}
+      style={
+        height
+          ? { width: '100%', height, backgroundColor: 'transparent' }
+          : { width: '100%', aspectRatio: NEWS_IMAGE_RATIO, backgroundColor: 'transparent' }
+      }
       contentFit="cover"
       onError={() => setFailed(true)}
     />
@@ -181,6 +188,36 @@ export function PollChoices({ post }) {
   );
 }
 
+export function NewsLinkButton({ href, label, onPress }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const text = label?.trim() || t('openLink');
+
+  return (
+    <ExternalLink
+      href={href}
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={text}
+      style={{
+        minHeight: 48,
+        borderRadius: 14,
+        backgroundColor: theme.primary,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+      }}>
+      <Ionicons name="open-outline" size={20} color={theme.background} />
+      <ThemedText type="smallBold" style={{ color: theme.background, flexShrink: 1 }} numberOfLines={2}>
+        {text}
+      </ThemedText>
+    </ExternalLink>
+  );
+}
+
 export function PostCard({ post, onOpen, onEdit, onDelete }) {
   const theme = useTheme();
   const { t, language } = useI18n();
@@ -215,17 +252,7 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
               {post.body}
             </ThemedText>
           ) : null}
-          <ThemedView className="flex-row items-center justify-between bg-transparent mt-half">
-            {post.linkUrl ? (
-              <ExternalLink href={post.linkUrl} onPress={() => markNewsItemRead(post.id)}>
-                <ThemedText type="small" themeColor="primary">
-                  {t('openLink')}
-                </ThemedText>
-              </ExternalLink>
-            ) : (
-              <ThemedView className="bg-transparent" />
-            )}
-            <ThemedView className="items-end bg-transparent">
+          <ThemedView className="items-end bg-transparent mt-half">
               {created ? (
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: unread ? 0.8 : 0.55 }}>
                   {created}
@@ -237,9 +264,17 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
                 </ThemedText>
               ) : null}
             </ThemedView>
-          </ThemedView>
         </ThemedView>
       </PressScale>
+      {post.linkUrl ? (
+        <ThemedView className="px-three pb-three bg-transparent">
+          <NewsLinkButton
+            href={post.linkUrl}
+            label={post.linkLabel}
+            onPress={() => markNewsItemRead(post.id)}
+          />
+        </ThemedView>
+      ) : null}
       {post.options?.length ? <PollChoices post={post} /> : null}
       {post.canManage ? (
         <ThemedView className="flex-row gap-three px-three pb-three bg-transparent">

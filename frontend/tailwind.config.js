@@ -35,8 +35,8 @@ module.exports = {
         five: 32,
         six: 64,
         'bottom-tab': platformSelect({ ios: 50, android: 80, default: 0 }),
-        // BottomTabInset + Spacing.three, for content sitting under the tab bar.
-        'bottom-tab-gap': platformSelect({ ios: 66, android: 96, default: 16 }),
+        // Clears the tab bar, including the home indicator, and leaves a gap under the last control.
+        'bottom-tab-gap': platformSelect({ ios: 128, android: 144, default: 112 }),
       },
       borderRadius: {
         half: 2,
