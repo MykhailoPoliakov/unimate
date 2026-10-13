@@ -63,15 +63,21 @@ def news_out(
     language: str,
     poll: NewsPollOut | None = None,
     *,
+    db: Session,
     viewer: User | None = None,
 ) -> NewsOut | None:
     translation = pick_translation(news.translations, language)
     if translation is None:
         return None
+    institution_slug, programs, years = audience_fields(news, db)
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
         author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
+        institution=institution_slug,
+        program=programs[0] if programs else None,
+        programs=programs,
+        years=years,
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, translation.lang),
@@ -132,6 +138,7 @@ def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_
                 item,
                 user.language,
                 _poll_snapshot(item, counts_by_news[item.id], yours_by_news.get(item.id)),
+                db=db,
                 viewer=user,
             )
         )

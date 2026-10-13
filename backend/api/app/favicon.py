@@ -76,12 +76,12 @@ def _assert_public_http_url(url: str) -> None:
             raise HTTPException(422, "That address is not allowed")
 
 
-def _fetch(url: str, max_bytes: int = MAX_HTML_BYTES) -> bytes:
+def _fetch(url: str, max_bytes: int = MAX_HTML_BYTES) -> tuple[str, bytes]:
     _assert_public_http_url(url)
     request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
     try:
         with urlopen(request, timeout=FETCH_TIMEOUT) as response:
-            return response.read(max_bytes)
+            return response.geturl() or url, response.read(max_bytes)
     except HTTPError as error:
         raise HTTPException(422, "Could not load that page") from error
     except (URLError, TimeoutError, OSError) as error:
@@ -89,7 +89,8 @@ def _fetch(url: str, max_bytes: int = MAX_HTML_BYTES) -> bytes:
 
 
 def preview_website(url: str) -> dict[str, str | None]:
-    html = _fetch(url).decode("utf-8", errors="ignore")
+    final_url, raw = _fetch(url)
+    html = raw.decode("utf-8", errors="ignore")
     parser = _PageMetaParser()
     try:
         parser.feed(html)
@@ -98,7 +99,7 @@ def preview_website(url: str) -> dict[str, str | None]:
     title = (parser.og_title or "".join(parser.title_chunks)).strip()
     title = re.sub(r"\s+", " ", title)[:200] or None
     icons = sorted(parser.icons, key=lambda item: item[0], reverse=True)
-    icon = urljoin(url, icons[0][1]) if icons else urljoin(url, "/favicon.ico")
+    icon = urljoin(final_url, icons[0][1]) if icons else urljoin(final_url, "/favicon.ico")
     try:
         _assert_public_http_url(icon)
     except HTTPException:

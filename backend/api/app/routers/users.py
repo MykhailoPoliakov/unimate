@@ -1,15 +1,15 @@
 import uuid
 from typing import Literal, cast
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.academic import enrollment_year_for, year_of_study
 from app.audience import moderator_scope, serialize_moderator_scope
 from app.db import get_db
-from app.deps import require_admin
-from app.models import Institution, Program, User
+from app.deps import get_current_user, require_admin
+from app.models import Button, Institution, News, NewsVote, Program, PushToken, Social, User
 from app.schemas import Language, UserCreate, UserOut, UserRoleUpdate, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -136,3 +136,25 @@ def update_user_role(
     db.commit()
     db.refresh(user)
     return to_out(user)
+
+
+@router.delete("/{user_id}", status_code=204)
+def delete_user(
+    user_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if user.id != user_id:
+        raise HTTPException(403, "You can only delete your own profile")
+    if user.role == "admin":
+        admin_count = db.scalar(select(func.count()).select_from(User).where(User.role == "admin"))
+        if admin_count <= 1:
+            raise HTTPException(409, "Cannot remove the last admin")
+    db.execute(delete(NewsVote).where(NewsVote.user_id == user.id))
+    db.execute(delete(PushToken).where(PushToken.user_id == user.id))
+    db.execute(update(News).where(News.author_id == user.id).values(author_id=None))
+    db.execute(update(Button).where(Button.author_id == user.id).values(author_id=None))
+    db.execute(update(Social).where(Social.author_id == user.id).values(author_id=None))
+    db.delete(user)
+    db.commit()
+    return Response(status_code=204)
