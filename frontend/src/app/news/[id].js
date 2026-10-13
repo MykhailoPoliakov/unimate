@@ -4,7 +4,7 @@ import { ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { fadeIn } from '@/components/motion';
-import { formatNewsTime, MetaChips, NewsImage, NewsLinkButton, PollChoices } from '@/components/news-ui';
+import { formatNewsTime, MetaChips, NewsFooter, NewsImage, newsAudienceLabels, PollChoices } from '@/components/news-ui';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFeed } from '@/hooks/use-feed';
@@ -51,16 +51,10 @@ export default function NewsDetailScreen() {
                 {t('postedBy', { id: post.authorId })}
               </ThemedText>
             ) : null}
-            <MetaChips items={post.tags?.length ? post.tags : [post.audience]} />
+            <MetaChips items={newsAudienceLabels(post, t)} />
             {post.body ? <ThemedText themeColor="textSecondary">{post.body}</ThemedText> : null}
-            {post.options?.length ? <PollChoices post={post} /> : null}
-            {post.linkUrl ? (
-              <NewsLinkButton
-                href={post.linkUrl}
-                label={post.linkLabel}
-                onPress={() => markNewsItemRead(post.id)}
-              />
-            ) : null}
+            {post.options?.length ? <PollChoices post={post} flush /> : null}
+            <NewsFooter post={post} onOpenLink={() => markNewsItemRead(post.id)} />
           </Animated.View>
         </ScrollView>
       )}

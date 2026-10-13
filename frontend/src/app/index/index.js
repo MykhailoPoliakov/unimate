@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, ActionSheetIOS, View } from 'react-native';
 import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DEFAULT_LINK_COLOR, linksStorageKey } from '@/components/button-modal';
 import { openExternalUrl } from '@/components/external-link';
+import { ScheduleBrowser, scheduleStorageKey, timetableUrl } from '@/components/schedule-browser';
 import { listEnter, PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { SortableSection } from '@/components/sortable-section';
@@ -20,7 +21,7 @@ import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { campusServicesFor } from '@/constants/campus-services';
-import { listButtons } from '@/lib/api';
+import { listButtons, previewButton } from '@/lib/api';
 import { LOCAL_ICONS } from '@/lib/local-icons';
 import { setLinkDraft } from '@/lib/nav-draft';
 
@@ -53,7 +54,7 @@ const BRAND = {
   timeedit: { icon: 'timeedit', rgb: { r: 140, g: 232, b: 196 } },
   'e-studentservice': { icon: 'e-studentservice', rgb: { r: 47, g: 95, b: 168 } },
   'kdg-website': {
-    icon: 'kdg-icon',
+    icon: 'school-outline',
     rgb: { r: 28, g: 28, b: 28 },
     lightRgb: { r: 52, g: 52, b: 54 },
   },
@@ -153,10 +154,28 @@ function openButtonMenu({ t, onEdit, onDelete }) {
   ]);
 }
 
-function ServiceLink({ title, subtitle, icon, href, color, brand, onLongPress, blockHeldPress }) {
+function ServiceLink({ title, subtitle, icon, href, color, brand, onPress, onLongPress, blockHeldPress }) {
   const theme = useTheme();
+  const { profile } = useProfile();
   const light = useColorScheme() !== 'dark';
   const [pressed, setPressed] = useState(false);
+  const [siteIcon, setSiteIcon] = useState(null);
+  const kdgSite = isKdgWebsiteButton({ url: href });
+
+  useEffect(() => {
+    if (!kdgSite || !profile?.userId || !href) return undefined;
+    let cancelled = false;
+    previewButton(profile.userId, href)
+      .then((preview) => {
+        if (!cancelled && typeof preview?.icon === 'string' && /^https?:\/\//i.test(preview.icon)) {
+          setSiteIcon(preview.icon);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [kdgSite, href, profile?.userId]);
   const downAt = useRef(0);
   const skipPress = useRef(false);
   const rgb = (light && brand?.lightRgb ? brand.lightRgb : brand?.rgb) ?? parseRgb(color) ?? parseRgb(DEFAULT_LINK_COLOR);
@@ -167,7 +186,8 @@ function ServiceLink({ title, subtitle, icon, href, color, brand, onLongPress, b
   const topLeft = rgbCss(pressed ? shadow : highlight);
   const bottomRight = rgbCss(pressed ? highlight : shadow);
   const well = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.92)`;
-  const localIcon = (brand?.icon && LOCAL_ICONS[brand.icon]) || LOCAL_ICONS[icon];
+  const displayIcon = siteIcon || icon;
+  const localIcon = siteIcon ? null : (brand?.icon && LOCAL_ICONS[brand.icon]) || LOCAL_ICONS[icon];
 
   return (
     <Pressable
@@ -177,7 +197,8 @@ function ServiceLink({ title, subtitle, icon, href, color, brand, onLongPress, b
           return;
         }
         if (blockHeldPress && Date.now() - downAt.current > 280) return;
-        openExternalUrl(href, theme);
+        if (onPress) onPress();
+        else openExternalUrl(href, theme);
       }}
       onLongPress={
         onLongPress
@@ -215,7 +236,7 @@ function ServiceLink({ title, subtitle, icon, href, color, brand, onLongPress, b
           borderBottomColor: bottomRight,
         }}>
         <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
-          {localIcon || (typeof icon === 'string' && icon.startsWith('http')) ? (
+          {localIcon || (typeof displayIcon === 'string' && displayIcon.startsWith('http')) ? (
             <View
               style={{
                 borderRadius: 10,
@@ -227,7 +248,7 @@ function ServiceLink({ title, subtitle, icon, href, color, brand, onLongPress, b
                 overflow: 'hidden',
               }}>
               <Image
-                source={localIcon ?? { uri: icon }}
+                source={localIcon ?? { uri: displayIcon }}
                 style={{ width: 40, height: 40, borderRadius: 8 }}
                 contentFit="cover"
               />
@@ -243,7 +264,7 @@ function ServiceLink({ title, subtitle, icon, href, color, brand, onLongPress, b
                 borderRightColor: bottomRight,
                 borderBottomColor: bottomRight,
               }}>
-              <Ionicons name={icon} size={28} color="#F3F0E8" />
+              <Ionicons name={displayIcon} size={28} color="#F3F0E8" />
             </ThemedView>
           )}
           <ThemedView className="flex-1 bg-transparent">
@@ -271,7 +292,24 @@ export default function HomeScreen() {
   const router = useRouter();
   const institution = profile?.institution;
   const services = campusServicesFor(institution, profile?.language);
+  const schedulePortalUrl =
+    services.find((button) => isScheduleButton(button) && !isCustomButton(button))?.url ??
+    'https://timeedit.kdg.be/';
   const [extras, setExtras] = useState([]);
+  const [scheduleUrl, setScheduleUrl] = useState(null);
+
+  const openOwnSchedule = useCallback(async (forcePortal = false) => {
+    if (!profile?.userId) return;
+    const saved = forcePortal
+      ? null
+      : timetableUrl(await AsyncStorage.getItem(scheduleStorageKey(profile.userId)));
+    const next = saved || schedulePortalUrl;
+    if (Platform.OS === 'web') {
+      openExternalUrl(next, theme);
+      return;
+    }
+    setScheduleUrl(next);
+  }, [profile?.userId, schedulePortalUrl, theme]);
 
   const persistLinks = useCallback(
     async (next) => {
@@ -336,17 +374,22 @@ export default function HomeScreen() {
     router.push('/compose');
   };
 
-  const renderButton = (button, { blockHeldPress } = {}) => (
-    <ServiceLink
-      title={button.title}
-      subtitle={button.description}
-      icon={buttonIcon(button)}
-      href={button.url}
-      color={button.color ?? DEFAULT_LINK_COLOR}
-      brand={buttonBrand(button)}
-      blockHeldPress={blockHeldPress}
-    />
-  );
+  const renderButton = (button, { blockHeldPress } = {}) => {
+    const schedule = isScheduleButton(button) && !isCustomButton(button);
+    return (
+      <ServiceLink
+        title={button.title}
+        subtitle={button.description}
+        icon={buttonIcon(button)}
+        href={button.url}
+        color={button.color ?? DEFAULT_LINK_COLOR}
+        brand={buttonBrand(button)}
+        blockHeldPress={blockHeldPress}
+        onPress={schedule ? () => openOwnSchedule(false) : undefined}
+        onLongPress={schedule ? () => openOwnSchedule(true) : undefined}
+      />
+    );
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.background }}>
@@ -409,6 +452,12 @@ export default function HomeScreen() {
             ) : null}
           </ScrollView>
         </SafeAreaView>
+        <ScheduleBrowser
+          visible={scheduleUrl !== null}
+          userId={profile?.userId}
+          initialUrl={scheduleUrl}
+          onClose={() => setScheduleUrl(null)}
+        />
       </ThemedView>
     </GestureHandlerRootView>
   );

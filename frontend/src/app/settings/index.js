@@ -20,7 +20,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { mapRemoteUser, useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemePreference } from '@/hooks/use-theme-preference';
-import { updateUser, updateUserRole, listInstitutions, listPrograms } from '@/lib/api';
+import { deleteUser, updateUser, updateUserRole, listInstitutions, listPrograms } from '@/lib/api';
 import { mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
 
 const THEME_IDS = [
@@ -34,12 +34,8 @@ const FEEDBACK_EMAIL = support.email;
 export default function SettingsScreen() {
   const theme = useTheme();
   const { t, language, languages } = useI18n();
-  const { profile, saveProfile, refreshUser } = useProfile();
-  const {
-    refresh: refreshFeed,
-    inAppNewsEnabled,
-    setInAppNewsEnabled,
-  } = useFeed();
+  const { profile, saveProfile, refreshUser, clearProfile } = useProfile();
+  const { refresh: refreshFeed } = useFeed();
   const { preference, setPreference } = useThemePreference();
   const {
     enabled: notificationsEnabled,
@@ -51,6 +47,7 @@ export default function SettingsScreen() {
   const [roleToAssign, setRoleToAssign] = useState('moderator');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
   const [roleUpdated, setRoleUpdated] = useState(false);
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [scopeInstitutionsList, setScopeInstitutionsList] = useState([]);
   const [scopeProgramsList, setScopeProgramsList] = useState([]);
   const [assignedInstitutions, setAssignedInstitutions] = useState([]);
@@ -174,6 +171,31 @@ export default function SettingsScreen() {
 
   const handleShare = () => {
     Share.share({ message: t('shareMessage') }).catch(() => {});
+  };
+
+  const handleDeleteProfile = () => {
+    if (!profile?.userId || isDeletingProfile) return;
+    Alert.alert(t('deleteProfile'), t('deleteProfileMessage'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('delete'),
+        style: 'destructive',
+        onPress: async () => {
+          setIsDeletingProfile(true);
+          try {
+            await deleteUser(profile.userId);
+            await clearProfile();
+          } catch (error) {
+            if (error?.status === 404) {
+              await clearProfile();
+              return;
+            }
+            Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
+            setIsDeletingProfile(false);
+          }
+        },
+      },
+    ]);
   };
 
   const handleCopyId = async () => {
@@ -317,16 +339,6 @@ export default function SettingsScreen() {
                   {pushError}
                 </ThemedText>
               ) : null}
-              <SettingsRow
-                icon="newspaper-outline"
-                label={t('inAppNewsNotifications')}
-                right={
-                  <Switch
-                    value={inAppNewsEnabled}
-                    onValueChange={setInAppNewsEnabled}
-                  />
-                }
-              />
             </SettingsGroup>
 
             {profile?.role === 'admin' ? (
@@ -553,28 +565,38 @@ export default function SettingsScreen() {
               <SettingsRow icon="information-circle-outline" label={t('aboutUnimate')} href="/settings/about" />
             </SettingsGroup>
 
-            <ThemedView className="items-center pt-four bg-transparent" style={{ paddingBottom: 24 }}>
-              <ThemedText type="small" themeColor="textSecondary">
-                v{Constants.expoConfig?.version ?? '1.0.0'}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {profile?.role ? t(profile.role) : t('student')}
-              </ThemedText>
-              {profile?.userId ? (
-                <ThemedView className="flex-row items-center gap-two bg-transparent">
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {profile.userId}
-                  </ThemedText>
-                  <Pressable
-                    onPress={handleCopyId}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('copyId')}
-                    className="active:opacity-70">
-                    <Ionicons name="copy-outline" size={16} color={theme.textSecondary} />
-                  </Pressable>
-                </ThemedView>
-              ) : null}
+            <ThemedView className="pt-four bg-transparent" style={{ paddingBottom: 24, gap: 16 }}>
+              <SettingsGroup>
+                <SettingsRow
+                  icon="trash-outline"
+                  label={isDeletingProfile ? t('saving') : t('deleteProfile')}
+                  destructive
+                  onPress={isDeletingProfile ? undefined : handleDeleteProfile}
+                />
+              </SettingsGroup>
+              <ThemedView className="items-center bg-transparent">
+                <ThemedText type="small" themeColor="textSecondary">
+                  v{Constants.expoConfig?.version ?? '1.0.0'}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {profile?.role ? t(profile.role) : t('student')}
+                </ThemedText>
+                {profile?.userId ? (
+                  <ThemedView className="flex-row items-center gap-two bg-transparent">
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {profile.userId}
+                    </ThemedText>
+                    <Pressable
+                      onPress={handleCopyId}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('copyId')}
+                      className="active:opacity-70">
+                      <Ionicons name="copy-outline" size={16} color={theme.textSecondary} />
+                    </Pressable>
+                  </ThemedView>
+                ) : null}
+              </ThemedView>
             </ThemedView>
           </ScrollView>
         </KeyboardAvoidingView>

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { NewsImage } from '@/components/news-ui';
+import { audienceLabels, institutionChip, NewsImage } from '@/components/news-ui';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFeed } from '@/hooks/use-feed';
@@ -178,18 +178,17 @@ export default function NewsComposeScreen() {
     if (asset?.uri) setImageUrl(asset.uri);
   };
 
-  const audienceTags = () => {
-    if (targetingEveryone) return [t('everyone')];
-    const years = selectedYears
-      .slice()
-      .sort((a, b) => a - b)
-      .map((year) => t('yearLabel', { n: year }));
-    return [
-      selectedInstitution?.name,
-      ...selectedPrograms.map((item) => item.name),
-      ...years,
-    ].filter(Boolean);
-  };
+  const audienceTags = () =>
+    audienceLabels({
+      everyone: targetingEveryone,
+      institutionName: institutionChip(institutionSlug, selectedInstitution?.name),
+      programNames: selectedPrograms.map((item) => item.name),
+      selectedProgramCount: programSlugs.length,
+      allProgramCount: programs.length,
+      years: selectedYears,
+      allYearCount: maxYear,
+      t,
+    });
 
   const handleSave = () => {
     if (!canSave || savingRef.current) return;

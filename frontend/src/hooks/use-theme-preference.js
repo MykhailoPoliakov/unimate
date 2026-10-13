@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Appearance, AppState, Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -92,7 +92,7 @@ export function ThemePreferenceProvider({ children }) {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isReady) return;
     applyOverrides(preference, resolved);
     SystemUI.setBackgroundColorAsync(Colors[resolved].background);

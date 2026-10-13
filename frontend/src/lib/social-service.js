@@ -93,6 +93,35 @@ export function iconOnBrand(color) {
   return color.toUpperCase() === '#FFFC00' ? '#111111' : '#F3F0E8';
 }
 
+export function discordInviteUrl(value) {
+  try {
+    const parsed = new URL(normalizeUrl(value));
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const code = host === 'discord.gg' ? parts[0] : parts[0] === 'invite' ? parts[1] : null;
+    return code ? `https://discord.com/invite/${code}` : null;
+  } catch {
+    return null;
+  }
+}
+
+function telegramAppUrl(parts) {
+  const head = parts[0];
+  if (!head || ['share', 'addstickers', 'iv', 's'].includes(head)) return null;
+  if (head === 'joinchat' && parts[1]) return `tg://join?invite=${encodeURIComponent(parts[1])}`;
+  if (head.startsWith('+')) return `tg://join?invite=${encodeURIComponent(head.slice(1))}`;
+  const post = parts[1] && /^\d+$/.test(parts[1]) ? `&post=${parts[1]}` : '';
+  return `tg://resolve?domain=${encodeURIComponent(head)}${post}`;
+}
+
+function whatsAppAppUrl(host, parts, searchParams) {
+  if (host === 'chat.whatsapp.com' && parts[0]) {
+    return `whatsapp://chat?code=${encodeURIComponent(parts[0])}`;
+  }
+  const phone = (host === 'wa.me' ? parts[0] : searchParams.get('phone'))?.replace(/[^\d]/g, '');
+  return phone ? `whatsapp://send?phone=${phone}` : null;
+}
+
 export function nativeAppUrl(value) {
   try {
     const href = normalizeUrl(value);
@@ -120,18 +149,9 @@ export function nativeAppUrl(value) {
       const name = parts[0] && !['i', 'search', 'home'].includes(parts[0]) ? parts[0] : null;
       return name ? `twitter://user?screen_name=${name}` : 'twitter://';
     }
-    if (service?.id === 'discord') {
-      if (host === 'discord.gg') return `discord://discord.gg/${parts[0] ?? ''}`;
-      return href.replace(/^https?:\/\//, 'discord://');
-    }
-    if (service?.id === 'whatsapp') {
-      const phone = host === 'wa.me' ? parts[0] : parsed.searchParams.get('phone');
-      return phone ? `whatsapp://send?phone=${phone}` : 'whatsapp://send';
-    }
-    if (service?.id === 'telegram') {
-      const domain = host === 't.me' || host === 'telegram.me' ? parts[0] : null;
-      return domain ? `tg://resolve?domain=${domain}` : 'tg://';
-    }
+    if (service?.id === 'discord') return null;
+    if (service?.id === 'telegram') return telegramAppUrl(parts);
+    if (service?.id === 'whatsapp') return whatsAppAppUrl(host, parts, parsed.searchParams);
     if (service?.id === 'snapchat') {
       const user = parts[0] === 'add' ? parts[1] : parts[0];
       return user ? `snapchat://add/${user}` : 'snapchat://';

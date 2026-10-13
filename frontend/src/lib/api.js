@@ -92,6 +92,10 @@ export function readUser(userId) {
   return api.get(`/users/${userId}`);
 }
 
+export function deleteUser(userId) {
+  return api.delete(`/users/${encodeURIComponent(userId)}`, userId);
+}
+
 export function updateUser(userId, payload) {
   return api.patch(`/users/${userId}`, payload);
 }

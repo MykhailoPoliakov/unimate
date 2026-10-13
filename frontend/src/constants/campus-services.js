@@ -33,7 +33,7 @@ export const CAMPUS_SERVICES = {
     {
       id: 'website',
       url: 'https://www.kdg.be/en',
-      icon: 'kdg-icon',
+      icon: 'school-outline',
       color: '28, 28, 28',
       platform: 'website',
       translations: {

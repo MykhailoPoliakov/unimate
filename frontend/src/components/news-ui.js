@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, Share, View } from 'react-native';
+
+import { catalogInstitution, mergePrograms } from '@/constants/study-catalog';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ExternalLink } from '@/components/external-link';
@@ -24,8 +26,9 @@ export function formatNewsTime(iso, language) {
 }
 
 const NEWS_IMAGE_RATIO = 3 / 2;
+const NEWS_LIST_IMAGE_RATIO = 2;
 
-export function NewsImage({ uri, height }) {
+export function NewsImage({ uri, height, compact = false }) {
   const [failed, setFailed] = useState(false);
   if (!uri?.trim() || failed) return null;
   return (
@@ -34,11 +37,112 @@ export function NewsImage({ uri, height }) {
       style={
         height
           ? { width: '100%', height, backgroundColor: 'transparent' }
-          : { width: '100%', aspectRatio: NEWS_IMAGE_RATIO, backgroundColor: 'transparent' }
+          : { width: '100%', aspectRatio: compact ? NEWS_LIST_IMAGE_RATIO : NEWS_IMAGE_RATIO, backgroundColor: 'transparent' }
       }
       contentFit="cover"
       onError={() => setFailed(true)}
     />
+  );
+}
+
+export function institutionChip(slug, name) {
+  if (String(slug || '').toLowerCase() === 'kdg') return 'KdG';
+  const label = (name || slug || '').replace(/\s+university$/i, '').trim();
+  return label;
+}
+
+export function audienceLabels({
+  everyone,
+  institutionName,
+  programNames = [],
+  selectedProgramCount = 0,
+  allProgramCount = 0,
+  years = [],
+  allYearCount = 0,
+  t,
+}) {
+  if (everyone || !institutionName) return [];
+  const allPrograms = allProgramCount > 0 && selectedProgramCount >= allProgramCount;
+  const sortedYears = [...years]
+    .map((year) => Number(year))
+    .filter((year) => Number.isFinite(year))
+    .sort((a, b) => a - b);
+  const coversEveryYear =
+    allYearCount > 0 &&
+    sortedYears.length >= allYearCount &&
+    Array.from({ length: allYearCount }, (_, index) => index + 1).every((year) => sortedYears.includes(year));
+  const allYears = sortedYears.length === 0 || coversEveryYear;
+  if (allPrograms && allYears) return [institutionName];
+  const chips = allPrograms ? [institutionName] : programNames.filter(Boolean);
+  if (!allYears) chips.push(...sortedYears.map((year) => t('yearLabel', { n: year })));
+  return chips.filter(Boolean);
+}
+
+export function newsAudienceLabels(post, t) {
+  if (!post?.institution) return [];
+  const catalog = catalogInstitution(post.institution);
+  const programs = mergePrograms(post.institution, []);
+  const selected = post.programs ?? [];
+  const chosen = selected.length ? programs.filter((item) => selected.includes(item.slug)) : programs;
+  const names = selected.map((slug) => programs.find((item) => item.slug === slug)?.name ?? slug);
+  const maxYear = chosen.length ? Math.max(...chosen.map((item) => item.duration_years || 0)) : 0;
+  return audienceLabels({
+    institutionName: institutionChip(post.institution, catalog?.name),
+    programNames: names,
+    selectedProgramCount: selected.length ? selected.length : programs.length,
+    allProgramCount: programs.length,
+    years: post.years ?? [],
+    allYearCount: maxYear,
+    t,
+  });
+}
+
+function newsShareText(post) {
+  return [post?.title, post?.body, post?.linkUrl].map((item) => item?.trim()).filter(Boolean).join('\n\n');
+}
+
+export function NewsShareButton({ post }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+
+  const share = () => {
+    const message = newsShareText(post);
+    const payload = post?.linkUrl ? { message, url: post.linkUrl } : { message };
+    Share.share(payload).catch(() => {});
+  };
+
+  return (
+    <Pressable
+      onPress={share}
+      accessibilityRole="button"
+      accessibilityLabel={t('share')}
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.backgroundElement,
+        borderWidth: 1,
+        borderColor: theme.border,
+      }}>
+      <Ionicons name="share-outline" size={22} color={theme.primary} />
+    </Pressable>
+  );
+}
+
+export function NewsFooter({ post, onOpenLink }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {post.linkUrl ? (
+        <View style={{ flex: 1 }}>
+          <NewsLinkButton href={post.linkUrl} label={post.linkLabel} onPress={onOpenLink} />
+        </View>
+      ) : (
+        <View style={{ flex: 1 }} />
+      )}
+      <NewsShareButton post={post} />
+    </View>
   );
 }
 
@@ -98,7 +202,7 @@ function PollFill({ percent, color }) {
   );
 }
 
-export function PollChoices({ post }) {
+export function PollChoices({ post, flush = false }) {
   const theme = useTheme();
   const { t } = useI18n();
   const { profile } = useProfile();
@@ -139,7 +243,7 @@ export function PollChoices({ post }) {
   };
 
   return (
-    <ThemedView className="gap-two px-three pb-three bg-transparent">
+    <ThemedView className={`gap-two bg-transparent ${flush ? '' : 'px-three pb-three'}`}>
       {options.map((label, index) => {
         const isSelected = poll?.your_vote === index;
         const count = counts[index] ?? 0;
@@ -224,6 +328,7 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
   const { isNewsUnread, markNewsItemRead } = useFeed();
   const unread = isNewsUnread(post);
   const created = formatNewsTime(post.createdAt, language);
+  const showPoll = post.options?.length && typeof post.poll?.your_vote !== 'number';
 
   return (
     <GlassCard
@@ -233,11 +338,11 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
         borderColor: unread ? theme.border : theme.background,
       }}>
       <PressScale onPress={() => onOpen(post)}>
-        <NewsImage uri={post.imageUrl} />
-        <ThemedView className="gap-one px-three pt-three pb-two bg-transparent">
+        <NewsImage uri={post.imageUrl} compact />
+        <ThemedView className="gap-half px-three pt-two pb-one bg-transparent">
           <ThemedText
             type="default"
-            className="text-[22px] leading-7"
+            className="text-[18px] leading-6"
             style={{
               fontWeight: unread ? '700' : '500',
               color: unread ? theme.text : theme.textSecondary,
@@ -247,7 +352,7 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
           {post.body ? (
             <ThemedText
               themeColor="textSecondary"
-              numberOfLines={3}
+              numberOfLines={2}
               style={{ opacity: unread ? 1 : 0.78 }}>
               {post.body}
             </ThemedText>
@@ -266,18 +371,8 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
             </ThemedView>
         </ThemedView>
       </PressScale>
-      {post.linkUrl ? (
-        <ThemedView className="px-three pb-three bg-transparent">
-          <NewsLinkButton
-            href={post.linkUrl}
-            label={post.linkLabel}
-            onPress={() => markNewsItemRead(post.id)}
-          />
-        </ThemedView>
-      ) : null}
-      {post.options?.length ? <PollChoices post={post} /> : null}
       {post.canManage ? (
-        <ThemedView className="flex-row gap-three px-three pb-three bg-transparent">
+        <ThemedView className="flex-row gap-three px-three pb-two bg-transparent">
           <Pressable onPress={() => onEdit(post)} className="active:opacity-70">
             <ThemedText type="small" themeColor="primary">
               {t('edit')}
@@ -290,6 +385,10 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
           </Pressable>
         </ThemedView>
       ) : null}
+      {showPoll ? <PollChoices post={post} /> : null}
+      <ThemedView className="px-three pb-two bg-transparent">
+        <NewsFooter post={post} onOpenLink={() => markNewsItemRead(post.id)} />
+      </ThemedView>
     </GlassCard>
   );
 }

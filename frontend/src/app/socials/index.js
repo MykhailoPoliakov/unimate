@@ -10,7 +10,7 @@ import { openExternalUrl } from '@/components/external-link';
 import { GlassCard } from '@/components/glass-card';
 import { listEnter, PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
-import { SocialBrandIcon } from '@/components/social-brand-icon';
+import { WebsiteIcon } from '@/components/social-brand-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
@@ -18,7 +18,6 @@ import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { cooldownMessage, deleteSocial, listManageSocials, listSocials } from '@/lib/api';
 import { setSocialDraft } from '@/lib/nav-draft';
-import { brandColor, iconOnBrand, socialIcon } from '@/lib/social-service';
 
 function flattenAdminSocial(item, language) {
   const translation =
@@ -48,10 +47,6 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
   const { t } = useI18n();
   const suppressRedirect = useRef(false);
   const suppressRedirectTimer = useRef(null);
-  const icon = socialIcon(item);
-  const accent = brandColor(item);
-  const glyph = accent ? iconOnBrand(accent) : theme.primary;
-
   const copyLink = async () => {
     try {
       const copied = await Clipboard.setStringAsync(item.url);
@@ -95,13 +90,7 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
           delayLongPress={450}
           style={{ flex: 1 }}>
           <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
-            <SocialBrandIcon
-              name={icon}
-              size={32}
-              well={44}
-              color={glyph}
-              backgroundColor={accent ?? theme.backgroundSelected}
-            />
+            <WebsiteIcon url={item.url} well={44} />
             <ThemedView className="flex-1 bg-transparent">
               <ThemedText type="smallBold">{item.title}</ThemedText>
               {item.description ? (

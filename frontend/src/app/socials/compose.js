@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 
-import { SocialBrandIcon } from '@/components/social-brand-icon';
+import { SocialBrandIcon, WebsiteIcon } from '@/components/social-brand-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
@@ -187,15 +187,7 @@ export default function SocialComposeScreen() {
             style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
           />
           <ThemedView className="flex-row items-center gap-two bg-transparent">
-            <SocialBrandIcon
-              name={resolvedIcon}
-              size={22}
-              well={36}
-              color={iconOnBrand(brandForIcon(resolvedIcon)?.color ?? detected?.color) ?? theme.primary}
-              backgroundColor={
-                brandForIcon(resolvedIcon)?.color ?? detected?.color ?? theme.backgroundSelected
-              }
-            />
+            <WebsiteIcon url={url} well={36} />
             <ThemedText type="small" themeColor="textSecondary">
               {detected ? t('detectedService', { name: detected.label }) : t('unknownService')}
             </ThemedText>

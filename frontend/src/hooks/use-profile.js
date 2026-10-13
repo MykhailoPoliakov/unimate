@@ -117,7 +117,7 @@ export function ProfileProvider({ children }) {
     [deviceId, persist, profile]
   );
 
-  const clearProfile = useCallback(async () => persist(null), [persist]);
+  const clearProfile = useCallback(async () => persist(null, { forgetUser: true }), [persist]);
 
   const refreshUser = useCallback(async () => {
     if (!profile?.userId) return profile;

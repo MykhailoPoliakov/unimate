@@ -3,7 +3,7 @@ import { Linking, Pressable } from 'react-native';
 import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
 
 import { useTheme } from '@/hooks/use-theme';
-import { nativeAppUrl } from '@/lib/social-service';
+import { discordInviteUrl, nativeAppUrl } from '@/lib/social-service';
 
 export async function openExternalUrl(href, colors, { preferNativeApp = false } = {}) {
   if (process.env.EXPO_OS === 'web') {
@@ -14,22 +14,22 @@ export async function openExternalUrl(href, colors, { preferNativeApp = false } 
   }
 
   if (preferNativeApp) {
+    const discordInvite = discordInviteUrl(href);
+    if (discordInvite) {
+      try {
+        await Linking.openURL(discordInvite);
+        return;
+      } catch {
+        // Discord is not installed. Open the page below.
+      }
+    }
     const appUrl = nativeAppUrl(href);
     if (appUrl && appUrl !== href) {
-      try {
-        const supported = await Linking.canOpenURL(appUrl);
-        if (supported) {
-          await Linking.openURL(appUrl);
-          return;
-        }
-      } catch {
-        // Fall through to the in-app browser.
-      }
       try {
         await Linking.openURL(appUrl);
         return;
       } catch {
-        // Fall through to the in-app browser.
+        // The app is not installed. Open the page below.
       }
     }
   }
