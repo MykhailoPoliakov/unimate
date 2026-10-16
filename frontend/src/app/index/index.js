@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DEFAULT_LINK_COLOR, linksStorageKey } from '@/components/button-modal';
 import { openExternalUrl } from '@/components/external-link';
-import { ScheduleBrowser, scheduleStorageKey, timetableUrl } from '@/components/schedule-browser';
+import { ScheduleBrowser, scheduleStartUrl, scheduleStorageKey, timetableUrl } from '@/components/schedule-browser';
 import { listEnter, PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { SortableSection } from '@/components/sortable-section';
@@ -303,7 +303,7 @@ export default function HomeScreen() {
     const saved = forcePortal
       ? null
       : timetableUrl(await AsyncStorage.getItem(scheduleStorageKey(profile.userId)));
-    const next = saved || schedulePortalUrl;
+    const next = scheduleStartUrl(saved || schedulePortalUrl);
     if (Platform.OS === 'web') {
       openExternalUrl(next, theme);
       return;

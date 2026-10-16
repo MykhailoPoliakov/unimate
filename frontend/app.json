@@ -115,7 +115,8 @@
           "photosPermission": "UniMate uses your photos when an admin adds a picture to news."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-widgets"
     ],
     "experiments": {
       "reactCompiler": true

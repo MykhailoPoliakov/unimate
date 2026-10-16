@@ -31,125 +31,59 @@ export function timetableUrl(value) {
   return url.toString();
 }
 
+export function scheduleStartUrl(value) {
+  const saved = timetableUrl(value);
+  if (saved) return saved;
+  try {
+    const url = new URL(String(value ?? '').trim());
+    const host = url.hostname.toLowerCase();
+    if (host === 'timeedit.kdg.be') return 'https://cloud.timeedit.net/be_kdg/web/student/';
+    if (host === 'cloud.timeedit.net') {
+      const parts = url.pathname.split('/').filter(Boolean);
+      const org = parts[0] || 'be_kdg';
+      const section = parts[1] || 'web';
+      return `https://cloud.timeedit.net/${org}/${section}/student/`;
+    }
+  } catch {
+    // Fall through to the KdG student entry.
+  }
+  return 'https://cloud.timeedit.net/be_kdg/web/student/';
+}
+
 const TOP_INSET = Platform.OS === 'ios' ? Math.max(initialWindowMetrics?.insets.top ?? 0, 62) : (initialWindowMetrics?.insets.top ?? 0);
 const BOTTOM_INSET = initialWindowMetrics?.insets.bottom ?? 0;
 
 const MOBILE_SAFARI =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
-const CLICK_SCRIPT = `
+export function isScheduleSignInUrl(value) {
+  try {
+    const host = new URL(String(value ?? '')).hostname.toLowerCase();
+    return (
+      host === 'www.timeedit.net' ||
+      host === 'auth.timeedit.net' ||
+      /microsoftonline|live\.com|microsoft\.com|adfs|okta/.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+const SHOW_SIGN_IN = `
 (function () {
-  if (window.__unimateScheduleWatch) return true;
-  window.__unimateScheduleWatch = true;
+  if (window.__unimateShowSignIn) return true;
+  window.__unimateShowSignIn = true;
 
-  function onTimetable() {
-    return /^https:\\/\\/(cloud\\.timeedit\\.net|timeedit\\.kdg\\.be)\\/.+\\.html([?#]|$)/i.test(location.href)
-      && !/\\/(index|login|logout|error|saml|sso|signin|signon)\\.html([?#]|$)/i.test(location.pathname);
+  function showLogin() {
+    var button = document.getElementById('loginAuth');
+    if (button) button.classList.remove('hidelogin');
+    var wrap = document.getElementById('loginAuthWrap');
+    if (wrap) wrap.classList.remove('loading');
+    if (document.body) document.body.style.visibility = 'visible';
   }
 
-  function report() {
-    try {
-      if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(location.href);
-    } catch (e) {}
-  }
-
-  function textOf(el) {
-    return (el.innerText || el.getAttribute('aria-label') || el.getAttribute('title') || '')
-      .replace(/\\s+/g, ' ')
-      .trim();
-  }
-
-  function kindOf(text) {
-    if (!text || text.length > 22) return '';
-    if (/^(student|students|studenten)$/i.test(text)) return 'student';
-    if (/^(schedule|schedules|rooster|lessenrooster|mijn rooster|my schedule|schema|horaire|stundenplan)$/i.test(text)) return 'schedule';
-    return '';
-  }
-
-  function wouldReload(el) {
-    var href = el.href || (el.getAttribute && el.getAttribute('href')) || '';
-    if (!href || href === '#' || href.charAt(0) === '#') return href === '#' || (href && href.charAt(0) === '#');
-    try {
-      var next = new URL(href, location.href);
-      return next.pathname === location.pathname && next.search === location.search;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function visible(el) {
-    var rects = el.getClientRects();
-    return rects.length > 0 && rects[0].width > 8 && rects[0].height > 8;
-  }
-
-  function walk(root, out) {
-    if (!root || !root.querySelectorAll) return;
-    var nodes = root.querySelectorAll('a, button, [role="button"], [role="link"], [onclick], div, span, li');
-    for (var i = 0; i < nodes.length; i++) {
-      out.push(nodes[i]);
-      if (nodes[i].shadowRoot) walk(nodes[i].shadowRoot, out);
-    }
-  }
-
-  var clicked = [];
-  var clicksOnUrl = 0;
-  var urlForClicks = '';
-
-  function already(el) {
-    return clicked.indexOf(el) !== -1;
-  }
-
-  function scan() {
-    report();
-    if (!document.documentElement) return;
-    if (location.href !== urlForClicks) {
-      urlForClicks = location.href;
-      clicksOnUrl = 0;
-      clicked = [];
-    }
-    if (onTimetable() || clicksOnUrl >= 2) return;
-    var nodes = [];
-    walk(document, nodes);
-    var student = null;
-    var schedule = null;
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      if (already(el) || !visible(el) || wouldReload(el)) continue;
-      var kind = kindOf(textOf(el));
-      if (!kind) continue;
-      var nested = false;
-      for (var c = 0; c < el.children.length; c++) {
-        if (kindOf(textOf(el.children[c]))) nested = true;
-      }
-      if (nested) continue;
-      if (kind === 'student' && !student) student = el;
-      if (kind === 'schedule' && !schedule) schedule = el;
-    }
-    var pick = student || schedule;
-    if (!pick) return;
-    clicked.push(pick);
-    clicksOnUrl += 1;
-    try { pick.click(); } catch (e) {}
-  }
-
-  var queued = false;
-  function scheduleScan() {
-    if (queued) return;
-    queued = true;
-    setTimeout(function () {
-      queued = false;
-      scan();
-    }, 600);
-  }
-
-  function boot() {
-    if (!document.documentElement) return;
-    scheduleScan();
-    new MutationObserver(scheduleScan).observe(document.documentElement, { childList: true, subtree: true });
-  }
-
-  if (document.readyState === 'complete') boot();
-  else window.addEventListener('load', boot);
+  showLogin();
+  setInterval(showLogin, 300);
   return true;
 })();
 true;
@@ -160,14 +94,18 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
   const { t } = useI18n();
   const webRef = useRef(null);
   const lastSaved = useRef('');
+  const signedIn = useRef(Boolean(timetableUrl(initialUrl)));
+  const mustSignIn = !signedIn.current;
   const [canGoBack, setCanGoBack] = useState(false);
 
   useEffect(() => {
     lastSaved.current = timetableUrl(initialUrl) ?? '';
+    signedIn.current = Boolean(lastSaved.current);
   }, [initialUrl]);
 
   const remember = useCallback(
     async (url) => {
+      if (!signedIn.current) return;
       const next = timetableUrl(url);
       if (!next || !userId || next === lastSaved.current) return;
       lastSaved.current = next;
@@ -175,6 +113,20 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     },
     [userId]
   );
+
+  const noteNavigation = useCallback(
+    (url) => {
+      if (isScheduleSignInUrl(url)) signedIn.current = true;
+      remember(url);
+    },
+    [remember]
+  );
+
+  const allowNavigation = useCallback((request) => {
+    const url = request?.url ?? '';
+    if (signedIn.current || !timetableUrl(url)) return true;
+    return false;
+  }, []);
 
   const openPopupInPlace = useCallback((event) => {
     const url = event?.nativeEvent?.targetUrl;
@@ -219,17 +171,19 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
             userAgent={Platform.OS === 'ios' ? MOBILE_SAFARI : undefined}
             javaScriptEnabled
             domStorageEnabled
-            sharedCookiesEnabled
+            sharedCookiesEnabled={false}
             thirdPartyCookiesEnabled
             cacheEnabled
+            incognito={mustSignIn}
             javaScriptCanOpenWindowsAutomatically
             setSupportMultipleWindows={false}
             allowsBackForwardNavigationGestures
-            injectedJavaScript={CLICK_SCRIPT}
-            onMessage={(event) => remember(event.nativeEvent.data)}
+            injectedJavaScriptBeforeContentLoaded={mustSignIn ? SHOW_SIGN_IN : undefined}
+            injectedJavaScript={mustSignIn ? SHOW_SIGN_IN : undefined}
+            onShouldStartLoadWithRequest={allowNavigation}
             onNavigationStateChange={(nav) => {
               setCanGoBack(Boolean(nav.canGoBack));
-              remember(nav.url);
+              noteNavigation(nav.url);
             }}
             onOpenWindow={openPopupInPlace}
           />
