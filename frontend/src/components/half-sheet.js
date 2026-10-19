@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { GlassCircleButton } from '@/components/glass-card';
+import { GlassCircleButton, glassShadow } from '@/components/glass-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
@@ -75,10 +75,11 @@ export function HalfSheet({ visible, title, onClose, children }) {
         <View style={styles.sheetWrap} pointerEvents="box-none">
           <GestureDetector gesture={gesture}>
             <Animated.View
+              style={[styles.sheetOuter, glassShadow(theme), styles.sheetShadow, sheetStyle]}>
+            <View
               style={[
                 styles.sheet,
-                { backgroundColor: theme.background },
-                sheetStyle,
+                { backgroundColor: theme.backgroundElement, borderColor: theme.border },
               ]}>
               <ThemedView className="items-center pt-two bg-transparent">
                 <View
@@ -95,6 +96,7 @@ export function HalfSheet({ visible, title, onClose, children }) {
                 <ThemedText type="smallBold">{title}</ThemedText>
               </ThemedView>
               <ThemedView className="flex-1 px-four bg-transparent">{children}</ThemedView>
+            </View>
             </Animated.View>
           </GestureDetector>
         </View>
@@ -109,16 +111,27 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(20, 22, 24, 0.46)',
   },
   sheetWrap: {
     flex: 1,
     justifyContent: 'flex-end',
   },
-  sheet: {
+  sheetOuter: {
     height: '50%',
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+  },
+  sheetShadow: {
+    shadowOffset: { width: 0, height: -8 },
+  },
+  sheet: {
+    flex: 1,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
 });

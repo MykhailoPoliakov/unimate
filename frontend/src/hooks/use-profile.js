@@ -83,6 +83,14 @@ export function ProfileProvider({ children }) {
         const parsed = JSON.parse(value);
         if (!isValidProfile(parsed)) return;
 
+        const local = {
+          ...parsed,
+          deviceId: id,
+          role: ['admin', 'moderator'].includes(parsed.role) ? parsed.role : 'student',
+        };
+        setProfile(local);
+        setIsLoading(false);
+
         try {
           const remote = await readUser(parsed.userId);
           if (cancelled) return;
@@ -90,14 +98,6 @@ export function ProfileProvider({ children }) {
         } catch (error) {
           if (error instanceof ApiError && (error.status === 404 || error.status === 422)) {
             if (!cancelled) await persist(null, { forgetUser: true });
-            return;
-          }
-          if (!cancelled) {
-            setProfile({
-              ...parsed,
-              deviceId: id,
-              role: ['admin', 'moderator'].includes(parsed.role) ? parsed.role : 'student',
-            });
           }
         }
       } catch {

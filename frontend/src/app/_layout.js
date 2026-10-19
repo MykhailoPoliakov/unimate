@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { Platform, View } from 'react-native';
 
 import '@/global.css';
@@ -20,6 +20,7 @@ import { ThemePreferenceProvider, useThemePreference } from '@/hooks/use-theme-p
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions?.({ duration: 0, fade: false });
 
 if (Platform.OS !== 'web') {
   ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
@@ -46,7 +47,7 @@ function Root() {
   const { isReady, resolved } = useThemePreference();
   const backgroundColor = Colors[resolved === 'dark' ? 'dark' : 'light'].background;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isLoading || !isReady) return;
     SplashScreen.hideAsync();
   }, [isLoading, isReady]);
