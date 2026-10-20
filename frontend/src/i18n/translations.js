@@ -107,7 +107,7 @@ const en = {
   editSocial: 'Edit link',
   linkUrl: 'Link',
   socialTitle: 'Name',
-  socialDescription: 'Description (up to 2,000 characters)',
+  socialDescription: 'Description',
   detectedService: 'Detected: {name}',
   unknownService: 'Service not recognized. Pick an icon.',
   deleteSocial: 'Delete this link?',

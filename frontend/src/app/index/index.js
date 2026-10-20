@@ -154,7 +154,18 @@ function openButtonMenu({ t, onEdit, onDelete }) {
   ]);
 }
 
-function ServiceLink({ title, subtitle, icon, href, color, brand, onPress, onLongPress, blockHeldPress }) {
+function ServiceLink({
+  title,
+  subtitle,
+  icon,
+  href,
+  color,
+  brand,
+  configuredColor = false,
+  onPress,
+  onLongPress,
+  blockHeldPress,
+}) {
   const theme = useTheme();
   const { profile } = useProfile();
   const light = useColorScheme() !== 'dark';
@@ -178,7 +189,11 @@ function ServiceLink({ title, subtitle, icon, href, color, brand, onPress, onLon
   }, [kdgSite, href, profile?.userId]);
   const downAt = useRef(0);
   const skipPress = useRef(false);
-  const rgb = (light && brand?.lightRgb ? brand.lightRgb : brand?.rgb) ?? parseRgb(color) ?? parseRgb(DEFAULT_LINK_COLOR);
+  const rgb =
+    (configuredColor ? parseRgb(color) : null) ??
+    (light && brand?.lightRgb ? brand.lightRgb : brand?.rgb) ??
+    parseRgb(color) ??
+    parseRgb(DEFAULT_LINK_COLOR);
   const paper = light ? { r: 243, g: 241, b: 236 } : { r: 22, g: 24, b: 27 };
   const face = mixRgb(paper, rgb, light ? 0.34 : 0.4);
   const highlight = mixRgb(face, { r: 255, g: 255, b: 255 }, light ? 0.72 : 0.38);
@@ -331,7 +346,7 @@ export default function HomeScreen() {
   const loadHome = useCallback(async () => {
     if (!profile?.userId) {
       setExtras([]);
-      setRemoteServices({ institution, buttons: defaultServices });
+      setRemoteServices({ institution, buttons: defaultServices, configured: false });
       setCurrentInstitutionName(null);
       return;
     }
@@ -350,9 +365,10 @@ export default function HomeScreen() {
       setRemoteServices({
         institution,
         buttons: buttonResult.value.configured ? buttonResult.value.buttons : defaultServices,
+        configured: buttonResult.value.configured,
       });
     } else {
-      setRemoteServices({ institution, buttons: defaultServices });
+      setRemoteServices({ institution, buttons: defaultServices, configured: false });
     }
 
     try {
@@ -412,6 +428,9 @@ export default function HomeScreen() {
         href={button.url}
         color={button.color ?? DEFAULT_LINK_COLOR}
         brand={buttonBrand(button)}
+        configuredColor={
+          remoteServices?.institution === institution && remoteServices.configured
+        }
         blockHeldPress={blockHeldPress}
         onPress={schedule ? () => openOwnSchedule(false) : undefined}
         onLongPress={schedule ? () => openOwnSchedule(true) : undefined}
