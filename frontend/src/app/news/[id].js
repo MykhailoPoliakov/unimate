@@ -1,6 +1,6 @@
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
-import { Alert, Pressable, ScrollView } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
@@ -21,17 +21,24 @@ export default function NewsDetailScreen() {
   const { posts, markNewsItemRead, recordNewsView } = useFeed();
   const { profile } = useProfile();
   const theme = useTheme();
+  const [copyFeedback, setCopyFeedback] = useState(null);
   const post = posts.find((item) => String(item.id) === String(id));
   const created = formatNewsTime(post?.createdAt, language);
+
+  useEffect(() => {
+    if (!copyFeedback) return undefined;
+    const timeout = setTimeout(() => setCopyFeedback(null), 1800);
+    return () => clearTimeout(timeout);
+  }, [copyFeedback]);
 
   const copyAuthorId = async () => {
     if (profile?.role !== 'admin' || !post?.authorId) return;
     try {
       const copied = await Clipboard.setStringAsync(post.authorId);
       if (!copied) throw new Error('Clipboard write failed');
-      Alert.alert(t('copied'), t('idCopied'));
+      setCopyFeedback('copied');
     } catch {
-      Alert.alert(t('couldNotSave'), t('tryAgain'));
+      setCopyFeedback('error');
     }
   };
 
@@ -80,7 +87,11 @@ export default function NewsDetailScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={t('copyId')}
                     className="active:opacity-70">
-                    <Ionicons name="copy-outline" size={16} color={theme.textSecondary} />
+                    <Ionicons
+                      name={copyFeedback === 'copied' ? 'checkmark' : 'copy-outline'}
+                      size={16}
+                      color={copyFeedback === 'error' ? theme.error : theme.textSecondary}
+                    />
                   </Pressable>
                 ) : null}
               </ThemedView>

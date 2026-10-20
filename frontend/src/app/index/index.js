@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, ActionSheetIOS, View } from 'react-native';
 import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
@@ -21,7 +21,7 @@ import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { campusServicesFor } from '@/constants/campus-services';
-import { listButtons, previewButton } from '@/lib/api';
+import { listButtons, listHomeButtons, previewButton } from '@/lib/api';
 import { LOCAL_ICONS } from '@/lib/local-icons';
 import { setLinkDraft } from '@/lib/nav-draft';
 
@@ -291,7 +291,13 @@ export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const institution = profile?.institution;
-  const services = campusServicesFor(institution, profile?.language);
+  const defaultServices = useMemo(
+    () => campusServicesFor(institution, profile?.language),
+    [institution, profile?.language]
+  );
+  const [remoteServices, setRemoteServices] = useState(null);
+  const services =
+    remoteServices?.institution === institution ? remoteServices.buttons : defaultServices;
   const schedulePortalUrl =
     services.find((button) => isScheduleButton(button) && !isCustomButton(button))?.url ??
     'https://timeedit.kdg.be/';
@@ -324,7 +330,18 @@ export default function HomeScreen() {
   const loadHome = useCallback(async () => {
     if (!profile?.userId) {
       setExtras([]);
+      setRemoteServices({ institution, buttons: defaultServices });
       return;
+    }
+
+    try {
+      const config = await listHomeButtons(profile.userId);
+      setRemoteServices({
+        institution,
+        buttons: config.configured ? config.buttons : defaultServices,
+      });
+    } catch {
+      setRemoteServices({ institution, buttons: defaultServices });
     }
 
     try {
@@ -347,7 +364,7 @@ export default function HomeScreen() {
     } catch {
       setExtras([]);
     }
-  }, [profile?.userId, persistLinks]);
+  }, [profile?.userId, institution, defaultServices, persistLinks]);
 
   const { refreshing, reload } = useReload(loadHome);
 

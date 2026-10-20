@@ -62,6 +62,14 @@ def ensure_audience_columns() -> None:
             user_columns = {column["name"] for column in inspector.get_columns("users")}
             if "moderator_scope" not in user_columns:
                 connection.execute(text("ALTER TABLE users ADD COLUMN moderator_scope TEXT"))
+        if "institutions" in inspector.get_table_names():
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS home_button_configs (
+                    institution_id INTEGER PRIMARY KEY
+                        REFERENCES institutions(id) ON DELETE CASCADE,
+                    buttons_json TEXT NOT NULL DEFAULT '[]'
+                )
+            """))
         if "buttons" in inspector.get_table_names():
             button_columns = {column["name"] for column in inspector.get_columns("buttons")}
             if "program_slugs" not in button_columns:

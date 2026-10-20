@@ -8,7 +8,7 @@ from app.content import parse_json_list
 from app.db import get_db
 from app.deps import require_admin
 from app.models import Button, Institution, News, Program, Social, User
-from app.schemas import InstitutionCreate, InstitutionOut, ProgramCreate, ProgramOut
+from app.schemas import InstitutionCreate, InstitutionOut, NameUpdate, ProgramCreate, ProgramOut
 
 router = APIRouter(prefix="/institutions", tags=["institutions"])
 
@@ -133,6 +133,45 @@ def create_program(
     except IntegrityError as error:
         db.rollback()
         raise HTTPException(409, "A program with this slug already exists at this university") from error
+    db.refresh(program)
+    return program
+
+
+@router.patch("/{slug}", response_model=InstitutionOut)
+def update_institution(
+    slug: str,
+    data: NameUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    institution = db.scalar(
+        select(Institution).options(selectinload(Institution.programs)).where(Institution.slug == slug)
+    )
+    if institution is None:
+        raise HTTPException(404, "University not found")
+    institution.name = data.name
+    db.commit()
+    db.refresh(institution)
+    return institution
+
+
+@router.patch("/{slug}/programs/{program_slug}", response_model=ProgramOut)
+def update_program(
+    slug: str,
+    program_slug: str,
+    data: NameUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    program = db.scalar(
+        select(Program)
+        .join(Institution)
+        .where(Institution.slug == slug, Program.slug == program_slug)
+    )
+    if program is None:
+        raise HTTPException(404, "Program not found")
+    program.name = data.name
+    db.commit()
     db.refresh(program)
     return program
 

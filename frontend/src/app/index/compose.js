@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -114,16 +113,6 @@ export default function LinkComposeScreen() {
               {t('enterALink')}
             </ThemedText>
           ) : null}
-          <ThemedView className="flex-row items-center gap-three bg-transparent">
-            {icon?.startsWith?.('http') ? (
-              <Image source={{ uri: icon }} style={{ width: 40, height: 40, borderRadius: 8 }} />
-            ) : (
-              <ThemedView className="w-[40px] h-[40px] rounded-two" style={{ backgroundColor: color }} />
-            )}
-            <ThemedText type="small" themeColor="textSecondary">
-              {t('iconFromSite')}
-            </ThemedText>
-          </ThemedView>
           <TextInput
             value={title}
             onChangeText={setTitle}
@@ -137,8 +126,15 @@ export default function LinkComposeScreen() {
             onChangeText={setDescription}
             placeholder={t('socialDescription')}
             placeholderTextColor={theme.textSecondary}
-            className="rounded-three px-three py-three text-base font-medium"
-            style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
+            multiline
+            maxLength={500}
+            textAlignVertical="top"
+            className="rounded-three px-three py-three text-base font-medium min-h-[100px]"
+            style={{
+              backgroundColor: theme.backgroundElement,
+              color: theme.text,
+              textAlignVertical: 'top',
+            }}
           />
           <ThemedText type="small" themeColor="textSecondary">
             {t('buttonColor')}

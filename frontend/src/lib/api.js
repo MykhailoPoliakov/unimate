@@ -108,6 +108,10 @@ export function createInstitution(adminId, payload) {
   return api.post('/institutions', payload, adminId);
 }
 
+export function updateInstitution(adminId, slug, name) {
+  return api.patch(`/institutions/${encodeURIComponent(slug)}`, { name }, adminId);
+}
+
 export function deleteInstitution(adminId, slug) {
   return api.delete(`/institutions/${encodeURIComponent(slug)}`, adminId);
 }
@@ -120,11 +124,27 @@ export function createProgram(adminId, institutionSlug, payload) {
   );
 }
 
+export function updateProgram(adminId, institutionSlug, programSlug, name) {
+  return api.patch(
+    `/institutions/${encodeURIComponent(institutionSlug)}/programs/${encodeURIComponent(programSlug)}`,
+    { name },
+    adminId
+  );
+}
+
 export function deleteProgram(adminId, institutionSlug, programSlug) {
   return api.delete(
     `/institutions/${encodeURIComponent(institutionSlug)}/programs/${encodeURIComponent(programSlug)}`,
     adminId
   );
+}
+
+export function listHomeButtons(userId) {
+  return api.get('/home-buttons', userId);
+}
+
+export function saveHomeButtons(adminId, buttons) {
+  return api.put('/home-buttons', { buttons }, adminId);
 }
 
 export function createUser(payload) {

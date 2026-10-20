@@ -13,15 +13,18 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.db import Base, get_db
-from app.models import Institution, News, Program, User
+from app.models import HomeButtonConfig, Institution, News, Program, User
 from app.main import app
+from app.routers.home_buttons import get_home_buttons, update_home_buttons
 from app.routers.institutions import (
     create_institution,
     create_program,
     delete_institution,
     delete_program,
+    update_institution,
+    update_program,
 )
-from app.schemas import InstitutionCreate, ProgramCreate
+from app.schemas import HomeButtonIn, HomeButtonsUpdate, InstitutionCreate, NameUpdate, ProgramCreate
 
 
 class InstitutionManagementTests(unittest.TestCase):
@@ -87,6 +90,25 @@ class InstitutionManagementTests(unittest.TestCase):
         self.assertEqual(program.duration_years, 4)
         self.assertEqual(program.institution_id, created.id)
 
+    def test_admin_can_rename_university_and_program(self):
+        updated_institution = update_institution(
+            self.institution.slug,
+            NameUpdate(name="Renamed University"),
+            self.admin,
+            self.db,
+        )
+        updated_program = update_program(
+            self.institution.slug,
+            self.program.slug,
+            NameUpdate(name="Renamed Program"),
+            self.admin,
+            self.db,
+        )
+
+        self.assertEqual(updated_institution.name, "Renamed University")
+        self.assertEqual(updated_program.name, "Renamed Program")
+        self.assertEqual(updated_program.slug, self.program.slug)
+
     def test_non_admin_cannot_create_university(self):
         response = self.client.post(
             "/institutions",
@@ -112,6 +134,66 @@ class InstitutionManagementTests(unittest.TestCase):
             )
 
         self.assertEqual(error.exception.status_code, 409)
+
+    def test_admin_can_configure_home_buttons_for_their_university(self):
+        initial = get_home_buttons(self.student, self.db)
+        self.assertFalse(initial.configured)
+
+        payload = HomeButtonsUpdate(
+            buttons=[
+                HomeButtonIn(
+                    id="portal",
+                    title="Student portal",
+                    description="Open the student portal",
+                    url="https://example.edu/portal",
+                    color="#123456",
+                )
+            ]
+        )
+
+        result = update_home_buttons(payload, self.admin, self.db)
+        loaded = get_home_buttons(self.student, self.db)
+
+        self.assertTrue(result.configured)
+        self.assertEqual(loaded.buttons[0].id, "portal")
+        self.assertEqual(loaded.buttons[0].url, "https://example.edu/portal")
+
+        empty = update_home_buttons(HomeButtonsUpdate(buttons=[]), self.admin, self.db)
+        self.assertTrue(empty.configured)
+        self.assertEqual(empty.buttons, [])
+        self.assertIsNotNone(self.db.get(HomeButtonConfig, self.institution.id))
+
+    def test_non_admin_cannot_update_home_buttons(self):
+        response = self.client.put(
+            "/home-buttons",
+            headers={"X-User-Id": str(self.student.id)},
+            json={"buttons": []},
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_home_button_urls_and_schedule_type_are_validated(self):
+        with self.assertRaises(ValueError):
+            HomeButtonIn(
+                id="unsafe",
+                title="Unsafe URL",
+                url="javascript:alert(1)",
+            )
+
+        schedule = HomeButtonsUpdate(
+            buttons=[
+                HomeButtonIn(
+                    id="schedule",
+                    title="Schedule",
+                    url="https://timeedit.example/",
+                    platform="schedule",
+                )
+            ]
+        )
+        with self.assertRaises(HTTPException) as error:
+            update_home_buttons(schedule, self.admin, self.db)
+
+        self.assertEqual(error.exception.status_code, 422)
 
     def test_program_cannot_be_deleted_while_content_targets_it(self):
         self.db.add(

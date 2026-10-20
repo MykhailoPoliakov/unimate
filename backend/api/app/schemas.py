@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 import re
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic import field_validator
@@ -65,6 +66,88 @@ class ProgramCreate(BaseModel):
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
             raise ValueError("Slug must use lowercase letters, numbers, and hyphens")
         return slug
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Name cannot be empty")
+        return name
+
+
+class HomeButtonIn(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), min_length=1, max_length=80)
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=500)
+    url: str = Field(min_length=8, max_length=500)
+    color: str | None = Field(default=None, max_length=32)
+    platform: Literal["custom", "canvas", "student-service", "website", "schedule"] = "custom"
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        title = value.strip()
+        if not title:
+            raise ValueError("Name cannot be empty")
+        return title
+
+    @field_validator("description")
+    @classmethod
+    def normalize_description(cls, value: str | None) -> str | None:
+        return value.strip() or None if value is not None else None
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        url = value.strip()
+        parsed = urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.hostname:
+            raise ValueError("URL must be an absolute HTTP or HTTPS link")
+        if parsed.username or parsed.password:
+            raise ValueError("URL cannot contain credentials")
+        return url
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        color = value.strip()
+        if re.fullmatch(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?", color):
+            return color
+        parts = color.split(",")
+        if len(parts) == 3:
+            try:
+                channels = [int(part.strip()) for part in parts]
+            except ValueError:
+                channels = []
+            if len(channels) == 3 and all(0 <= channel <= 255 for channel in channels):
+                return ", ".join(str(channel) for channel in channels)
+        raise ValueError("Color must be a hex color or three RGB values")
+
+
+class HomeButtonsUpdate(BaseModel):
+    buttons: list[HomeButtonIn] = Field(max_length=30)
+
+    @field_validator("buttons")
+    @classmethod
+    def validate_buttons(cls, buttons: list[HomeButtonIn]) -> list[HomeButtonIn]:
+        ids = [button.id for button in buttons]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Button IDs must be unique")
+        if sum(button.platform == "schedule" for button in buttons) > 1:
+            raise ValueError("Only one Schedule button is allowed")
+        return buttons
+
+
+class HomeButtonsOut(BaseModel):
+    configured: bool
+    buttons: list[HomeButtonIn] = Field(default_factory=list)
+
+
+class NameUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
 
     @field_validator("name")
     @classmethod

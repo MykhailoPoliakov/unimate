@@ -25,6 +25,15 @@ class Institution(Base):
     )
 
 
+class HomeButtonConfig(Base):
+    __tablename__ = "home_button_configs"
+
+    institution_id: Mapped[int] = mapped_column(
+        ForeignKey("institutions.id", ondelete="CASCADE"), primary_key=True
+    )
+    buttons_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
 class Program(Base):
     __tablename__ = "programs"
     __table_args__ = (
