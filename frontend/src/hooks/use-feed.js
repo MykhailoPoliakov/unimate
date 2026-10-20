@@ -4,7 +4,14 @@ import { AppState } from 'react-native';
 
 import { useProfile } from '@/hooks/use-profile';
 import { LANGUAGES } from '@/i18n/translations';
-import { createNews, deleteNews, listManagedNews, listNews, updateNews } from '@/lib/api';
+import {
+  createNews,
+  deleteNews,
+  listManagedNews,
+  listNews,
+  recordNewsView as submitNewsView,
+  updateNews,
+} from '@/lib/api';
 import { joinNewsBody, parseNewsBody } from '@/lib/poll';
 import { normalizeUrl } from '@/lib/social-service';
 
@@ -16,6 +23,7 @@ const FeedContext = createContext({
   unreadNewsCount: 0,
   inAppNewsEnabled: true,
   refresh: async () => {},
+  recordNewsView: async () => {},
   isNewsUnread: () => false,
   markNewsItemRead: async () => {},
   markNewsBadgeSeen: async () => {},
@@ -86,6 +94,7 @@ function toPost(item, language) {
     linkLabel: translation.cta_label ?? '',
     createdAt: item.created_at ?? null,
     authorId: item.author_id ?? null,
+    viewCount: item.view_count ?? null,
     canManage: false,
     institution: item.institution ?? null,
     programs: item.programs ?? (item.program ? [item.program] : []),
@@ -262,6 +271,22 @@ export function FeedProvider({ children }) {
     setPosts(sortPosts([...postsById.values()]));
   }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language, profile?.role]);
 
+  const recordNewsView = useCallback(
+    async (id) => {
+      if (!profile?.userId || id == null) return;
+      const result = await submitNewsView(profile.userId, id);
+      if (Number.isInteger(result?.view_count)) {
+        setPosts((current) =>
+          current.map((post) =>
+            String(post.id) === String(id) ? { ...post, viewCount: result.view_count } : post
+          )
+        );
+      }
+      return result;
+    },
+    [profile?.userId]
+  );
+
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
@@ -411,6 +436,7 @@ export function FeedProvider({ children }) {
         unreadNewsCount,
         inAppNewsEnabled,
         refresh,
+        recordNewsView,
         isNewsUnread,
         markNewsItemRead,
         markNewsBadgeSeen,

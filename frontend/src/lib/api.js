@@ -1,6 +1,9 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const CREATE_USER_TIMEOUT_MS = 15_000;
+
 function isTunnelHost(host) {
   return /exp\.direct|exp\.host|ngrok|expo\.dev/i.test(host ?? '');
 }
@@ -16,14 +19,16 @@ export const API_BASE_URL = defaultBaseUrl();
 
 export class ApiError extends Error {
   constructor(status, detail, retryAfter = null) {
-    const message =
-      typeof detail === 'string'
-        ? detail
-        : detail?.code === 'cooldown'
-          ? `cooldown:${detail.retry_after}`
-          : Array.isArray(detail)
-            ? JSON.stringify(detail)
-            : `Request failed (${status})`;
+    let message = `Request failed (${status})`;
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (detail?.code === 'cooldown') {
+      message = `cooldown:${detail.retry_after}`;
+    } else if (detail?.code === 'request_timeout') {
+      message = 'Request timed out';
+    } else if (Array.isArray(detail)) {
+      message = JSON.stringify(detail);
+    }
     super(message);
     this.status = status;
     this.detail = detail;
@@ -38,34 +43,49 @@ export function cooldownMessage(error, t, fallback) {
   return t('postCooldown', { n: minutes });
 }
 
-async function request(path, { method = 'GET', body, userId } = {}) {
+async function request(
+  path,
+  { method = 'GET', body, userId, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS } = {}
+) {
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (userId) headers['X-User-Id'] = String(userId);
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
 
-  if (response.status === 204) return null;
+    if (response.status === 204) return null;
 
-  const text = await response.text();
-  let data = null;
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
+    const text = await response.text();
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
     }
-  }
 
-  if (!response.ok) {
-    const detail = data?.detail ?? data;
-    throw new ApiError(response.status, detail);
+    if (!response.ok) {
+      const detail = data?.detail ?? data;
+      throw new ApiError(response.status, detail);
+    }
+    return data;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new ApiError(408, { code: 'request_timeout' });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return data;
 }
 
 export const api = {
@@ -85,7 +105,11 @@ export function listPrograms(slug) {
 }
 
 export function createUser(payload) {
-  return api.post('/users', payload);
+  return request('/users', {
+    method: 'POST',
+    body: payload,
+    timeoutMs: CREATE_USER_TIMEOUT_MS,
+  });
 }
 
 export function readUser(userId) {
@@ -139,6 +163,10 @@ export function reorderButtons(userId, serviceIds, extraIds) {
 
 export function listNews(userId) {
   return api.get('/news', userId);
+}
+
+export function recordNewsView(userId, newsId) {
+  return api.post(`/news/${newsId}/view`, undefined, userId);
 }
 
 export function createNews(userId, payload) {

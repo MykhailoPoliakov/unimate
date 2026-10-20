@@ -44,7 +44,9 @@ export function Onboarding() {
         ...mapRemoteUser(user, deviceId),
       });
     } catch (error) {
-      setSaveError(error.message ?? t('tryAgain'));
+      setSaveError(
+        error?.status === 408 ? t('requestTimedOut') : error?.message ?? t('tryAgain')
+      );
     } finally {
       setIsSaving(false);
     }

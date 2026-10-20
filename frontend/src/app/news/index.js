@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, usePathname, useRouter } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Alert, RefreshControl, ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,14 +21,45 @@ export default function NewsScreen() {
   const { t } = useI18n();
   const router = useRouter();
   const { profile, refreshUser } = useProfile();
-  const { posts, removePost, refresh, markNewsBadgeSeen } = useFeed();
+  const { posts, removePost, refresh, markNewsBadgeSeen, recordNewsView } = useFeed();
   const pathname = usePathname();
   const canManageNews = ['admin', 'moderator'].includes(profile?.role);
+  const screenFocused = useRef(false);
+  const postLayouts = useRef(new Map());
+  const postsRef = useRef(posts);
+  const viewedPostIds = useRef(new Set());
+  const scrollOffset = useRef(0);
+  const viewportHeight = useRef(0);
+  postsRef.current = posts;
+
+  const checkVisiblePosts = useCallback(() => {
+    if (!screenFocused.current || !profile?.userId || viewportHeight.current <= 0) return;
+    for (const post of postsRef.current) {
+      if (!post.isPublished || viewedPostIds.current.has(String(post.id))) continue;
+      const frame = postLayouts.current.get(String(post.id));
+      if (!frame) continue;
+      const visibleHeight = Math.max(
+        0,
+        Math.min(frame.y + frame.height, scrollOffset.current + viewportHeight.current) -
+          Math.max(frame.y, scrollOffset.current)
+      );
+      if (visibleHeight < Math.min(frame.height * 0.5, 120)) continue;
+      viewedPostIds.current.add(String(post.id));
+      recordNewsView(post.id).catch((error) => {
+        console.error('Failed to record news view', error);
+      });
+    }
+  }, [profile?.userId, recordNewsView]);
 
   useFocusEffect(
     useCallback(() => {
+      screenFocused.current = true;
       void markNewsBadgeSeen();
-    }, [markNewsBadgeSeen])
+      requestAnimationFrame(checkVisiblePosts);
+      return () => {
+        screenFocused.current = false;
+      };
+    }, [checkVisiblePosts, markNewsBadgeSeen])
   );
 
   useEffect(() => {
@@ -67,6 +98,15 @@ export default function NewsScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1"
+          onLayout={(event) => {
+            viewportHeight.current = event.nativeEvent.layout.height;
+            checkVisiblePosts();
+          }}
+          onScroll={(event) => {
+            scrollOffset.current = event.nativeEvent.contentOffset.y;
+            checkVisiblePosts();
+          }}
+          scrollEventThrottle={150}
           contentContainerClassName="px-four gap-two max-w-content self-center w-full"
           contentContainerStyle={{ paddingBottom: BottomTabGap }}
           alwaysBounceVertical
@@ -101,7 +141,14 @@ export default function NewsScreen() {
             </ThemedView>
           ) : (
             posts.map((post, index) => (
-              <Animated.View key={post.id} entering={listEnter(index)}>
+              <Animated.View
+                key={post.id}
+                entering={listEnter(index)}
+                onLayout={(event) => {
+                  const { y, height } = event.nativeEvent.layout;
+                  postLayouts.current.set(String(post.id), { y, height });
+                  checkVisiblePosts();
+                }}>
                 <PostCard
                   post={post}
                   onOpen={(item) => router.push(`/news/${item.id}`)}

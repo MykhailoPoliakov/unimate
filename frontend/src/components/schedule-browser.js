@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Platform, Pressable, View } from 'react-native';
 import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
@@ -69,21 +69,205 @@ export function isScheduleSignInUrl(value) {
   }
 }
 
-const SHOW_SIGN_IN = `
+const AUTO_SIGN_IN = `
 (function () {
-  if (window.__unimateShowSignIn) return true;
-  window.__unimateShowSignIn = true;
+  var alertWrapped = false;
+  if (!window.__unimateAlertWrapped) {
+    window.__unimateAlertWrapped = true;
+    var nativeAlert = window.alert;
+    window.alert = function (message) {
+      var text = String(message ?? '');
+      if (/precondition failed/i.test(text) && /reloading page/i.test(text)) {
+        var reloadKey = 'unimate.precondition.reload.' + window.location.pathname;
+        try {
+          var previousReload = Number(window.sessionStorage.getItem(reloadKey) || 0);
+          if (previousReload === 0 || Date.now() - previousReload >= 10000) {
+            window.sessionStorage.setItem(reloadKey, String(Date.now()));
+            window.setTimeout(function () {
+              window.location.reload();
+            }, 0);
+            return;
+          }
+        } catch {
+          window.setTimeout(function () {
+            window.location.reload();
+          }, 0);
+          return;
+        }
+      }
+      return nativeAlert.apply(window, arguments);
+    };
+    alertWrapped = true;
+  }
+
+  if (window.__unimateAutoSignIn && !alertWrapped) return true;
+  window.__unimateAutoSignIn = true;
+
+  var observer;
+  var retryTimer;
+
+  function rememberChoice() {
+    var checkboxes = document.querySelectorAll('input[type="checkbox"], [role="checkbox"]');
+    for (var index = 0; index < checkboxes.length; index += 1) {
+      var checkbox = checkboxes[index];
+      var labels = checkbox.labels
+        ? Array.prototype.map.call(checkbox.labels, function (label) {
+            return label.innerText || label.textContent || '';
+          }).join(' ')
+        : '';
+      var parentLabel = checkbox.closest('label');
+      var label = [
+        checkbox.getAttribute('aria-label'),
+        checkbox.getAttribute('title'),
+        labels,
+        parentLabel && (parentLabel.innerText || parentLabel.textContent),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\\s+/g, ' ')
+        .trim();
+      if (!/remember\\s+(my\\s+)?(choice|login|me)\\b/i.test(label)) continue;
+      if (checkbox.checked || checkbox.getAttribute('aria-checked') === 'true') continue;
+      if (window.__unimateRememberedChoice === checkbox) continue;
+      if (checkbox.disabled || !checkbox.getClientRects().length) continue;
+      window.__unimateRememberedChoice = checkbox;
+      checkbox.click();
+      return true;
+    }
+
+    var controls = document.querySelectorAll('button, a, label, [role="button"]');
+    for (var controlIndex = 0; controlIndex < controls.length; controlIndex += 1) {
+      var control = controls[controlIndex];
+      var controlLabel = (
+        control.innerText ||
+        control.textContent ||
+        control.getAttribute('aria-label') ||
+        control.getAttribute('title') ||
+        ''
+      )
+        .replace(/\\s+/g, ' ')
+        .trim();
+      if (!/remember\\s+(my\\s+)?(choice|login|me)\\b/i.test(controlLabel)) continue;
+      if (
+        control.disabled ||
+        !control.getClientRects().length ||
+        window.__unimateRememberedAction === control
+      ) {
+        continue;
+      }
+      window.__unimateRememberedAction = control;
+      control.click();
+      return true;
+    }
+    return false;
+  }
+
+  function isSchedulePage() {
+    return Boolean(
+      document.getElementById('openStartRangeButton') &&
+      document.getElementById('searchTextWide')
+    );
+  }
+
+  function stopRetryingOnSchedule() {
+    if (!isSchedulePage()) return;
+    if (retryTimer) clearInterval(retryTimer);
+    if (observer) observer.disconnect();
+  }
+
+  function clickNextStep() {
+    if (isSchedulePage()) return false;
+    rememberChoice();
+
+    var login = document.getElementById('loginAuth');
+    if (login) {
+      var wasHidden = login.classList.contains('hidelogin');
+      if (wasHidden) {
+        login.classList.remove('hidelogin');
+        window.__unimateLoginClicked = false;
+      }
+      var wrap = document.getElementById('loginAuthWrap');
+      var loading = wrap && wrap.classList.contains('loading');
+      var authPosted = /TE Auth posted/i.test(document.body?.innerText || '');
+      if (authPosted && window.__unimateLoginWasLoading) {
+        window.__unimateLoginClicked = false;
+        window.__unimateLoginWasLoading = false;
+      }
+      if (loading && !authPosted) {
+        window.__unimateLoginWasLoading = true;
+        return false;
+      }
+      if (
+        window.__unimateLoginWasLoading ||
+        window.__unimateLastLoginControl !== login
+      ) {
+        window.__unimateLoginClicked = false;
+        window.__unimateLoginWasLoading = false;
+      }
+      window.__unimateLastLoginControl = login;
+      if (
+        !window.__unimateLoginClicked &&
+        typeof window.loginWithTEAuth === 'function' &&
+        !login.disabled &&
+        login.getClientRects().length
+      ) {
+        window.__unimateLoginClicked = true;
+        login.click();
+        return true;
+      }
+    }
+
+    var controls = document.querySelectorAll('button, a, [role="button"], input[type="submit"]');
+    for (var index = 0; index < controls.length; index += 1) {
+      var control = controls[index];
+      var label = (control.innerText || control.value || control.getAttribute('aria-label') || '')
+        .replace(/\\s+/g, ' ')
+        .trim();
+      var isSsoSignIn =
+        /\\b(sign in|log in|login)\\b/i.test(label) &&
+        /\\b(sso|single[ -]?sign[ -]?on)\\b/i.test(label);
+      if (
+        isSsoSignIn &&
+        !control.disabled &&
+        control.getClientRects().length
+      ) {
+        if (window.__unimateSsoClicked) continue;
+        window.__unimateSsoClicked = true;
+        control.click();
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   function showLogin() {
-    var button = document.getElementById('loginAuth');
-    if (button) button.classList.remove('hidelogin');
-    var wrap = document.getElementById('loginAuthWrap');
-    if (wrap) wrap.classList.remove('loading');
-    if (document.body) document.body.style.visibility = 'visible';
+    if (!document.body) return;
+    if (document.body.style.visibility !== 'visible') {
+      document.body.style.visibility = 'visible';
+    }
   }
 
   showLogin();
-  setInterval(showLogin, 300);
+  observer = new MutationObserver(function () {
+    showLogin();
+    clickNextStep();
+    stopRetryingOnSchedule();
+  });
+  if (document.documentElement) {
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+  }
+  retryTimer = setInterval(function () {
+    showLogin();
+    clickNextStep();
+    stopRetryingOnSchedule();
+  }, 100);
+  clickNextStep();
+  stopRetryingOnSchedule();
   return true;
 })();
 true;
@@ -93,15 +277,11 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
   const theme = useTheme();
   const { t } = useI18n();
   const webRef = useRef(null);
-  const lastSaved = useRef('');
-  const signedIn = useRef(Boolean(timetableUrl(initialUrl)));
-  const mustSignIn = !signedIn.current;
+  const lastSaved = useRef(timetableUrl(initialUrl) ?? '');
+  const signedIn = useRef(Boolean(lastSaved.current));
   const [canGoBack, setCanGoBack] = useState(false);
-
-  useEffect(() => {
-    lastSaved.current = timetableUrl(initialUrl) ?? '';
-    signedIn.current = Boolean(lastSaved.current);
-  }, [initialUrl]);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
 
   const remember = useCallback(
     async (url) => {
@@ -163,6 +343,37 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
               <Ionicons name="close" size={26} color={theme.text} />
             </Pressable>
           </View>
+          {pageLoading ? (
+            <View
+              accessibilityRole="progressbar"
+              accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
+              style={{ paddingHorizontal: 16, paddingVertical: 6, gap: 5 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
+                  {t('loading')}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {Math.round(loadProgress * 100)}%
+                </ThemedText>
+              </View>
+              <View
+                style={{
+                  height: 3,
+                  overflow: 'hidden',
+                  borderRadius: 2,
+                  backgroundColor: theme.backgroundElement,
+                }}>
+                <View
+                  style={{
+                    width: `${Math.round(loadProgress * 100)}%`,
+                    height: '100%',
+                    backgroundColor: theme.primary,
+                  }}
+                />
+              </View>
+            </View>
+          ) : null}
           <WebView
             key={`${userId ?? 'schedule'}:${initialUrl}`}
             ref={webRef}
@@ -171,15 +382,26 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
             userAgent={Platform.OS === 'ios' ? MOBILE_SAFARI : undefined}
             javaScriptEnabled
             domStorageEnabled
-            sharedCookiesEnabled={false}
+            sharedCookiesEnabled
             thirdPartyCookiesEnabled
             cacheEnabled
-            incognito={mustSignIn}
+            incognito={false}
             javaScriptCanOpenWindowsAutomatically
             setSupportMultipleWindows={false}
             allowsBackForwardNavigationGestures
-            injectedJavaScriptBeforeContentLoaded={mustSignIn ? SHOW_SIGN_IN : undefined}
-            injectedJavaScript={mustSignIn ? SHOW_SIGN_IN : undefined}
+            injectedJavaScriptBeforeContentLoaded={AUTO_SIGN_IN}
+            injectedJavaScript={AUTO_SIGN_IN}
+            onLoadStart={() => {
+              setPageLoading(true);
+              setLoadProgress(0);
+            }}
+            onLoadProgress={({ nativeEvent }) => {
+              setLoadProgress(Math.min(1, Math.max(0, nativeEvent.progress)));
+            }}
+            onLoadEnd={() => {
+              setLoadProgress(1);
+              setPageLoading(false);
+            }}
             onShouldStartLoadWithRequest={allowNavigation}
             onNavigationStateChange={(nav) => {
               setCanGoBack(Boolean(nav.canGoBack));

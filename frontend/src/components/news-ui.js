@@ -325,6 +325,7 @@ export function NewsLinkButton({ href, label, onPress }) {
 export function PostCard({ post, onOpen, onEdit, onDelete }) {
   const theme = useTheme();
   const { t, language } = useI18n();
+  const { profile } = useProfile();
   const { isNewsUnread, markNewsItemRead } = useFeed();
   const unread = isNewsUnread(post);
   const created = formatNewsTime(post.createdAt, language);
@@ -366,6 +367,11 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
               {post.authorId ? (
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: unread ? 0.8 : 0.55 }}>
                   {t('postedBy', { id: post.authorId })}
+                </ThemedText>
+              ) : null}
+              {profile?.role === 'admin' && Number.isInteger(post.viewCount) ? (
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.7 }}>
+                  {t('newsViews', { n: post.viewCount })}
                 </ThemedText>
               ) : null}
             </ThemedView>
