@@ -181,6 +181,16 @@ class News(Base):
     votes: Mapped[list["NewsVote"]] = relationship(cascade="all, delete-orphan")
 
 
+class NewsView(Base):
+    __tablename__ = "news_views"
+
+    news_id: Mapped[int] = mapped_column(
+        ForeignKey("news.id", ondelete="CASCADE"), primary_key=True
+    )
+    viewer_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class NewsTranslation(Base):
     __tablename__ = "news_translations"
 

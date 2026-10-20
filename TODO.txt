@@ -1,3 +1,20 @@
-1. fill db table socials with links
-2. find moderators for news
-3. remote push notifications
+core:
+    fill db table socials with links
+    find moderators for news
+
+
+front:
+
+    i want the schedule to be accessed with one click, rn user have to click on schedule, then login button and then Sing in with SSO...
+    this should be autoclicked and user have to login only one time, after that he only sees the schedule after the click 
+
+    schedule to stay loged in after the app reopens (not only when user opens and closes "schedule")
+
+    copy uuid of news poster (for admins when they open new and see the uuid of who posted it)
+
+
+add social not working properly ? + bug with socials
+
+app previews + screenshots
+rework description (for me)
+

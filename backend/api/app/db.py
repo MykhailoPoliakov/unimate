@@ -49,6 +49,15 @@ def ensure_audience_columns() -> None:
                 connection.execute(text(f"ALTER TABLE {table} ADD COLUMN program_slugs TEXT"))
             if "year_list" not in columns:
                 connection.execute(text(f"ALTER TABLE {table} ADD COLUMN year_list TEXT"))
+        if "news" in inspector.get_table_names():
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS news_views (
+                    news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+                    viewer_hash VARCHAR(64) NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (news_id, viewer_hash)
+                )
+            """))
         if "users" in inspector.get_table_names():
             user_columns = {column["name"] for column in inspector.get_columns("users")}
             if "moderator_scope" not in user_columns:

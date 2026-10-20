@@ -1,6 +1,6 @@
 {
   "title": "Privacy policy",
-  "updated": "Last updated 6 October 2026",
+  "updated": "Last updated 20 October 2026",
   "intro": [
     "UniMate is a student app for campus links, socials, and news. This policy explains what we collect and why. It is the privacy policy URL for the UniMate app on the App Store."
   ],
@@ -17,6 +17,7 @@
         "Device identifier. UniMate stores a device id on this install so we can create and recognise your student profile.",
         "Study profile. University, program, year of study, and language that you choose in the app.",
         "Role. Student, moderator, or admin, as set on the UniMate server for your account id.",
+        "News readership. When at least half of a published news card is visible in the news feed, or you open its details, UniMate counts one view per account for that article. The server stores an article-specific one-way hash to prevent duplicate counts, not your raw account id; admins can see aggregate view counts. This hash is pseudonymous data and is removed when you delete your account.",
         "Push notifications. If you allow notifications, we store a push token so we can send news alerts to this device.",
         "Local links. Extra Home links you add yourself stay on this device (local storage). They are not uploaded as part of your server profile.",
         "News images. Moderators and admins may attach a photo when publishing news. That image is stored so other students can see the post."
@@ -29,6 +30,7 @@
       "title": "How we use it",
       "items": [
         "Show Home buttons, social links, and news for your university and program.",
+        "Show admins how many accounts have seen each news item, counting each account once per article.",
         "Remember your language and notification preferences.",
         "Let moderators and admins publish content for the audiences they manage."
       ],

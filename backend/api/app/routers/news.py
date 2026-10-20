@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, selectinload
 
 from app.academic import year_of_study
@@ -12,11 +13,20 @@ from app.audience import audience_fields, constrain_moderator_audience, resolve_
 from app.content import matches_audience, pick_translation, visible_to_institution
 from app.db import get_db
 from app.deps import get_current_user, require_news_manager
-from app.models import News, NewsTranslation, NewsVote, User
+from app.models import News, NewsTranslation, NewsView, NewsVote, User
+from app.news_analytics import news_viewer_hash
 from app.poll import poll_options_from_news
 from app.rate_limit import enforce_create_cooldown
 from app.push import schedule_news_pushes
-from app.schemas import Language, NewsCreate, NewsOut, NewsPollOut, NewsTranslationOut, NewsVoteIn
+from app.schemas import (
+    Language,
+    NewsCreate,
+    NewsOut,
+    NewsPollOut,
+    NewsTranslationOut,
+    NewsViewOut,
+    NewsVoteIn,
+)
 
 router = APIRouter(prefix="/news", tags=["news"])
 
@@ -65,6 +75,7 @@ def news_out(
     *,
     db: Session,
     viewer: User | None = None,
+    view_count: int | None = None,
 ) -> NewsOut | None:
     translation = pick_translation(news.translations, language)
     if translation is None:
@@ -74,6 +85,7 @@ def news_out(
         id=news.id,
         is_published=news.is_published,
         author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
+        view_count=view_count if viewer is not None and viewer.role == "admin" else None,
         institution=institution_slug,
         program=programs[0] if programs else None,
         programs=programs,
@@ -130,6 +142,15 @@ def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_
                 )
             ).all()
         )
+    view_counts: dict[int, int] = {}
+    if user.role == "admin" and news_ids:
+        view_counts = dict(
+            db.execute(
+                select(NewsView.news_id, func.count())
+                .where(NewsView.news_id.in_(news_ids))
+                .group_by(NewsView.news_id)
+            ).all()
+        )
     return [
         result
         for item in news_items
@@ -140,6 +161,7 @@ def list_news(user: User = Depends(get_current_user), db: Session = Depends(get_
                 _poll_snapshot(item, counts_by_news[item.id], yours_by_news.get(item.id)),
                 db=db,
                 viewer=user,
+                view_count=view_counts.get(item.id, 0),
             )
         )
     ]
@@ -188,11 +210,17 @@ def _translation_row(item) -> NewsTranslation:
 
 def _created_out(news: News, db: Session, viewer: User | None = None) -> NewsOut:
     institution_slug, programs, years = audience_fields(news, db)
+    view_count = None
+    if viewer is not None and viewer.role == "admin":
+        view_count = db.scalar(
+            select(func.count()).select_from(NewsView).where(NewsView.news_id == news.id)
+        )
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
         created_at=_as_utc(news.created_at or news.published_at),
         author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
+        view_count=view_count,
         institution=institution_slug,
         program=programs[0] if programs else None,
         programs=programs,
@@ -320,6 +348,34 @@ def _visible_news(news_id: int, user: User, db: Session) -> News:
     ):
         raise HTTPException(404, "Not found")
     return news
+
+
+@router.post("/{news_id}/view", response_model=NewsViewOut)
+def record_news_view(
+    news_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    news = _visible_news(news_id, user, db)
+    db.execute(
+        insert(NewsView)
+        .values(
+            news_id=news.id,
+            viewer_hash=news_viewer_hash(news.id, user.id),
+            created_at=datetime.now(timezone.utc),
+        )
+        .on_conflict_do_nothing(
+            index_elements=[NewsView.news_id, NewsView.viewer_hash]
+        )
+    )
+    db.commit()
+
+    view_count = None
+    if user.role == "admin":
+        view_count = db.scalar(
+            select(func.count()).select_from(NewsView).where(NewsView.news_id == news.id)
+        )
+    return NewsViewOut(view_count=view_count)
 
 
 def _poll_out(news: News, user: User, db: Session) -> NewsPollOut:

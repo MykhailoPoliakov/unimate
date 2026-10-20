@@ -4,7 +4,7 @@ import unittest
 import uuid
 from unittest.mock import MagicMock, patch
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 if not TEST_DATABASE_URL:
@@ -16,10 +16,11 @@ from sqlalchemy.orm import Session
 
 from app.db import Base
 from app.deps import require_admin, require_news_manager
-from app.models import Institution, News, NewsTranslation, Program, PushToken, User
+from app.models import Institution, News, NewsTranslation, NewsView, Program, PushToken, User
 from app.push import _send_batch, build_news_push_messages
 from app.routers.notifications import update_push_device
-from app.routers.news import create_news, delete_news, list_managed_news, list_news, update_news
+from app.routers.news import create_news, delete_news, list_managed_news, list_news, record_news_view, update_news
+from app.routers.users import delete_user
 from app.routers.users import update_user_role
 from app.schemas import NewsCreate, NewsTranslationIn, PushDeviceUpdate, UserRoleUpdate
 
@@ -146,6 +147,32 @@ class ModeratorPermissionTests(unittest.TestCase):
         self.assertEqual(as_admin[0].author_id, str(self.moderator.id))
         managed = list_managed_news(self.admin, self.db)
         self.assertEqual(managed[0].author_id, str(self.moderator.id))
+
+    def test_news_views_count_once_per_user_and_are_removed_on_account_deletion(self):
+        created = create_news(self._news_data(), self.moderator, self.db)
+        student = self._user(self.moderator.program, "student")
+
+        first_view = record_news_view(created.id, student, self.db)
+        repeated_view = record_news_view(created.id, student, self.db)
+
+        self.assertIsNone(first_view.view_count)
+        self.assertIsNone(repeated_view.view_count)
+        views = self.db.scalars(
+            select(NewsView).where(NewsView.news_id == created.id)
+        ).all()
+        self.assertEqual(len(views), 1)
+        self.assertNotEqual(views[0].viewer_hash, str(student.id))
+        self.assertEqual(list_news(self.admin, self.db)[0].view_count, 1)
+        self.assertIsNone(list_news(student, self.db)[0].view_count)
+
+        delete_user(student.id, student, self.db)
+
+        self.assertEqual(
+            self.db.scalar(
+                select(func.count()).select_from(NewsView).where(NewsView.news_id == created.id)
+            ),
+            0,
+        )
 
     def test_last_admin_cannot_be_demoted(self):
         with self.assertRaises(HTTPException) as error:

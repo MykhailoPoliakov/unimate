@@ -117,12 +117,17 @@ class NewsOut(BaseModel):
     is_published: bool
     created_at: datetime | None = None
     author_id: str | None = None
+    view_count: int | None = None
     institution: str | None = None
     program: str | None = None
     programs: list[str] = Field(default_factory=list)
     years: list[int] = Field(default_factory=list)
     translations: list[NewsTranslationOut]
     poll: NewsPollOut | None = None
+
+
+class NewsViewOut(BaseModel):
+    view_count: int | None = None
 
 
 class NewsVoteIn(BaseModel):

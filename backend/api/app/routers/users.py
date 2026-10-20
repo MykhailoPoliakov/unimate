@@ -2,14 +2,15 @@ import uuid
 from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.academic import enrollment_year_for, year_of_study
 from app.audience import moderator_scope, serialize_moderator_scope
 from app.db import get_db
 from app.deps import get_current_user, require_admin
-from app.models import Button, Institution, News, NewsVote, Program, PushToken, Social, User
+from app.models import Button, Institution, News, NewsView, NewsVote, Program, PushToken, Social, User
+from app.news_analytics import news_viewer_hash
 from app.schemas import Language, UserCreate, UserOut, UserRoleUpdate, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -152,6 +153,17 @@ def delete_user(
             raise HTTPException(409, "Cannot remove the last admin")
     db.execute(delete(NewsVote).where(NewsVote.user_id == user.id))
     db.execute(delete(PushToken).where(PushToken.user_id == user.id))
+    news_ids = db.scalars(select(News.id)).all()
+    if news_ids:
+        view_keys = [
+            (news_id, news_viewer_hash(news_id, user.id))
+            for news_id in news_ids
+        ]
+        db.execute(
+            delete(NewsView).where(
+                tuple_(NewsView.news_id, NewsView.viewer_hash).in_(view_keys)
+            )
+        )
     db.execute(update(News).where(News.author_id == user.id).values(author_id=None))
     db.execute(update(Button).where(Button.author_id == user.id).values(author_id=None))
     db.execute(update(Social).where(Social.author_id == user.id).values(author_id=None))
