@@ -126,7 +126,11 @@ const AUTO_SIGN_IN = `
         .join(' ')
         .replace(/\\s+/g, ' ')
         .trim();
-      if (!/remember\\s+(my\\s+)?(choice|login|me)\\b/i.test(label)) continue;
+      if (
+        !/\\b(?:remember\\s+(?:my\\s+)?(?:choice|login|me)|keep\\s+me\\s+(?:signed|logged)\\s+in|stay\\s+(?:signed|logged)\\s+in)\\b/i.test(
+          label
+        )
+      ) continue;
       if (checkbox.checked || checkbox.getAttribute('aria-checked') === 'true') continue;
       if (window.__unimateRememberedChoice === checkbox) continue;
       if (checkbox.disabled || !checkbox.getClientRects().length) continue;
@@ -147,7 +151,11 @@ const AUTO_SIGN_IN = `
       )
         .replace(/\\s+/g, ' ')
         .trim();
-      if (!/remember\\s+(my\\s+)?(choice|login|me)\\b/i.test(controlLabel)) continue;
+      if (
+        !/\\b(?:remember\\s+(?:my\\s+)?(?:choice|login|me)|keep\\s+me\\s+(?:signed|logged)\\s+in|stay\\s+(?:signed|logged)\\s+in)\\b/i.test(
+          controlLabel
+        )
+      ) continue;
       if (
         control.disabled ||
         !control.getClientRects().length ||
@@ -278,7 +286,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
   const { t } = useI18n();
   const webRef = useRef(null);
   const lastSaved = useRef(timetableUrl(initialUrl) ?? '');
-  const signedIn = useRef(Boolean(lastSaved.current));
+  const signedIn = useRef(Boolean(timetableUrl(initialUrl)));
   const [canGoBack, setCanGoBack] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);

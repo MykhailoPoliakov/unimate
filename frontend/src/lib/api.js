@@ -104,6 +104,29 @@ export function listPrograms(slug) {
   return api.get(`/institutions/${slug}/programs`);
 }
 
+export function createInstitution(adminId, payload) {
+  return api.post('/institutions', payload, adminId);
+}
+
+export function deleteInstitution(adminId, slug) {
+  return api.delete(`/institutions/${encodeURIComponent(slug)}`, adminId);
+}
+
+export function createProgram(adminId, institutionSlug, payload) {
+  return api.post(
+    `/institutions/${encodeURIComponent(institutionSlug)}/programs`,
+    payload,
+    adminId
+  );
+}
+
+export function deleteProgram(adminId, institutionSlug, programSlug) {
+  return api.delete(
+    `/institutions/${encodeURIComponent(institutionSlug)}/programs/${encodeURIComponent(programSlug)}`,
+    adminId
+  );
+}
+
 export function createUser(payload) {
   return request('/users', {
     method: 'POST',

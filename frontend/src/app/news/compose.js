@@ -95,7 +95,7 @@ export default function NewsComposeScreen() {
         return next.length === 1 ? next[0].slug : null;
       });
     };
-    apply([]);
+    apply(null);
     listInstitutions()
       .then((items) => {
         if (!cancelled) apply(items);
@@ -126,7 +126,7 @@ export default function NewsComposeScreen() {
         return next.length === 1 ? [next[0].slug] : current.length ? [] : current;
       });
     };
-    apply([]);
+    apply(null);
     let cancelled = false;
     listPrograms(institutionSlug)
       .then((items) => {

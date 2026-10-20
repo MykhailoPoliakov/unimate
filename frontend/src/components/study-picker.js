@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, TextInput } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { checkIn, fadeIn, PressScale } from '@/components/motion';
@@ -85,15 +85,16 @@ export function useStudySelection({
   const loadInstitutions = useCallback(async () => {
     setIsLoading(true);
     setLoadFailed(false);
+    let items;
     try {
-      let items = [];
-      try {
-        items = await listInstitutions();
-      } catch {
-        items = [];
-      }
+      items = await listInstitutions();
+    } catch {
+      items = null;
+    }
+    try {
       const next = mergeInstitutions(items);
       if (
+        items === null &&
         initialInstitution &&
         !next.some((item) => item.slug === initialInstitution)
       ) {
@@ -105,8 +106,10 @@ export function useStudySelection({
       }
 
       setInstitutions(next);
-      setInstitutionSlug((current) => current ?? next[0]?.slug ?? null);
-      if (next.length === 0) setLoadFailed(true);
+      setInstitutionSlug((current) =>
+        next.some((item) => item.slug === current) ? current : next[0]?.slug ?? null
+      );
+      if (items !== null && next.length === 0) setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +129,7 @@ export function useStudySelection({
     }
 
     let cancelled = false;
-    const fallback = mergePrograms(institutionSlug, []);
+    const fallback = mergePrograms(institutionSlug, null);
     setPrograms(fallback);
     setProgramSlug((current) =>
       fallback.some((item) => item.slug === current) ? current : fallback[0]?.slug ?? null
@@ -145,7 +148,7 @@ export function useStudySelection({
         })
         .catch(() => {
           if (cancelled) return;
-          const next = mergePrograms(institutionSlug, []);
+          const next = mergePrograms(institutionSlug, null);
           setPrograms(next);
           setProgramSlug((current) =>
             next.some((item) => item.slug === current) ? current : next[0]?.slug ?? null
@@ -164,6 +167,21 @@ export function useStudySelection({
       if (timer) clearTimeout(timer);
     };
   }, [institutionSlug, programsDelayMs]);
+
+  const reloadPrograms = useCallback(async () => {
+    if (!institutionSlug) return;
+    setIsLoadingPrograms(true);
+    try {
+      const rows = await listPrograms(institutionSlug);
+      const next = mergePrograms(institutionSlug, rows);
+      setPrograms(next);
+      setProgramSlug((current) =>
+        next.some((item) => item.slug === current) ? current : next[0]?.slug ?? null
+      );
+    } finally {
+      setIsLoadingPrograms(false);
+    }
+  }, [institutionSlug]);
 
   useEffect(() => {
     if (!selectedProgram) return;
@@ -186,6 +204,7 @@ export function useStudySelection({
     isLoading,
     loadFailed,
     loadInstitutions,
+    reloadPrograms,
     isLoadingPrograms,
     canSubmit:
       !!institutionSlug &&
@@ -210,9 +229,49 @@ export function StudyFields({
   onSelectInstitution,
   onSelectProgram,
   onSelectYear,
+  canManage = false,
+  onAddInstitution,
+  onDeleteInstitution,
+  onAddProgram,
+  onDeleteProgram,
 }) {
   const theme = useTheme();
   const { t } = useI18n();
+  const [institutionName, setInstitutionName] = useState('');
+  const [institutionSlugDraft, setInstitutionSlugDraft] = useState('');
+  const [programName, setProgramName] = useState('');
+  const [programSlugDraft, setProgramSlugDraft] = useState('');
+  const [durationYears, setDurationYears] = useState('3');
+  const [isManaging, setIsManaging] = useState(false);
+
+  const manage = async (action, clear) => {
+    if (isManaging) return;
+    setIsManaging(true);
+    try {
+      await action();
+      clear?.();
+    } catch (error) {
+      Alert.alert(t('couldNotSave'), error?.message ?? t('tryAgain'));
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  const confirmDelete = (title, message, action) => {
+    Alert.alert(title, message, [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: () => manage(action) },
+    ]);
+  };
+
+  const inputStyle = {
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 10,
+    color: theme.text,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  };
 
   return (
     <>
@@ -229,37 +288,178 @@ export function StudyFields({
         </ThemedView>
       ) : (
         institutions.map((institution) => (
-          <Choice
-            key={institution.slug}
-            icon="school"
-            imageKey={institution.slug}
-            title={institution.name}
-            subtitle={institution.slug}
-            isSelected={institutionSlug === institution.slug}
-            onSelect={() => onSelectInstitution(institution.slug)}
-          />
+          <ThemedView key={institution.slug} className="flex-row items-center gap-two bg-transparent">
+            <ThemedView className="flex-1 bg-transparent">
+              <Choice
+                icon="school"
+                imageKey={institution.slug}
+                title={institution.name}
+                subtitle={institution.slug}
+                isSelected={institutionSlug === institution.slug}
+                onSelect={() => onSelectInstitution(institution.slug)}
+              />
+            </ThemedView>
+            {canManage ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('deleteUniversityNamed', { name: institution.name })}
+                onPress={() =>
+                  confirmDelete(
+                    t('deleteUniversity'),
+                    t('deleteUniversityMessage', { name: institution.name }),
+                    () => onDeleteInstitution(institution.slug)
+                  )
+                }
+                hitSlop={10}
+                className="p-two">
+                <Ionicons name="trash-outline" size={20} color={theme.error} />
+              </Pressable>
+            ) : null}
+          </ThemedView>
         ))
       )}
+
+      {canManage ? (
+        <ThemedView
+          className="gap-two rounded-three p-three bg-transparent"
+          style={{ borderWidth: 1, borderColor: theme.border }}>
+          <ThemedText type="smallBold">{t('addUniversity')}</ThemedText>
+          <TextInput
+            value={institutionName}
+            onChangeText={setInstitutionName}
+            placeholder={t('universityName')}
+            placeholderTextColor={theme.textSecondary}
+            style={inputStyle}
+          />
+          <TextInput
+            value={institutionSlugDraft}
+            onChangeText={setInstitutionSlugDraft}
+            placeholder={t('universitySlug')}
+            autoCapitalize="none"
+            placeholderTextColor={theme.textSecondary}
+            style={inputStyle}
+          />
+          <Pressable
+            disabled={isManaging || !institutionName.trim() || !institutionSlugDraft.trim()}
+            onPress={() =>
+              manage(
+                () => onAddInstitution({
+                  name: institutionName.trim(),
+                  slug: institutionSlugDraft.trim().toLowerCase(),
+                }),
+                () => {
+                  setInstitutionName('');
+                  setInstitutionSlugDraft('');
+                }
+              )
+            }
+            className="rounded-three py-two items-center"
+            style={{ backgroundColor: theme.primary, opacity: isManaging ? 0.5 : 1 }}>
+            <ThemedText type="smallBold" style={{ color: theme.background }}>
+              {t('addUniversity')}
+            </ThemedText>
+          </Pressable>
+        </ThemedView>
+      ) : null}
 
       {isLoadingPrograms ? (
         <ThemedView className="flex-row items-center gap-two py-three bg-transparent">
           <ActivityIndicator color={theme.primary} />
           <ThemedText themeColor="textSecondary">{t('loading')}</ThemedText>
         </ThemedView>
-      ) : programs.length > 0 ? (
+      ) : programs.length > 0 || (canManage && institutionSlug) ? (
         <Animated.View key={institutionSlug} entering={fadeIn} style={{ gap: 12 }}>
           <ThemedText type="small" themeColor="textSecondary">
             {t('yourProgram')}
           </ThemedText>
           {programs.map((program) => (
-            <Choice
-              key={program.slug}
-              icon="library"
-              title={program.name}
-              isSelected={programSlug === program.slug}
-              onSelect={() => onSelectProgram(program.slug)}
-            />
+            <ThemedView key={program.slug} className="flex-row items-center gap-two bg-transparent">
+              <ThemedView className="flex-1 bg-transparent">
+                <Choice
+                  icon="library"
+                  title={program.name}
+                  subtitle={`${program.duration_years} ${t('years')}`}
+                  isSelected={programSlug === program.slug}
+                  onSelect={() => onSelectProgram(program.slug)}
+                />
+              </ThemedView>
+              {canManage ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('deleteProgramNamed', { name: program.name })}
+                  onPress={() =>
+                    confirmDelete(
+                      t('deleteProgram'),
+                      t('deleteProgramMessage', { name: program.name }),
+                      () => onDeleteProgram(program.slug)
+                    )
+                  }
+                  hitSlop={10}
+                  className="p-two">
+                  <Ionicons name="trash-outline" size={20} color={theme.error} />
+                </Pressable>
+              ) : null}
+            </ThemedView>
           ))}
+
+          {canManage ? (
+            <ThemedView
+              className="gap-two rounded-three p-three bg-transparent"
+              style={{ borderWidth: 1, borderColor: theme.border }}>
+              <ThemedText type="smallBold">{t('addProgram')}</ThemedText>
+              <TextInput
+                value={programName}
+                onChangeText={setProgramName}
+                placeholder={t('programName')}
+                placeholderTextColor={theme.textSecondary}
+                style={inputStyle}
+              />
+              <TextInput
+                value={programSlugDraft}
+                onChangeText={setProgramSlugDraft}
+                placeholder={t('programSlug')}
+                autoCapitalize="none"
+                placeholderTextColor={theme.textSecondary}
+                style={inputStyle}
+              />
+              <TextInput
+                value={durationYears}
+                onChangeText={setDurationYears}
+                placeholder={t('durationYears')}
+                keyboardType="number-pad"
+                placeholderTextColor={theme.textSecondary}
+                style={inputStyle}
+              />
+              <Pressable
+                disabled={
+                  isManaging ||
+                  !programName.trim() ||
+                  !programSlugDraft.trim() ||
+                  !/^\d+$/.test(durationYears) ||
+                  Number(durationYears) < 1
+                }
+                onPress={() =>
+                  manage(
+                    () => onAddProgram({
+                      name: programName.trim(),
+                      slug: programSlugDraft.trim().toLowerCase(),
+                      duration_years: Number(durationYears),
+                    }),
+                    () => {
+                      setProgramName('');
+                      setProgramSlugDraft('');
+                      setDurationYears('3');
+                    }
+                  )
+                }
+                className="rounded-three py-two items-center"
+                style={{ backgroundColor: theme.primary, opacity: isManaging ? 0.5 : 1 }}>
+                <ThemedText type="smallBold" style={{ color: theme.background }}>
+                  {t('addProgram')}
+                </ThemedText>
+              </Pressable>
+            </ThemedView>
+          ) : null}
 
           <ThemedText type="small" themeColor="textSecondary">
             {t('yearOfStudy')}

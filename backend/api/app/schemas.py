@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
 from typing import Literal
+import re
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic import field_validator
 
 Language = Literal["nl", "de", "fr", "en", "uk", "ru"]
 
@@ -28,6 +30,49 @@ class InstitutionOut(BaseModel):
     slug: str
     name: str
     programs: list[ProgramOut] = []
+
+
+class InstitutionCreate(BaseModel):
+    slug: str = Field(min_length=2, max_length=50)
+    name: str = Field(min_length=1, max_length=200)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, value: str) -> str:
+        slug = value.strip().lower()
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
+            raise ValueError("Slug must use lowercase letters, numbers, and hyphens")
+        return slug
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Name cannot be empty")
+        return name
+
+
+class ProgramCreate(BaseModel):
+    slug: str = Field(min_length=2, max_length=50)
+    name: str = Field(min_length=1, max_length=200)
+    duration_years: int = Field(ge=1)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, value: str) -> str:
+        slug = value.strip().lower()
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
+            raise ValueError("Slug must use lowercase letters, numbers, and hyphens")
+        return slug
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Name cannot be empty")
+        return name
 
 
 class UserCreate(BaseModel):

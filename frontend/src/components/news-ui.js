@@ -81,7 +81,7 @@ export function audienceLabels({
 export function newsAudienceLabels(post, t) {
   if (!post?.institution) return [];
   const catalog = catalogInstitution(post.institution);
-  const programs = mergePrograms(post.institution, []);
+  const programs = mergePrograms(post.institution, null);
   const selected = post.programs ?? [];
   const chosen = selected.length ? programs.filter((item) => selected.includes(item.slug)) : programs;
   const names = selected.map((slug) => programs.find((item) => item.slug === slug)?.name ?? slug);

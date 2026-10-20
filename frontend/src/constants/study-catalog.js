@@ -20,23 +20,15 @@ function sortPrograms(items) {
 }
 
 export function mergeInstitutions(items) {
-  const bySlug = new Map(STUDY_CATALOG.map((item) => [item.slug, { ...item, programs: [...item.programs] }]));
-  for (const item of items ?? []) {
-    const current = bySlug.get(item.slug);
-    if (!current) {
-      bySlug.set(item.slug, { ...item, programs: item.programs ?? [] });
-      continue;
-    }
-    const programs = new Map(current.programs.map((program) => [program.slug, program]));
-    for (const program of item.programs ?? []) programs.set(program.slug, program);
-    bySlug.set(item.slug, { ...current, ...item, programs: sortPrograms([...programs.values()]) });
+  if (items == null) {
+    return STUDY_CATALOG.map((item) => ({ ...item, programs: [...item.programs] }));
   }
-  return [...bySlug.values()];
+  return [...items]
+    .map((item) => ({ ...item, programs: [...(item.programs ?? [])] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function mergePrograms(institutionSlug, items) {
-  const catalog = catalogInstitution(institutionSlug)?.programs ?? [];
-  const bySlug = new Map(catalog.map((program) => [program.slug, program]));
-  for (const program of items ?? []) bySlug.set(program.slug, program);
-  return sortPrograms([...bySlug.values()]);
+  const programs = items ?? catalogInstitution(institutionSlug)?.programs ?? [];
+  return sortPrograms(programs);
 }

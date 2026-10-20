@@ -20,7 +20,17 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { mapRemoteUser, useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemePreference } from '@/hooks/use-theme-preference';
-import { deleteUser, updateUser, updateUserRole, listInstitutions, listPrograms } from '@/lib/api';
+import {
+  createInstitution,
+  createProgram,
+  deleteInstitution,
+  deleteProgram,
+  deleteUser,
+  updateUser,
+  updateUserRole,
+  listInstitutions,
+  listPrograms,
+} from '@/lib/api';
 import { mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
 
 const THEME_IDS = [
@@ -84,7 +94,7 @@ export default function SettingsScreen() {
         if (!cancelled) setScopeInstitutionsList(mergeInstitutions(rows));
       })
       .catch(() => {
-        if (!cancelled) setScopeInstitutionsList(mergeInstitutions([]));
+        if (!cancelled) setScopeInstitutionsList(mergeInstitutions(null));
       });
     return () => {
       cancelled = true;
@@ -136,6 +146,32 @@ export default function SettingsScreen() {
     } finally {
       setIsSavingStudy(false);
     }
+  };
+
+  const handleAddInstitution = async (payload) => {
+    if (!profile?.userId) return;
+    const institution = await createInstitution(profile.userId, payload);
+    await study.loadInstitutions();
+    study.setInstitutionSlug(institution.slug);
+    study.setProgramSlug(null);
+  };
+
+  const handleDeleteInstitution = async (slug) => {
+    if (!profile?.userId) return;
+    await deleteInstitution(profile.userId, slug);
+    await study.loadInstitutions();
+  };
+
+  const handleAddProgram = async (payload) => {
+    if (!profile?.userId || !study.institutionSlug) return;
+    await createProgram(profile.userId, study.institutionSlug, payload);
+    await study.reloadPrograms();
+  };
+
+  const handleDeleteProgram = async (slug) => {
+    if (!profile?.userId || !study.institutionSlug) return;
+    await deleteProgram(profile.userId, study.institutionSlug, slug);
+    await study.reloadPrograms();
   };
 
   const handleUpdateRole = async () => {
@@ -261,6 +297,11 @@ export default function SettingsScreen() {
                   onSelectInstitution={study.setInstitutionSlug}
                   onSelectProgram={study.setProgramSlug}
                   onSelectYear={study.setYearOfStudy}
+                  canManage={profile?.role === 'admin'}
+                  onAddInstitution={handleAddInstitution}
+                  onDeleteInstitution={handleDeleteInstitution}
+                  onAddProgram={handleAddProgram}
+                  onDeleteProgram={handleDeleteProgram}
                 />
                 <Pressable
                   onPress={handleSaveStudy}

@@ -85,7 +85,7 @@ export default function SocialComposeScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    setInstitutions(withinModeratorInstitutions(mergeInstitutions([]), scope));
+    setInstitutions(withinModeratorInstitutions(mergeInstitutions(null), scope));
     listInstitutions()
       .then((rows) => {
         if (!cancelled) setInstitutions(withinModeratorInstitutions(mergeInstitutions(rows), scope));
@@ -101,7 +101,7 @@ export default function SocialComposeScreen() {
       setPrograms([]);
       return;
     }
-    const local = withinModeratorPrograms(mergePrograms(institutionSlug, []), scope);
+    const local = withinModeratorPrograms(mergePrograms(institutionSlug, null), scope);
     setPrograms(local);
     let cancelled = false;
     listPrograms(institutionSlug)
