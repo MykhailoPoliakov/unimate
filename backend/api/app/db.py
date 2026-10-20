@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -70,6 +71,45 @@ def ensure_audience_columns() -> None:
                     buttons_json TEXT NOT NULL DEFAULT '[]'
                 )
             """))
+            for row in connection.execute(
+                text("SELECT institution_id, buttons_json FROM home_button_configs")
+            ):
+                buttons = json.loads(row.buttons_json)
+                changed = False
+                if isinstance(buttons, list):
+                    for button in buttons:
+                        if not isinstance(button, dict):
+                            continue
+                        description = button.get("description")
+                        if isinstance(description, str) and len(description) > 100:
+                            button["description"] = description[:100]
+                            changed = True
+                if changed:
+                    connection.execute(
+                        text("""
+                            UPDATE home_button_configs
+                            SET buttons_json = :buttons_json
+                            WHERE institution_id = :institution_id
+                        """),
+                        {
+                            "buttons_json": json.dumps(buttons, ensure_ascii=False),
+                            "institution_id": row.institution_id,
+                        },
+                    )
+        if "social_translations" in inspector.get_table_names():
+            social_columns = {
+                column["name"]: column
+                for column in inspector.get_columns("social_translations")
+            }
+            description = social_columns.get("description")
+            if (
+                description
+                and description["type"].length is not None
+                and description["type"].length < 2000
+            ):
+                connection.execute(text(
+                    "ALTER TABLE social_translations ALTER COLUMN description TYPE VARCHAR(2000)"
+                ))
         if "buttons" in inspector.get_table_names():
             button_columns = {column["name"] for column in inspector.get_columns("buttons")}
             if "program_slugs" not in button_columns:

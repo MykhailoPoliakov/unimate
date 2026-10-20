@@ -195,6 +195,23 @@ class InstitutionManagementTests(unittest.TestCase):
 
         self.assertEqual(error.exception.status_code, 422)
 
+    def test_home_button_description_is_limited_to_100_characters(self):
+        button = HomeButtonIn(
+            id="portal",
+            title="Student portal",
+            url="https://example.edu/portal",
+            description="x" * 100,
+        )
+        self.assertEqual(len(button.description), 100)
+
+        with self.assertRaises(ValueError):
+            HomeButtonIn(
+                id="portal",
+                title="Student portal",
+                url="https://example.edu/portal",
+                description="x" * 101,
+            )
+
     def test_program_cannot_be_deleted_while_content_targets_it(self):
         self.db.add(
             News(

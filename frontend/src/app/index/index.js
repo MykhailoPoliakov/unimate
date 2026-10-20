@@ -21,7 +21,7 @@ import { useI18n } from '@/hooks/use-i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { campusServicesFor } from '@/constants/campus-services';
-import { listButtons, listHomeButtons, previewButton } from '@/lib/api';
+import { listButtons, listHomeButtons, listInstitutions, previewButton } from '@/lib/api';
 import { LOCAL_ICONS } from '@/lib/local-icons';
 import { setLinkDraft } from '@/lib/nav-draft';
 
@@ -303,6 +303,7 @@ export default function HomeScreen() {
     'https://timeedit.kdg.be/';
   const [extras, setExtras] = useState([]);
   const [scheduleUrl, setScheduleUrl] = useState(null);
+  const [currentInstitutionName, setCurrentInstitutionName] = useState(null);
 
   const openOwnSchedule = useCallback(async (forcePortal = false) => {
     if (!profile?.userId) return;
@@ -331,16 +332,26 @@ export default function HomeScreen() {
     if (!profile?.userId) {
       setExtras([]);
       setRemoteServices({ institution, buttons: defaultServices });
+      setCurrentInstitutionName(null);
       return;
     }
 
-    try {
-      const config = await listHomeButtons(profile.userId);
+    const [institutionResult, buttonResult] = await Promise.allSettled([
+      listInstitutions(),
+      listHomeButtons(profile.userId),
+    ]);
+    if (institutionResult.status === 'fulfilled') {
+      const current = institutionResult.value.find((row) => row.slug === institution);
+      setCurrentInstitutionName(current?.name ?? null);
+    } else {
+      setCurrentInstitutionName(null);
+    }
+    if (buttonResult.status === 'fulfilled') {
       setRemoteServices({
         institution,
-        buttons: config.configured ? config.buttons : defaultServices,
+        buttons: buttonResult.value.configured ? buttonResult.value.buttons : defaultServices,
       });
-    } catch {
+    } else {
       setRemoteServices({ institution, buttons: defaultServices });
     }
 
@@ -428,7 +439,7 @@ export default function HomeScreen() {
               className="flex-row items-center justify-between bg-transparent pb-four"
               style={{ paddingTop: 8 }}>
               <ThemedText type="subtitle">
-                {profile?.institutionName || labelFromSlug(institution) || t('homeCampus')}
+                {currentInstitutionName || profile?.institutionName || labelFromSlug(institution) || t('homeCampus')}
               </ThemedText>
               <PressScale onPress={() => openComposer(null)} pressedScale={0.94}>
                   <ThemedView

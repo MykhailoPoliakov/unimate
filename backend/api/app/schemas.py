@@ -79,7 +79,7 @@ class ProgramCreate(BaseModel):
 class HomeButtonIn(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), min_length=1, max_length=80)
     title: str = Field(min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, max_length=100)
     url: str = Field(min_length=8, max_length=500)
     color: str | None = Field(default=None, max_length=32)
     platform: Literal["custom", "canvas", "student-service", "website", "schedule"] = "custom"
@@ -351,7 +351,7 @@ class SocialOut(BaseModel):
 class SocialTranslationIn(BaseModel):
     lang: Language
     title: str = Field(min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, max_length=2000)
 
 
 class SocialCreate(BaseModel):

@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 
-import { SocialBrandIcon, WebsiteIcon } from '@/components/social-brand-icon';
+import { WebsiteIcon } from '@/components/social-brand-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
@@ -21,10 +21,7 @@ import { cooldownMessage, createSocial, listInstitutions, listPrograms, updateSo
 import { getSocialDraft } from '@/lib/nav-draft';
 import { moderatorScope, withinModeratorInstitutions, withinModeratorPrograms, withinModeratorYears } from '@/lib/moderator-scope';
 import {
-  brandForIcon,
   detectService,
-  iconOnBrand,
-  MANUAL_ICONS,
   normalizeUrl,
   resolveIconName,
 } from '@/lib/social-service';
@@ -37,8 +34,7 @@ export default function SocialComposeScreen() {
   const item = getSocialDraft();
   const [url, setUrl] = useState(item?.url ?? '');
   const [title, setTitle] = useState(item?.title ?? '');
-  const [description, setDescription] = useState(item?.description ?? '');
-  const [icon, setIcon] = useState(item?.icon ?? null);
+  const descriptionRef = useRef(item?.description ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [institutions, setInstitutions] = useState([]);
   const [programs, setPrograms] = useState([]);
@@ -51,13 +47,12 @@ export default function SocialComposeScreen() {
   const detected = useMemo(() => detectService(url), [url]);
   const hasLink = Boolean(url.trim());
   const resolvedIcon = hasLink
-    ? resolveIconName(icon || detected?.icon || 'globe-outline')
+    ? resolveIconName(detected?.icon || 'globe-outline')
     : 'globe-outline';
   const targetingValid =
     everyone || (!!institutionSlug && programSlugs.length > 0 && selectedYears.length > 0);
   const canSave =
     normalizeUrl(url).length > 8 && title.trim().length > 0 && targetingValid && !isSaving;
-  const selectedInstitution = institutions.find((row) => row.slug === institutionSlug);
   const selectedPrograms = programs.filter((row) => programSlugs.includes(row.slug));
   const yearSource = selectedPrograms.length ? selectedPrograms : programs;
   const maxYear = yearSource.length ? Math.max(...yearSource.map((row) => row.duration_years)) : 0;
@@ -74,14 +69,9 @@ export default function SocialComposeScreen() {
   }, [isModerator]);
 
   useEffect(() => {
-    if (!hasLink) {
-      setIcon(null);
-      return;
-    }
-    if (item || !detected) return;
+    if (!hasLink || item || !detected) return;
     setTitle((current) => current.trim() || detected.label);
-    if (!icon) setIcon(detected.icon);
-  }, [detected, hasLink, icon, item]);
+  }, [detected, hasLink, item]);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,7 +120,7 @@ export default function SocialComposeScreen() {
         translations: LANGUAGES.map((row) => ({
           lang: row.id,
           title: title.trim(),
-          description: description.trim() || null,
+          description: descriptionRef.current.trim() || null,
         })),
       };
       if (isEdit) await updateSocial(profile.userId, item.id, payload);
@@ -174,10 +164,7 @@ export default function SocialComposeScreen() {
           keyboardShouldPersistTaps="handled">
           <TextInput
             value={url}
-            onChangeText={(value) => {
-              setUrl(value);
-              if (!value.trim()) setIcon(null);
-            }}
+            onChangeText={setUrl}
             placeholder="https://"
             placeholderTextColor={theme.textSecondary}
             autoCapitalize="none"
@@ -201,45 +188,22 @@ export default function SocialComposeScreen() {
             style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
           />
           <TextInput
-            value={description}
-            onChangeText={setDescription}
+            defaultValue={item?.description ?? ''}
+            onChangeText={(value) => {
+              descriptionRef.current = value;
+            }}
             placeholder={t('socialDescription')}
             placeholderTextColor={theme.textSecondary}
-            className="rounded-three px-three py-three text-base font-medium"
-            style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
+            multiline
+            maxLength={2000}
+            textAlignVertical="top"
+            className="rounded-three px-three py-three text-base font-medium min-h-[120px]"
+            style={{
+              backgroundColor: theme.backgroundElement,
+              color: theme.text,
+              textAlignVertical: 'top',
+            }}
           />
-          <ThemedText type="small" themeColor="textSecondary">
-            {t('chooseIcon')}
-          </ThemedText>
-          <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
-            {MANUAL_ICONS.map((option) => {
-              const selected = resolvedIcon === option.icon;
-              const accent = brandForIcon(option.icon)?.color;
-              return (
-                <Pressable
-                  key={option.id}
-                  onPress={() => {
-                    setIcon(option.icon);
-                  }}>
-                  <ThemedView
-                    className="bg-transparent"
-                    style={{
-                      borderWidth: 1,
-                      borderRadius: 10,
-                      borderColor: selected ? accent ?? theme.primary : theme.border,
-                    }}>
-                    <SocialBrandIcon
-                      name={option.icon}
-                      size={20}
-                      well={36}
-                      color={iconOnBrand(accent) ?? theme.primary}
-                      backgroundColor={accent ?? theme.backgroundElement}
-                    />
-                  </ThemedView>
-                </Pressable>
-              );
-            })}
-          </ThemedView>
 
           <ThemedText type="smallBold">{t('audience')}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

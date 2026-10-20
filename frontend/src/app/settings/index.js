@@ -14,7 +14,6 @@ import { StudyFields, useStudySelection } from '@/components/study-picker';
 import { SettingsGroup, SettingsRow } from '@/components/settings-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { campusServicesFor } from '@/constants/campus-services';
 import { useFeed } from '@/hooks/use-feed';
 import { useI18n } from '@/hooks/use-i18n';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -27,17 +26,14 @@ import {
   deleteInstitution,
   deleteProgram,
   deleteUser,
-  listHomeButtons,
   updateInstitution,
   updateProgram,
   updateUser,
   updateUserRole,
   listInstitutions,
   listPrograms,
-  saveHomeButtons,
 } from '@/lib/api';
 import { mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
-import { DEFAULT_LINK_COLOR } from '@/components/button-modal';
 
 const THEME_IDS = [
   { id: 'system', icon: 'phone-portrait-outline' },
@@ -79,11 +75,6 @@ export default function SettingsScreen() {
   });
   const [isSavingStudy, setIsSavingStudy] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
-  const [homeButtons, setHomeButtons] = useState([]);
-  const [isLoadingHomeButtons, setIsLoadingHomeButtons] = useState(false);
-  const [isSavingHomeButtons, setIsSavingHomeButtons] = useState(false);
-  const [homeButtonsLoadFailed, setHomeButtonsLoadFailed] = useState(false);
-  const [homeButtonsLoadAttempt, setHomeButtonsLoadAttempt] = useState(0);
 
   const studyChanged =
     study.institutionSlug !== profile?.institution ||
@@ -112,41 +103,6 @@ export default function SettingsScreen() {
       cancelled = true;
     };
   }, [profile?.role]);
-
-  useEffect(() => {
-    if (profile?.role !== 'admin' || !profile?.userId || !profile?.institution) {
-      setHomeButtons([]);
-      return undefined;
-    }
-    let cancelled = false;
-    setIsLoadingHomeButtons(true);
-    setHomeButtonsLoadFailed(false);
-    listHomeButtons(profile.userId)
-      .then((config) => {
-        if (cancelled) return;
-        const defaults = campusServicesFor(profile.institution, profile.language).map((button) => ({
-          id: button.id,
-          title: button.title,
-          description: button.description,
-          url: button.url,
-          color: button.color,
-          platform: button.platform ?? 'custom',
-        }));
-        setHomeButtons(config.configured ? config.buttons : defaults);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setHomeButtonsLoadFailed(true);
-          Alert.alert(t('couldNotLoadHomeButtons'), error.message ?? t('tryAgain'));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingHomeButtons(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [homeButtonsLoadAttempt, profile?.institution, profile?.language, profile?.role, profile?.userId, t]);
 
   useEffect(() => {
     if (assignedInstitutions.length === 0) {
@@ -233,51 +189,6 @@ export default function SettingsScreen() {
     await study.reloadPrograms();
   };
 
-  const handleAddHomeButton = () => {
-    setHomeButtons((current) => [
-      ...current,
-      {
-        id: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        title: '',
-        description: '',
-        url: '',
-        color: DEFAULT_LINK_COLOR,
-        platform: 'custom',
-      },
-    ]);
-  };
-
-  const handleSaveHomeButtons = async () => {
-    if (!profile?.userId || isSavingHomeButtons) return;
-    setIsSavingHomeButtons(true);
-    try {
-      const result = await saveHomeButtons(profile.userId, homeButtons);
-      setHomeButtons(result.buttons);
-      Alert.alert(t('saved'));
-    } catch (error) {
-      Alert.alert(t('couldNotSave'), error.message ?? t('tryAgain'));
-    } finally {
-      setIsSavingHomeButtons(false);
-    }
-  };
-
-  const updateHomeButton = (id, field, value) => {
-    setHomeButtons((current) =>
-      current.map((button) => (button.id === id ? { ...button, [field]: value } : button))
-    );
-  };
-
-  const confirmRemoveHomeButton = (button) => {
-    Alert.alert(t('removeHomeButton'), t('removeHomeButtonMessage', { name: button.title || t('homeButtonName') }), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('delete'),
-        style: 'destructive',
-        onPress: () => setHomeButtons((current) => current.filter((item) => item.id !== button.id)),
-      },
-    ]);
-  };
-
   const handleUpdateRole = async () => {
     const targetId = roleTargetId.trim();
     if (!profile?.userId || !targetId || isUpdatingRole) return;
@@ -308,9 +219,6 @@ export default function SettingsScreen() {
   };
 
   const canSaveStudy = studyChanged && study.canSubmit && !isSavingStudy;
-  const homeButtonsValid = homeButtons.every(
-    (button) => button.title?.trim() && button.url?.trim()
-  );
 
   const handleShare = () => {
     Share.share({ message: t('shareMessage') }).catch(() => {});
@@ -437,114 +345,13 @@ export default function SettingsScreen() {
             </SettingsGroup>
 
             {profile?.role === 'admin' ? (
-              <SettingsGroup title={t('manageHomeButtons')}>
-                <ThemedView className="gap-three px-three py-three bg-transparent">
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {t('homeButtonsFor', { name: profile.institutionName || profile.institution })}
-                  </ThemedText>
-                  {isLoadingHomeButtons ? (
-                    <ThemedText type="small" themeColor="textSecondary">{t('loading')}</ThemedText>
-                  ) : homeButtonsLoadFailed ? (
-                    <Pressable onPress={() => setHomeButtonsLoadAttempt((attempt) => attempt + 1)}>
-                      <ThemedText type="small" themeColor="primary">{t('retry')}</ThemedText>
-                    </Pressable>
-                  ) : homeButtons.length === 0 ? (
-                    <ThemedText type="small" themeColor="textSecondary">{t('noHomeButtons')}</ThemedText>
-                  ) : (
-                    homeButtons.map((button, index) => (
-                      <ThemedView
-                        key={button.id}
-                        className="gap-two p-three rounded-three"
-                        style={{ backgroundColor: theme.backgroundElement, borderWidth: 1, borderColor: theme.border }}>
-                        <ThemedView className="flex-row items-center justify-between bg-transparent">
-                          <ThemedText type="smallBold">
-                            {t('homeButtonNumber', { n: index + 1 })}
-                          </ThemedText>
-                          {button.platform === 'schedule' ? (
-                            <ThemedText type="small" themeColor="primary">{t('specialSchedule')}</ThemedText>
-                          ) : null}
-                          <Pressable
-                            onPress={() => confirmRemoveHomeButton(button)}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('removeHomeButton')}>
-                            <Ionicons name="trash-outline" size={19} color={theme.destructive ?? '#C62828'} />
-                          </Pressable>
-                        </ThemedView>
-                        {[
-                          ['title', t('homeButtonName'), false],
-                          ['description', t('homeButtonSubtitle'), false],
-                          ['url', t('homeButtonLink'), true],
-                          ['color', t('homeButtonColor'), false],
-                        ].map(([field, label, url]) => (
-                          <TextInput
-                            key={field}
-                            value={button[field] ?? ''}
-                            onChangeText={(value) => updateHomeButton(button.id, field, value)}
-                            placeholder={label}
-                            placeholderTextColor={theme.textSecondary}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            keyboardType={url ? 'url' : 'default'}
-                            accessibilityLabel={label}
-                            className="rounded-three px-three py-two text-base font-medium"
-                            style={{
-                              backgroundColor: theme.background,
-                              color: theme.text,
-                              borderWidth: 1,
-                              borderColor: theme.border,
-                            }}
-                          />
-                        ))}
-                      </ThemedView>
-                    ))
-                  )}
-                  <Pressable
-                    onPress={handleAddHomeButton}
-                    disabled={isLoadingHomeButtons || homeButtonsLoadFailed || isSavingHomeButtons}
-                    className="rounded-three py-three items-center"
-                    style={{ borderWidth: 1, borderColor: theme.primary }}>
-                    <ThemedText type="smallBold" themeColor="primary">{t('addHomeButton')}</ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleSaveHomeButtons}
-                    disabled={
-                      isLoadingHomeButtons ||
-                      homeButtonsLoadFailed ||
-                      isSavingHomeButtons ||
-                      !homeButtonsValid
-                    }
-                    className="rounded-three py-three items-center"
-                    style={{
-                      backgroundColor:
-                        !isLoadingHomeButtons &&
-                        !homeButtonsLoadFailed &&
-                        !isSavingHomeButtons &&
-                        homeButtonsValid
-                          ? theme.primary
-                          : theme.border,
-                    }}>
-                    <ThemedText
-                      type="smallBold"
-                      themeColor={
-                        !isLoadingHomeButtons &&
-                        !homeButtonsLoadFailed &&
-                        !isSavingHomeButtons &&
-                        homeButtonsValid
-                          ? undefined
-                          : 'textSecondary'
-                      }
-                      style={
-                        !isLoadingHomeButtons &&
-                        !homeButtonsLoadFailed &&
-                        !isSavingHomeButtons &&
-                        homeButtonsValid
-                          ? { color: theme.background }
-                          : undefined
-                      }>
-                      {isSavingHomeButtons ? t('saving') : t('saveHomeButtons')}
-                    </ThemedText>
-                  </Pressable>
-                </ThemedView>
+              <SettingsGroup title={t('administration')}>
+                <SettingsRow
+                  icon="apps-outline"
+                  label={t('homeScreenButtons')}
+                  value={profile.institutionName || profile.institution}
+                  href="/settings/home-buttons"
+                />
               </SettingsGroup>
             ) : null}
 

@@ -157,7 +157,7 @@ class SocialTranslation(Base):
     )
     lang: Mapped[str] = mapped_column(String(5), primary_key=True)
     title: Mapped[str] = mapped_column(String(200))
-    description: Mapped[str | None] = mapped_column(String(500))
+    description: Mapped[str | None] = mapped_column(String(2000))
 
 
 class News(Base):

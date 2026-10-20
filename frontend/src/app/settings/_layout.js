@@ -20,6 +20,7 @@ export default function SettingsLayout() {
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="languages" options={{ title: t('languages') }} />
+      <Stack.Screen name="home-buttons" options={{ title: t('homeScreenButtons') }} />
       <Stack.Screen name="privacy" options={{ title: t('privacyPolicy') }} />
       <Stack.Screen name="terms" options={{ title: t('termsOfUse') }} />
       <Stack.Screen name="about" options={{ title: t('aboutUnimate') }} />

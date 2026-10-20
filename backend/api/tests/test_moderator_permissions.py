@@ -22,10 +22,29 @@ from app.routers.notifications import update_push_device
 from app.routers.news import create_news, delete_news, list_managed_news, list_news, record_news_view, update_news
 from app.routers.users import delete_user
 from app.routers.users import update_user_role
-from app.schemas import NewsCreate, NewsTranslationIn, PushDeviceUpdate, UserRoleUpdate
+from app.schemas import (
+    NewsCreate,
+    NewsTranslationIn,
+    PushDeviceUpdate,
+    SocialTranslationIn,
+    UserRoleUpdate,
+)
 
 
 class ModeratorPermissionTests(unittest.TestCase):
+    def test_social_descriptions_accept_up_to_2000_characters(self):
+        description = "a" * 2000
+        translation = SocialTranslationIn(lang="en", title="Community", description=description)
+
+        self.assertEqual(translation.description, description)
+
+        with self.assertRaises(ValueError):
+            SocialTranslationIn(
+                lang="en",
+                title="Community",
+                description=f"{description}a",
+            )
+
     def setUp(self):
         self.engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
         Base.metadata.drop_all(self.engine)
