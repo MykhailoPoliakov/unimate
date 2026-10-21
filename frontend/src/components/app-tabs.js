@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSegments } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useEffect, useState } from 'react';
-import { DynamicColorIOS, InteractionManager, Platform } from 'react-native';
+import { InteractionManager, Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -10,12 +10,6 @@ import { useFeed } from '@/hooks/use-feed';
 import { useI18n } from '@/hooks/use-i18n';
 
 const systemTabBar = Platform.OS === 'ios' && parseInt(Platform.Version, 10) >= 26;
-const labelColor = Platform.OS === 'ios'
-  ? DynamicColorIOS({ light: Colors.light.textSecondary, dark: Colors.dark.textSecondary })
-  : null;
-const selectedColor = Platform.OS === 'ios'
-  ? DynamicColorIOS({ light: Colors.light.primary, dark: Colors.dark.primary })
-  : null;
 
 export default function AppTabs() {
   const scheme = useColorScheme();
@@ -25,8 +19,6 @@ export default function AppTabs() {
   const segments = useSegments();
   const newsDepth = segments[0] === 'news' ? segments.length : 0;
   const [newsBadge, setNewsBadge] = useState(unreadNewsCount);
-  const idleLabelColor = labelColor ?? colors.textSecondary;
-  const idleSelectedColor = selectedColor ?? colors.primary;
 
   useEffect(() => {
     // Coming back from an article drops the unread badge. Updating the tab
@@ -62,11 +54,11 @@ export default function AppTabs() {
           })}
       disableTransparentOnScrollEdge
       minimizeBehavior="never"
-      tintColor={idleSelectedColor}
+      tintColor={colors.text}
       badgeBackgroundColor={colors.error}
       badgeTextColor="#FFFFFF"
-      iconColor={{ default: idleLabelColor, selected: idleSelectedColor }}
-      labelStyle={{ color: idleLabelColor, selected: { color: idleSelectedColor } }}>
+      iconColor={{ default: colors.text, selected: colors.text }}
+      labelStyle={{ color: colors.text, selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
