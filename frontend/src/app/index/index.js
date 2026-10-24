@@ -6,11 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, ActionSheetIOS, View } from 'react-native';
 import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DEFAULT_LINK_COLOR, linksStorageKey } from '@/components/button-modal';
 import { openExternalUrl } from '@/components/external-link';
-import { ScheduleBrowser, scheduleStartUrl, scheduleStorageKey, timetableUrl } from '@/components/schedule-browser';
+import { scheduleStartUrl, scheduleStorageKey, timetableUrl, useScheduleBrowser } from '@/components/schedule-browser';
 import { listEnter, PressScale } from '@/components/motion';
 import { useReload } from '@/components/reload-button';
 import { SortableSection } from '@/components/sortable-section';
@@ -301,9 +301,11 @@ function ServiceLink({
 }
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const { profile } = useProfile();
   const { t } = useI18n();
   const theme = useTheme();
+  const { preloadSchedule, openSchedule } = useScheduleBrowser();
   const router = useRouter();
   const institution = profile?.institution;
   const defaultServices = useMemo(
@@ -317,21 +319,55 @@ export default function HomeScreen() {
     services.find((button) => isScheduleButton(button) && !isCustomButton(button))?.url ??
     'https://timeedit.kdg.be/';
   const [extras, setExtras] = useState([]);
-  const [scheduleUrl, setScheduleUrl] = useState(null);
+  const [preloadedSchedule, setPreloadedSchedule] = useState(null);
   const [currentInstitutionName, setCurrentInstitutionName] = useState(null);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !profile?.userId) return undefined;
+    let cancelled = false;
+    AsyncStorage.getItem(scheduleStorageKey(profile.userId))
+      .then((saved) => {
+        if (!cancelled) {
+          const initialUrl = scheduleStartUrl(timetableUrl(saved) || schedulePortalUrl);
+          setPreloadedSchedule({
+            userId: profile.userId,
+            url: initialUrl,
+          });
+          preloadSchedule(profile.userId, initialUrl);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to preload saved schedule link', error);
+        if (!cancelled) {
+          const initialUrl = scheduleStartUrl(schedulePortalUrl);
+          setPreloadedSchedule({
+            userId: profile.userId,
+            url: initialUrl,
+          });
+          preloadSchedule(profile.userId, initialUrl);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [preloadSchedule, profile?.userId, schedulePortalUrl]);
 
   const openOwnSchedule = useCallback(async (forcePortal = false) => {
     if (!profile?.userId) return;
-    const saved = forcePortal
-      ? null
-      : timetableUrl(await AsyncStorage.getItem(scheduleStorageKey(profile.userId)));
-    const next = scheduleStartUrl(saved || schedulePortalUrl);
+    const next = forcePortal
+      ? scheduleStartUrl(schedulePortalUrl)
+      : preloadedSchedule?.userId === profile.userId
+        ? preloadedSchedule.url
+        : scheduleStartUrl(
+            timetableUrl(await AsyncStorage.getItem(scheduleStorageKey(profile.userId))) ||
+              schedulePortalUrl
+          );
     if (Platform.OS === 'web') {
       openExternalUrl(next, theme);
       return;
     }
-    setScheduleUrl(next);
-  }, [profile?.userId, schedulePortalUrl, theme]);
+    openSchedule(profile.userId, next);
+  }, [openSchedule, preloadedSchedule, profile?.userId, schedulePortalUrl, theme]);
 
   const persistLinks = useCallback(
     async (next) => {
@@ -441,10 +477,11 @@ export default function HomeScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.background }}>
       <ThemedView className="flex-1">
-        <SafeAreaView className="flex-1" edges={['top']}>
+        <View className="flex-1">
           <ScrollView
             className="flex-1"
             contentContainerClassName="px-four pb-bottom-tab-gap max-w-content self-center w-full"
+            contentContainerStyle={{ paddingTop: insets.top }}
             alwaysBounceVertical
             refreshControl={
               <RefreshControl
@@ -498,13 +535,7 @@ export default function HomeScreen() {
               </>
             ) : null}
           </ScrollView>
-        </SafeAreaView>
-        <ScheduleBrowser
-          visible={scheduleUrl !== null}
-          userId={profile?.userId}
-          initialUrl={scheduleUrl}
-          onClose={() => setScheduleUrl(null)}
-        />
+        </View>
       </ThemedView>
     </GestureHandlerRootView>
   );

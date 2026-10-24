@@ -2,9 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { openExternalUrl } from '@/components/external-link';
 import { GlassCard } from '@/components/glass-card';
@@ -130,6 +130,7 @@ function SocialRow({ item, isAdmin, onEdit, onDelete }) {
 }
 
 export default function SocialsScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { t } = useI18n();
   const router = useRouter();
@@ -197,10 +198,11 @@ export default function SocialsScreen() {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
+      <View className="flex-1">
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-four pb-bottom-tab-gap gap-two max-w-content self-center w-full"
+          contentContainerStyle={{ paddingTop: insets.top }}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -244,7 +246,7 @@ export default function SocialsScreen() {
             ))
           )}
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </ThemedView>
   );
 }

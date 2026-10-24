@@ -4,8 +4,6 @@ import { colorScheme as nativewindColorScheme } from 'nativewind';
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Appearance, AppState, Platform } from 'react-native';
 
-import { Colors } from '@/constants/theme';
-
 const STORAGE_KEY = 'unimate.theme';
 const VALID_PREFERENCES = ['system', 'light', 'dark'];
 
@@ -80,7 +78,7 @@ export function ThemePreferenceProvider({ children }) {
         if (cancelled) return;
         if (nextSystem) setSystem(nextSystem);
         applyOverrides(next, nextResolved);
-        SystemUI.setBackgroundColorAsync(Colors[nextResolved].background);
+        SystemUI.setBackgroundColorAsync(null);
         setPreferenceState(next);
       } finally {
         if (!cancelled) setIsReady(true);
@@ -95,7 +93,7 @@ export function ThemePreferenceProvider({ children }) {
   useLayoutEffect(() => {
     if (!isReady) return;
     applyOverrides(preference, resolved);
-    SystemUI.setBackgroundColorAsync(Colors[resolved].background);
+    SystemUI.setBackgroundColorAsync(null);
   }, [isReady, preference, resolved]);
 
   const setPreference = useCallback((value) => {
