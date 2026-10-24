@@ -2,8 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, Switch, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, Switch, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import support from 'unimate-docs/support.json';
 
@@ -44,6 +44,7 @@ const THEME_IDS = [
 const FEEDBACK_EMAIL = support.email;
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { t, language, languages } = useI18n();
   const { profile, saveProfile, refreshUser, clearProfile } = useProfile();
@@ -281,14 +282,14 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
+      <View className="flex-1">
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             className="flex-1"
             contentContainerClassName="px-four pb-four gap-five max-w-content self-center w-full"
-            contentContainerStyle={{ paddingBottom: 160 }}
+            contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 160 }}
             keyboardShouldPersistTaps="handled"
             alwaysBounceVertical
             refreshControl={
@@ -679,7 +680,7 @@ export default function SettingsScreen() {
             </ThemedView>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
       <HalfSheet
         visible={supportOpen}
         title={t('contactSupport')}

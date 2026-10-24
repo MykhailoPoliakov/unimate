@@ -4,3 +4,5 @@ find moderators for news
 app previews + screenshots
 rework description (for me)
 
+icon clean up in frontend
+

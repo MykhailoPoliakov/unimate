@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, TextInput } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { checkIn, fadeIn, PressScale } from '@/components/motion';
+import { checkIn } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
@@ -13,21 +13,34 @@ import { catalogInstitution, mergeInstitutions, mergePrograms } from '@/constant
 import { listInstitutions, listPrograms } from '@/lib/api';
 import { LOCAL_ICONS } from '@/lib/local-icons';
 
-export function Choice({ title, subtitle, isSelected, onSelect, icon, imageKey }) {
+export function Choice({
+  title,
+  subtitle,
+  isSelected,
+  onSelect,
+  icon,
+  imageKey,
+  onManage,
+  manageLabel,
+}) {
   const theme = useTheme();
   const image = imageKey
     ? LOCAL_ICONS[imageKey] ?? LOCAL_ICONS[String(imageKey).toLowerCase()]
     : null;
 
   return (
-    <PressScale onPress={onSelect} style={{ alignSelf: 'stretch' }}>
-      <ThemedView
-        type="backgroundElement"
-        className="flex-row items-center gap-three px-three py-three rounded-three"
-        style={{
-          borderWidth: 1,
-          borderColor: isSelected ? theme.primary : theme.border,
-        }}>
+    <ThemedView
+      type="backgroundElement"
+      className="flex-row items-center gap-three px-three py-three rounded-three"
+      style={{
+        borderWidth: 1,
+        borderColor: isSelected ? theme.primary : theme.border,
+      }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        onPress={onSelect}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         {image ? (
           <Image
             source={image}
@@ -56,8 +69,18 @@ export function Choice({ title, subtitle, isSelected, onSelect, icon, imageKey }
         ) : (
           <Ionicons name="ellipse-outline" size={22} color={theme.border} />
         )}
-      </ThemedView>
-    </PressScale>
+      </Pressable>
+      {onManage ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={manageLabel}
+          onPress={onManage}
+          hitSlop={10}
+          className="p-one">
+          <Ionicons name="ellipsis-horizontal" size={22} color={theme.textSecondary} />
+        </Pressable>
+      ) : null}
+    </ThemedView>
   );
 }
 
@@ -323,28 +346,21 @@ export function StudyFields({
         </ThemedView>
       ) : (
         institutions.map((institution) => (
-          <ThemedView key={institution.slug} className="flex-row items-center gap-two bg-transparent">
-            <ThemedView className="flex-1 bg-transparent">
-              <Choice
-                icon="school"
-                imageKey={institution.slug}
-                title={institution.name}
-                subtitle={institution.slug}
-                isSelected={institutionSlug === institution.slug}
-                onSelect={() => onSelectInstitution(institution.slug)}
-              />
-            </ThemedView>
-            {canManage ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('modifyUniversityNamed', { name: institution.name })}
-                onPress={() => showItemActions({ type: 'institution', item: institution })}
-                hitSlop={10}
-                className="p-two">
-                <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={theme.textSecondary} />
-              </Pressable>
-            ) : null}
-          </ThemedView>
+          <Choice
+            key={institution.slug}
+            icon="school"
+            imageKey={institution.slug}
+            title={institution.name}
+            subtitle={institution.slug}
+            isSelected={institutionSlug === institution.slug}
+            onSelect={() => onSelectInstitution(institution.slug)}
+            onManage={
+              canManage
+                ? () => showItemActions({ type: 'institution', item: institution })
+                : undefined
+            }
+            manageLabel={t('modifyUniversityNamed', { name: institution.name })}
+          />
         ))
       )}
       {canManage ? (
@@ -375,32 +391,25 @@ export function StudyFields({
           <ThemedText themeColor="textSecondary">{t('loading')}</ThemedText>
         </ThemedView>
       ) : programs.length > 0 || (canManage && institutionSlug) ? (
-        <Animated.View key={institutionSlug} entering={fadeIn} style={{ gap: 12 }}>
+        <Animated.View key={institutionSlug} style={{ gap: 12 }}>
           <ThemedText type="small" themeColor="textSecondary">
             {t('yourProgram')}
           </ThemedText>
           {programs.map((program) => (
-            <ThemedView key={program.slug} className="flex-row items-center gap-two bg-transparent">
-              <ThemedView className="flex-1 bg-transparent">
-                <Choice
-                  icon="library"
-                  title={program.name}
-                  subtitle={`${program.duration_years} ${t('years')}`}
-                  isSelected={programSlug === program.slug}
-                  onSelect={() => onSelectProgram(program.slug)}
-                />
-              </ThemedView>
-              {canManage ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('modifyProgramNamed', { name: program.name })}
-                  onPress={() => showItemActions({ type: 'program', item: program })}
-                  hitSlop={10}
-                  className="p-two">
-                  <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={theme.textSecondary} />
-                </Pressable>
-              ) : null}
-            </ThemedView>
+            <Choice
+              key={program.slug}
+              icon="library"
+              title={program.name}
+              subtitle={`${program.duration_years} ${t('years')}`}
+              isSelected={programSlug === program.slug}
+              onSelect={() => onSelectProgram(program.slug)}
+              onManage={
+                canManage
+                  ? () => showItemActions({ type: 'program', item: program })
+                  : undefined
+              }
+              manageLabel={t('modifyProgramNamed', { name: program.name })}
+            />
           ))}
 
           {canManage ? (

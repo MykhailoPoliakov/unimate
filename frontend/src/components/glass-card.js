@@ -37,7 +37,10 @@ export function GlassCard({ children, style, contentClassName, solid = false }) 
 
   if (!solid && GlassView && isLiquidGlassAvailable()) {
     return (
-      <GlassView glassEffectStyle="regular" style={frame}>
+      <GlassView
+        glassEffectStyle="regular"
+        isInteractive
+        style={[frame, { backgroundColor: 'transparent', overflow: 'visible' }]}>
         {children}
       </GlassView>
     );
@@ -92,7 +95,10 @@ export function GlassCircleButton({ onPress, icon, accessibilityLabel }) {
 
   if (GlassView && isLiquidGlassAvailable()) {
     return (
-      <GlassView glassEffectStyle="regular" style={circle}>
+      <GlassView
+        glassEffectStyle="regular"
+        isInteractive
+        style={[circle, { backgroundColor: 'transparent', overflow: 'visible' }]}>
         {button}
       </GlassView>
     );

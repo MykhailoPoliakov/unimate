@@ -113,7 +113,7 @@ export function ProfileProvider({ children }) {
   }, [persist]);
 
   const saveProfile = useCallback(
-    async (updates) => persist({ deviceId, ...(profile ?? {}), ...updates, deviceId }),
+    async (updates) => persist({ ...(profile ?? {}), ...updates, deviceId }),
     [deviceId, persist, profile]
   );
 

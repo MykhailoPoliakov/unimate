@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, View } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
+import { PressScale } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
+import { Colors } from '@/constants/theme';
 import { useI18n } from '@/hooks/use-i18n';
-import { useTheme } from '@/hooks/use-theme';
 
 export function scheduleStorageKey(userId) {
   return `unimate.scheduleUrl.${userId}`;
@@ -51,10 +52,71 @@ export function scheduleStartUrl(value) {
 }
 
 const TOP_INSET = Platform.OS === 'ios' ? Math.max(initialWindowMetrics?.insets.top ?? 0, 62) : (initialWindowMetrics?.insets.top ?? 0);
-const BOTTOM_INSET = initialWindowMetrics?.insets.bottom ?? 0;
+const TOOLBAR_BUTTON_STYLE = {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  borderWidth: 1,
+};
+const TOOLBAR_BUTTON_CONTENT_STYLE = {
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
 const MOBILE_SAFARI =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+
+const STARTUP_PROGRESS = 0.6;
+const READY_DISPLAY_MS = 100;
+
+const ScheduleBrowserContext = createContext(null);
+
+export function useScheduleBrowser() {
+  const context = useContext(ScheduleBrowserContext);
+  if (!context) throw new Error('useScheduleBrowser must be used within ScheduleBrowserProvider');
+  return context;
+}
+
+export function ScheduleBrowserProvider({ children }) {
+  const [browser, setBrowser] = useState({
+    userId: null,
+    initialUrl: null,
+    visible: false,
+  });
+
+  const preloadSchedule = useCallback((userId, initialUrl) => {
+    setBrowser((current) => {
+      if (current.userId === userId && current.initialUrl === initialUrl) return current;
+      if (current.visible && current.userId === userId) return current;
+      return { userId, initialUrl, visible: false };
+    });
+  }, []);
+  const openSchedule = useCallback((userId, initialUrl) => {
+    setBrowser({ userId, initialUrl, visible: true });
+  }, []);
+  const closeSchedule = useCallback(() => {
+    setBrowser((current) => ({ ...current, visible: false }));
+  }, []);
+
+  const context = { preloadSchedule, openSchedule };
+
+  return (
+    <ScheduleBrowserContext.Provider value={context}>
+      <View style={{ flex: 1 }}>
+        {children}
+        {browser.initialUrl ? (
+          <ScheduleBrowser
+            visible={browser.visible}
+            initialUrl={browser.initialUrl}
+            userId={browser.userId}
+            onClose={closeSchedule}
+          />
+        ) : null}
+      </View>
+    </ScheduleBrowserContext.Provider>
+  );
+}
 
 export function isScheduleSignInUrl(value) {
   try {
@@ -77,7 +139,11 @@ const AUTO_SIGN_IN = `
     var nativeAlert = window.alert;
     window.alert = function (message) {
       var text = String(message ?? '');
-      if (/precondition failed/i.test(text) && /reloading page/i.test(text)) {
+      var isPreconditionReload = /precondition failed/i.test(text) && /reloading page/i.test(text);
+      var isPageUpdate =
+        /\bpage\b.{0,100}\bneed(?:s)? to be updated\b/i.test(text) ||
+        /\b(?:update|refresh|reload) (?:the|this|your) page\b/i.test(text);
+      if (isPreconditionReload || isPageUpdate) {
         var reloadKey = 'unimate.precondition.reload.' + window.location.pathname;
         try {
           var previousReload = Number(window.sessionStorage.getItem(reloadKey) || 0);
@@ -92,12 +158,38 @@ const AUTO_SIGN_IN = `
           window.setTimeout(function () {
             window.location.reload();
           }, 0);
-          return;
         }
+        return;
       }
       return nativeAlert.apply(window, arguments);
     };
     alertWrapped = true;
+  }
+
+  function isSchedulePage() {
+    return Boolean(
+      document.getElementById('openStartRangeButton') &&
+      document.getElementById('searchTextWide')
+    );
+  }
+
+  function isPageStillLoading() {
+    var indicators = document.querySelectorAll(
+      '[aria-busy="true"], [role="progressbar"], progress, .loading, .loader, .spinner, [class*="loading"], [class*="spinner"]'
+    );
+    for (var index = 0; index < indicators.length; index += 1) {
+      var indicator = indicators[index];
+      var style = window.getComputedStyle(indicator);
+      if (
+        indicator.getClientRects().length &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(style.opacity || 1) > 0
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   if (window.__unimateAutoSignIn && !alertWrapped) return true;
@@ -105,6 +197,16 @@ const AUTO_SIGN_IN = `
 
   var observer;
   var retryTimer;
+  var scheduleReadyTimer;
+
+  function clickImmediately(control, onCancel) {
+    if (!control.isConnected || control.disabled || !control.getClientRects().length) {
+      if (onCancel) onCancel();
+      return false;
+    }
+    control.click();
+    return true;
+  }
 
   function rememberChoice() {
     var checkboxes = document.querySelectorAll('input[type="checkbox"], [role="checkbox"]');
@@ -134,8 +236,14 @@ const AUTO_SIGN_IN = `
       if (checkbox.checked || checkbox.getAttribute('aria-checked') === 'true') continue;
       if (window.__unimateRememberedChoice === checkbox) continue;
       if (checkbox.disabled || !checkbox.getClientRects().length) continue;
+      if (
+        !clickImmediately(checkbox, function () {
+          if (window.__unimateRememberedChoice === checkbox) {
+            window.__unimateRememberedChoice = null;
+          }
+        })
+      ) continue;
       window.__unimateRememberedChoice = checkbox;
-      checkbox.click();
       return true;
     }
 
@@ -163,22 +271,38 @@ const AUTO_SIGN_IN = `
       ) {
         continue;
       }
+      if (
+        !clickImmediately(control, function () {
+          if (window.__unimateRememberedAction === control) {
+            window.__unimateRememberedAction = null;
+          }
+        })
+      ) continue;
       window.__unimateRememberedAction = control;
-      control.click();
       return true;
     }
     return false;
   }
 
-  function isSchedulePage() {
-    return Boolean(
-      document.getElementById('openStartRangeButton') &&
-      document.getElementById('searchTextWide')
-    );
-  }
-
   function stopRetryingOnSchedule() {
     if (!isSchedulePage()) return;
+    if (!window.__unimateScheduleReadySent && !scheduleReadyTimer) {
+      scheduleReadyTimer = setTimeout(function () {
+        scheduleReadyTimer = null;
+        if (
+          !isSchedulePage() ||
+          document.readyState !== 'complete' ||
+          isPageStillLoading()
+        ) {
+          return;
+        }
+        if (window.ReactNativeWebView) {
+          window.__unimateScheduleReadySent = true;
+          window.ReactNativeWebView.postMessage('schedule-ready');
+        }
+      }, 2000);
+    }
+    if (!window.__unimateScheduleReadySent) return;
     if (retryTimer) clearInterval(retryTimer);
     if (observer) observer.disconnect();
   }
@@ -220,7 +344,9 @@ const AUTO_SIGN_IN = `
         login.getClientRects().length
       ) {
         window.__unimateLoginClicked = true;
-        login.click();
+        clickImmediately(login, function () {
+          window.__unimateLoginClicked = false;
+        });
         return true;
       }
     }
@@ -241,7 +367,9 @@ const AUTO_SIGN_IN = `
       ) {
         if (window.__unimateSsoClicked) continue;
         window.__unimateSsoClicked = true;
-        control.click();
+        clickImmediately(control, function () {
+          window.__unimateSsoClicked = false;
+        });
         return true;
       }
     }
@@ -282,14 +410,62 @@ true;
 `;
 
 function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
-  const theme = useTheme();
+  const theme = Colors.light;
   const { t } = useI18n();
   const webRef = useRef(null);
   const lastSaved = useRef(timetableUrl(initialUrl) ?? '');
   const signedIn = useRef(Boolean(timetableUrl(initialUrl)));
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [loadProgress, setLoadProgress] = useState(0);
+  const progressRef = useRef(STARTUP_PROGRESS);
+  const lastRefresh = useRef(0);
+  const scheduleReady = useRef(false);
+  const pageLoadStarted = useRef(false);
+  const readyDisplayTimer = useRef(null);
+  const [authOverlayVisible, setAuthOverlayVisible] = useState(true);
+  const [topProgressVisible, setTopProgressVisible] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(STARTUP_PROGRESS);
+  const toolbarButtonStyle = {
+    ...TOOLBAR_BUTTON_STYLE,
+    borderColor: theme.border,
+    backgroundColor: theme.backgroundElement,
+  };
+
+  const updateLoadProgress = useCallback((progress) => {
+    const next = Math.max(progressRef.current, Math.min(0.99, Math.max(0, progress)));
+    if (next === progressRef.current) return;
+    progressRef.current = next;
+    setLoadProgress(next);
+  }, []);
+
+  const beginPageLoad = useCallback(() => {
+    if (!scheduleReady.current || pageLoadStarted.current) return;
+    pageLoadStarted.current = true;
+    progressRef.current = 0;
+    setLoadProgress(0);
+    setTopProgressVisible(true);
+  }, []);
+
+  const finishPageLoad = useCallback(() => {
+    if (!scheduleReady.current) return;
+    pageLoadStarted.current = false;
+    progressRef.current = 1;
+    setLoadProgress(1);
+    setTopProgressVisible(false);
+  }, []);
+
+  useEffect(() => {
+    if (!authOverlayVisible) return undefined;
+    const timer = setInterval(() => {
+      updateLoadProgress(progressRef.current + 0.01);
+    }, 300);
+    return () => clearInterval(timer);
+  }, [authOverlayVisible, updateLoadProgress]);
+
+  useEffect(
+    () => () => {
+      if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
+    },
+    []
+  );
 
   const remember = useCallback(
     async (url) => {
@@ -304,7 +480,13 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
 
   const noteNavigation = useCallback(
     (url) => {
-      if (isScheduleSignInUrl(url)) signedIn.current = true;
+      if (isScheduleSignInUrl(url)) {
+        signedIn.current = true;
+        scheduleReady.current = false;
+        if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
+        readyDisplayTimer.current = null;
+        setAuthOverlayVisible(true);
+      }
       remember(url);
     },
     [remember]
@@ -322,55 +504,123 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     webRef.current.injectJavaScript(`window.location.assign(${JSON.stringify(url)}); true;`);
   }, []);
 
+  const reloadSchedule = useCallback(() => {
+    if (Date.now() - lastRefresh.current < 1500) return;
+    lastRefresh.current = Date.now();
+    beginPageLoad();
+    webRef.current?.reload();
+  }, [beginPageLoad]);
+
   return (
       <View style={{ flex: 1, backgroundColor: theme.background }}>
-          <View style={{ height: TOP_INSET, backgroundColor: theme.background }} />
-          <View
+        <View style={{ height: TOP_INSET, backgroundColor: theme.background }} />
+        <View
+          style={{
+            height: 56,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            backgroundColor: theme.background,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.border,
+            zIndex: 1,
+          }}>
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel={t('reload')}
+            onPress={reloadSchedule}
+            pressedScale={0.86}
+            style={toolbarButtonStyle}
+            contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
+            <Ionicons name="refresh" size={22} color={theme.text} />
+          </PressScale>
+          <ThemedText
+            type="smallBold"
+            numberOfLines={1}
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 8,
-              height: 52,
-              zIndex: 2,
-              backgroundColor: theme.background,
+              position: 'absolute',
+              left: 64,
+              right: 64,
+              textAlign: 'center',
+              color: theme.text,
             }}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => (canGoBack ? webRef.current?.goBack() : onClose())}
-              hitSlop={12}
-              style={{ width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="chevron-back" size={28} color={theme.text} />
-            </Pressable>
-            <ThemedText type="smallBold" style={{ flex: 1, textAlign: 'center' }}>
-              {t('yourSchedule')}
-            </ThemedText>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="close" size={26} color={theme.text} />
-            </Pressable>
-          </View>
-          {pageLoading ? (
-            <View
-              accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
-              style={{ paddingHorizontal: 16, paddingVertical: 6, gap: 5 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <ActivityIndicator size="small" color={theme.primary} />
-                <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
-                  {t('loading')}
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {Math.round(loadProgress * 100)}%
-                </ThemedText>
-              </View>
+            {t('yourSchedule')}
+          </ThemedText>
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
+            onPress={onClose}
+            pressedScale={0.86}
+            style={toolbarButtonStyle}
+            contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
+            <Ionicons name="close" size={22} color={theme.text} />
+          </PressScale>
+        </View>
+        <View style={{ flex: 1, position: 'relative', backgroundColor: theme.background }}>
+            <WebView
+              key={`${userId ?? 'schedule'}:${initialUrl}`}
+              ref={webRef}
+              source={{ uri: initialUrl }}
+              style={{ flex: 1, backgroundColor: theme.background }}
+              userAgent={Platform.OS === 'ios' ? MOBILE_SAFARI : undefined}
+              javaScriptEnabled
+              domStorageEnabled
+              sharedCookiesEnabled
+              thirdPartyCookiesEnabled
+              cacheEnabled
+              incognito={false}
+              scrollEnabled
+              nestedScrollEnabled={Platform.OS === 'android'}
+              overScrollMode={Platform.OS === 'android' ? 'always' : undefined}
+              automaticallyAdjustContentInsets={false}
+              bounces
+              decelerationRate={Platform.OS === 'ios' ? 'normal' : undefined}
+              javaScriptCanOpenWindowsAutomatically
+              setSupportMultipleWindows={false}
+              allowsBackForwardNavigationGestures
+              injectedJavaScriptBeforeContentLoaded={AUTO_SIGN_IN}
+              injectedJavaScript={AUTO_SIGN_IN}
+              onMessage={({ nativeEvent }) => {
+                if (nativeEvent.data !== 'schedule-ready') return;
+                scheduleReady.current = true;
+                if (pageLoadStarted.current) {
+                  finishPageLoad();
+                } else {
+                  progressRef.current = 1;
+                  setLoadProgress(1);
+                  setTopProgressVisible(false);
+                }
+                if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
+                readyDisplayTimer.current = setTimeout(() => {
+                  readyDisplayTimer.current = null;
+                  if (scheduleReady.current) setAuthOverlayVisible(false);
+                }, READY_DISPLAY_MS);
+              }}
+              onLoadProgress={({ nativeEvent }) => {
+                if (pageLoadStarted.current) {
+                  updateLoadProgress(nativeEvent.progress * 0.99);
+                }
+              }}
+              onLoadEnd={finishPageLoad}
+              onShouldStartLoadWithRequest={allowNavigation}
+              onNavigationStateChange={(nav) => {
+                noteNavigation(nav.url);
+              }}
+              onOpenWindow={openPopupInPlace}
+            />
+            {topProgressVisible ? (
               <View
+                accessibilityRole="progressbar"
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
                 style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
                   height: 3,
                   overflow: 'hidden',
-                  borderRadius: 2,
-                  backgroundColor: theme.backgroundElement,
+                  backgroundColor: theme.border,
                 }}>
                 <View
                   style={{
@@ -380,58 +630,88 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
                   }}
                 />
               </View>
-            </View>
-          ) : null}
-          <WebView
-            key={`${userId ?? 'schedule'}:${initialUrl}`}
-            ref={webRef}
-            source={{ uri: initialUrl }}
-            style={{ flex: 1, backgroundColor: theme.background, marginBottom: BOTTOM_INSET }}
-            userAgent={Platform.OS === 'ios' ? MOBILE_SAFARI : undefined}
-            javaScriptEnabled
-            domStorageEnabled
-            sharedCookiesEnabled
-            thirdPartyCookiesEnabled
-            cacheEnabled
-            incognito={false}
-            javaScriptCanOpenWindowsAutomatically
-            setSupportMultipleWindows={false}
-            allowsBackForwardNavigationGestures
-            injectedJavaScriptBeforeContentLoaded={AUTO_SIGN_IN}
-            injectedJavaScript={AUTO_SIGN_IN}
-            onLoadStart={() => {
-              setPageLoading(true);
-              setLoadProgress(0);
-            }}
-            onLoadProgress={({ nativeEvent }) => {
-              setLoadProgress(Math.min(1, Math.max(0, nativeEvent.progress)));
-            }}
-            onLoadEnd={() => {
-              setLoadProgress(1);
-              setPageLoading(false);
-            }}
-            onShouldStartLoadWithRequest={allowNavigation}
-            onNavigationStateChange={(nav) => {
-              setCanGoBack(Boolean(nav.canGoBack));
-              noteNavigation(nav.url);
-            }}
-            onOpenWindow={openPopupInPlace}
-          />
+            ) : null}
+            {authOverlayVisible ? (
+              <View
+                accessibilityRole="progressbar"
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  left: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 24,
+                  backgroundColor: theme.background,
+                }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <ThemedText type="smallBold" style={{ marginTop: 20, color: theme.text }}>
+                  {t('loggingInAndLoading')}
+                </ThemedText>
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: 10, marginBottom: 8 }}>
+                  {Math.round(loadProgress * 100)}%
+                </ThemedText>
+                <View
+                  style={{
+                    width: '100%',
+                    maxWidth: 280,
+                    height: 4,
+                    overflow: 'hidden',
+                    borderRadius: 4,
+                    backgroundColor: theme.backgroundElement,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: `${Math.round(loadProgress * 100)}%`,
+                      height: '100%',
+                      borderRadius: 4,
+                      backgroundColor: theme.primary,
+                    }}
+                  />
+                </View>
+              </View>
+            ) : null}
+        </View>
       </View>
   );
 }
 
-export function ScheduleBrowser(props) {
-  if (!props.visible || !props.initialUrl) return null;
+function ScheduleBrowser({ visible, initialUrl, onClose, userId }) {
+  const handleClose = useCallback(() => {
+    if (!visible) return false;
+    onClose();
+    return true;
+  }, [onClose, visible]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleClose);
+    return () => subscription.remove();
+  }, [handleClose]);
+
+  if (!initialUrl) return null;
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="fullScreen"
-      statusBarTranslucent
-      onRequestClose={props.onClose}>
-      <ScheduleBrowserScreen {...props} />
-    </Modal>
+    <View
+      pointerEvents={visible ? 'auto' : 'none'}
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        zIndex: visible ? 1000 : -1,
+        elevation: visible ? 1000 : 0,
+        opacity: visible ? 1 : 0,
+      }}>
+      <ScheduleBrowserScreen
+        key={`${userId ?? 'schedule'}:${initialUrl}`}
+        userId={userId}
+        initialUrl={initialUrl}
+        onClose={onClose}
+      />
+    </View>
   );
 }

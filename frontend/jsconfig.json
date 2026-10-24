@@ -8,7 +8,8 @@
     "checkJs": false,
     "paths": {
       "@/*": ["./src/*"],
-      "@/assets/*": ["./assets/*"]
+      "@/assets/*": ["./assets/*"],
+      "unimate-docs/*": ["../docs/*"]
     }
   },
   "exclude": ["node_modules"]

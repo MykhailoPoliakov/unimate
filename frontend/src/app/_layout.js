@@ -1,15 +1,15 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useLayoutEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, StatusBar, View } from 'react-native';
 
 import '@/global.css';
 import '@/nativewind-interop';
 
 import AppTabs from '@/components/app-tabs';
 import { Onboarding } from '@/components/onboarding';
+import { ScheduleBrowserProvider } from '@/components/schedule-browser';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NotificationObserver } from '@/components/notification-observer';
 import { FeedProvider } from '@/hooks/use-feed';
@@ -59,7 +59,9 @@ function Root() {
   return (
     <View style={{ flex: 1, backgroundColor }}>
       <NotificationObserver />
-      <AppTabs />
+      <ScheduleBrowserProvider>
+        <AppTabs />
+      </ScheduleBrowserProvider>
     </View>
   );
 }
@@ -67,10 +69,15 @@ function Root() {
 function Providers() {
   const colorScheme = useColorScheme();
   const backgroundColor = Colors[colorScheme === 'dark' ? 'dark' : 'light'].background;
+
   return (
     <ThemeProvider value={navigationTheme(colorScheme)}>
       <View style={{ flex: 1, backgroundColor }}>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} translucent />
+        <StatusBar
+          barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor="transparent"
+          translucent
+        />
         <ProfileProvider>
           <I18nProvider>
             <NotificationsProvider>
