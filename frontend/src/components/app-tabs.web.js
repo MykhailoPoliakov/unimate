@@ -50,10 +50,10 @@ export function TabButton({ children, icon, selectedIcon, isFocused, badgeCount 
           <Ionicons
             name={isFocused ? selectedIcon ?? icon : icon}
             size={14}
-            color={isFocused ? colors.primary : colors.textSecondary}
+            color={colors.text}
           />
         )}
-        <ThemedText type="small" themeColor={isFocused ? 'primary' : 'textSecondary'}>
+        <ThemedText type="small" themeColor="text">
           {children}
         </ThemedText>
         {badgeCount > 0 ? (
