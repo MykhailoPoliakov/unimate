@@ -6,7 +6,6 @@ import { View } from 'react-native';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { previewButton } from '@/lib/api';
-import { LOCAL_ICONS } from '@/lib/local-icons';
 import { discordInviteUrl, resolveIconName } from '@/lib/social-service';
 
 async function discordServerIcon(url) {
@@ -25,14 +24,11 @@ async function discordServerIcon(url) {
 export function WebsiteIcon({ url, well = 44 }) {
   const theme = useTheme();
   const { profile } = useProfile();
-  const [uri, setUri] = useState(null);
-  const [failed, setFailed] = useState(false);
+  const [iconState, setIconState] = useState(null);
   const radius = Math.round(well * 0.22);
 
   useEffect(() => {
     let cancelled = false;
-    setUri(null);
-    setFailed(false);
     const href = url?.trim();
     if (!href || !profile?.userId) return undefined;
     discordServerIcon(href)
@@ -49,7 +45,9 @@ export function WebsiteIcon({ url, well = 44 }) {
         });
       })
       .then((icon) => {
-        if (!cancelled && icon) setUri(icon);
+        if (!cancelled && icon) {
+          setIconState({ key: `${profile.userId}:${href}`, uri: icon, failed: false });
+        }
       })
       .catch(() => {});
     return () => {
@@ -57,13 +55,21 @@ export function WebsiteIcon({ url, well = 44 }) {
     };
   }, [url, profile?.userId]);
 
+  const iconKey = `${profile?.userId ?? ''}:${url?.trim() ?? ''}`;
+  const uri = iconState?.key === iconKey ? iconState.uri : null;
+  const failed = iconState?.key === iconKey && iconState.failed;
+
   if (uri && !failed) {
     return (
       <Image
         source={{ uri }}
         style={{ width: well, height: well, borderRadius: radius, backgroundColor: theme.backgroundElement }}
         contentFit="cover"
-        onError={() => setFailed(true)}
+        onError={() =>
+          setIconState((current) =>
+            current?.key === iconKey ? { ...current, failed: true } : current
+          )
+        }
       />
     );
   }
@@ -86,17 +92,6 @@ export function WebsiteIcon({ url, well = 44 }) {
 export function SocialBrandIcon({ name, size = 28, color, backgroundColor, well = 44 }) {
   const icon = resolveIconName(name);
   const radius = Math.round(well * 0.22);
-  const local = LOCAL_ICONS[icon];
-
-  if (local) {
-    return (
-      <Image
-        source={local}
-        style={{ width: well, height: well, borderRadius: radius }}
-        contentFit="cover"
-      />
-    );
-  }
 
   return (
     <View

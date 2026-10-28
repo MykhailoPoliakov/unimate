@@ -63,7 +63,7 @@
     {
       "url": "https://www.kdg.be/en",
       "institution": "kdg",
-      "icon": "kdg-icon",
+      "icon": "globe-outline",
       "color": "28, 28, 28",
       "platform": "website",
       "sort_order": 3,

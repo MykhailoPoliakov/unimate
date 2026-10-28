@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, TextInput } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -11,7 +10,6 @@ import { useI18n } from '@/hooks/use-i18n';
 import { useTheme } from '@/hooks/use-theme';
 import { catalogInstitution, mergeInstitutions, mergePrograms } from '@/constants/study-catalog';
 import { listInstitutions, listPrograms } from '@/lib/api';
-import { LOCAL_ICONS } from '@/lib/local-icons';
 
 export function Choice({
   title,
@@ -19,14 +17,10 @@ export function Choice({
   isSelected,
   onSelect,
   icon,
-  imageKey,
   onManage,
   manageLabel,
 }) {
   const theme = useTheme();
-  const image = imageKey
-    ? LOCAL_ICONS[imageKey] ?? LOCAL_ICONS[String(imageKey).toLowerCase()]
-    : null;
 
   return (
     <ThemedView
@@ -41,19 +35,11 @@ export function Choice({
         accessibilityState={{ selected: isSelected }}
         onPress={onSelect}
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        {image ? (
-          <Image
-            source={image}
-            style={{ width: 44, height: 44, borderRadius: 0 }}
-            contentFit="cover"
-          />
-        ) : (
-          <ThemedView
-            type="backgroundSelected"
-            className="w-[44px] h-[44px] rounded-two items-center justify-center">
-            <Ionicons name={icon} size={22} color={theme.primary} />
-          </ThemedView>
-        )}
+        <ThemedView
+          type="backgroundSelected"
+          className="w-[44px] h-[44px] rounded-two items-center justify-center">
+          <Ionicons name={icon} size={22} color={theme.primary} />
+        </ThemedView>
         <ThemedView className="flex-1 bg-transparent">
           <ThemedText type="smallBold">{title}</ThemedText>
           {subtitle ? (
@@ -349,7 +335,6 @@ export function StudyFields({
           <Choice
             key={institution.slug}
             icon="school"
-            imageKey={institution.slug}
             title={institution.name}
             subtitle={institution.slug}
             isSelected={institutionSlug === institution.slug}

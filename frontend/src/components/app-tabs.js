@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSegments } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useEffect, useState } from 'react';
-import { InteractionManager, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -31,10 +31,10 @@ export default function AppTabs() {
     };
 
     if (newsDepth === 1) {
-      const task = InteractionManager.runAfterInteractions(apply);
+      const timer = setTimeout(apply, 400);
       return () => {
         cancelled = true;
-        task.cancel();
+        clearTimeout(timer);
       };
     }
 

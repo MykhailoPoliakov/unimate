@@ -22,7 +22,6 @@ import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { campusServicesFor } from '@/constants/campus-services';
 import { listButtons, listHomeButtons, listInstitutions, previewButton } from '@/lib/api';
-import { LOCAL_ICONS } from '@/lib/local-icons';
 import { setLinkDraft } from '@/lib/nav-draft';
 
 function labelFromSlug(slug) {
@@ -50,11 +49,11 @@ function parseRgb(value) {
 }
 
 const BRAND = {
-  canvas: { icon: 'canvas', rgb: { r: 225, g: 63, b: 43 } },
-  timeedit: { icon: 'timeedit', rgb: { r: 140, g: 232, b: 196 } },
-  'e-studentservice': { icon: 'e-studentservice', rgb: { r: 47, g: 95, b: 168 } },
+  canvas: { icon: 'book-outline', rgb: { r: 225, g: 63, b: 43 } },
+  timeedit: { icon: 'calendar-outline', rgb: { r: 140, g: 232, b: 196 } },
+  'e-studentservice': { icon: 'school-outline', rgb: { r: 47, g: 95, b: 168 } },
   'kdg-website': {
-    icon: 'school-outline',
+    icon: 'globe-outline',
     rgb: { r: 28, g: 28, b: 28 },
     lightRgb: { r: 52, g: 52, b: 54 },
   },
@@ -109,7 +108,13 @@ function linksMigratedKey(userId) {
 function buttonIcon(button) {
   const brand = buttonBrand(button);
   if (brand) return brand.icon;
-  if (button.icon) return button.icon;
+  const legacyIconFallbacks = {
+    canvas: 'book-outline',
+    timeedit: 'calendar-outline',
+    'e-studentservice': 'school-outline',
+    'kdg-icon': 'globe-outline',
+  };
+  if (button.icon) return legacyIconFallbacks[button.icon] ?? button.icon;
   const url = (button.url ?? '').toLowerCase();
   if (url.includes('student')) return 'school';
   if (url.includes('outlook') || url.includes('mail')) return 'mail';
@@ -171,22 +176,25 @@ function ServiceLink({
   const light = useColorScheme() !== 'dark';
   const [pressed, setPressed] = useState(false);
   const [siteIcon, setSiteIcon] = useState(null);
-  const kdgSite = isKdgWebsiteButton({ url: href });
 
   useEffect(() => {
-    if (!kdgSite || !profile?.userId || !href) return undefined;
+    if (!profile?.userId || !/^https?:\/\//i.test(href ?? '')) return undefined;
     let cancelled = false;
     previewButton(profile.userId, href)
       .then((preview) => {
         if (!cancelled && typeof preview?.icon === 'string' && /^https?:\/\//i.test(preview.icon)) {
-          setSiteIcon(preview.icon);
+          setSiteIcon({ key: `${profile.userId}:${href}`, uri: preview.icon, failed: false });
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (!cancelled) console.warn('Unable to load home button icon', error);
+      });
     return () => {
       cancelled = true;
     };
-  }, [kdgSite, href, profile?.userId]);
+  }, [href, profile?.userId]);
+  const iconKey = `${profile?.userId ?? ''}:${href ?? ''}`;
+  const parsedIcon = siteIcon?.key === iconKey && !siteIcon.failed ? siteIcon.uri : null;
   const downAt = useRef(0);
   const skipPress = useRef(false);
   const rgb =
@@ -201,8 +209,7 @@ function ServiceLink({
   const topLeft = rgbCss(pressed ? shadow : highlight);
   const bottomRight = rgbCss(pressed ? highlight : shadow);
   const well = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.92)`;
-  const displayIcon = siteIcon || icon;
-  const localIcon = siteIcon ? null : (brand?.icon && LOCAL_ICONS[brand.icon]) || LOCAL_ICONS[icon];
+  const displayIcon = parsedIcon || icon;
 
   return (
     <Pressable
@@ -251,7 +258,7 @@ function ServiceLink({
           borderBottomColor: bottomRight,
         }}>
         <ThemedView className="flex-row items-center gap-three px-three py-three bg-transparent">
-          {localIcon || (typeof displayIcon === 'string' && displayIcon.startsWith('http')) ? (
+          {typeof displayIcon === 'string' && displayIcon.startsWith('http') ? (
             <View
               style={{
                 borderRadius: 10,
@@ -263,9 +270,14 @@ function ServiceLink({
                 overflow: 'hidden',
               }}>
               <Image
-                source={localIcon ?? { uri: displayIcon }}
+                source={{ uri: displayIcon }}
                 style={{ width: 40, height: 40, borderRadius: 8 }}
                 contentFit="cover"
+                onError={() =>
+                  setSiteIcon((current) =>
+                    current?.key === iconKey ? { ...current, failed: true } : current
+                  )
+                }
               />
             </View>
           ) : (
@@ -367,7 +379,7 @@ export default function HomeScreen() {
       return;
     }
     openSchedule(profile.userId, next);
-  }, [openSchedule, preloadedSchedule, profile?.userId, schedulePortalUrl, theme]);
+  }, [openSchedule, preloadedSchedule, profile, schedulePortalUrl, theme]);
 
   const persistLinks = useCallback(
     async (next) => {
@@ -376,7 +388,7 @@ export default function HomeScreen() {
         await AsyncStorage.setItem(linksStorageKey(profile.userId), JSON.stringify(next));
       }
     },
-    [profile?.userId]
+    [profile]
   );
 
   const loadHome = useCallback(async () => {
@@ -427,7 +439,7 @@ export default function HomeScreen() {
     } catch {
       setExtras([]);
     }
-  }, [profile?.userId, institution, defaultServices, persistLinks]);
+  }, [profile, institution, defaultServices, persistLinks]);
 
   const { refreshing, reload } = useReload(loadHome);
 

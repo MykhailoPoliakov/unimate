@@ -88,8 +88,36 @@ def _fetch(url: str, max_bytes: int = MAX_HTML_BYTES) -> tuple[str, bytes]:
         raise HTTPException(422, "Could not load that page") from error
 
 
+def _same_site(first: str, second: str) -> bool:
+    def root(value: str) -> str:
+        host = (urlparse(value).hostname or "").lower()
+        return ".".join(host.split(".")[-2:])
+
+    return root(first) == root(second)
+
+
+def _origin_favicon(url: str) -> str | None:
+    parsed = urlparse(url)
+    icon = f"{parsed.scheme}://{parsed.netloc}/favicon.ico"
+    try:
+        _assert_public_http_url(icon)
+    except HTTPException:
+        return None
+    return icon
+
+
 def preview_website(url: str) -> dict[str, str | None]:
-    final_url, raw = _fetch(url)
+    try:
+        final_url, raw = _fetch(url)
+    except HTTPException:
+        # Protected pages can reject the fetch; the site's own favicon still works.
+        icon = _origin_favicon(url)
+        if icon is None:
+            raise
+        return {"title": None, "icon": icon}
+    if not _same_site(url, final_url):
+        # A redirect to a sign-in provider (e.g. Microsoft) must not lend its icon.
+        return {"title": None, "icon": _origin_favicon(url)}
     html = raw.decode("utf-8", errors="ignore")
     parser = _PageMetaParser()
     try:

@@ -19,33 +19,15 @@
       "requireFullScreen": true,
       "infoPlist": {
         "UISupportedInterfaceOrientations": [
-          "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortrait"
         ],
         "UISupportedInterfaceOrientations~ipad": [
-          "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortrait"
         ],
         "UIBackgroundModes": [
-          "remote-notification",
           "remote-notification"
         ],
         "LSApplicationQueriesSchemes": [
-          "instagram",
-          "fb",
-          "linkedin",
-          "youtube",
-          "tiktok",
-          "twitter",
-          "discord",
-          "whatsapp",
-          "tg",
-          "snapchat",
-          "reddit",
-          "slack",
-          "twitch",
-          "spotify",
-          "msteams",
           "instagram",
           "fb",
           "linkedin",
@@ -74,7 +56,6 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE"
@@ -113,7 +94,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "UniMate uses your photos when an admin adds a picture to news."
+          "photosPermission": "UniMate uses your photos when an admin adds a picture to news.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "expo-asset",

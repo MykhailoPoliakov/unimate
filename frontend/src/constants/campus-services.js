@@ -3,7 +3,7 @@ export const CAMPUS_SERVICES = {
     {
       id: 'canvas',
       url: 'https://canvas.kdg.be/',
-      icon: 'canvas',
+      icon: 'book-outline',
       color: '225, 63, 43',
       platform: 'canvas',
       translations: {
@@ -18,7 +18,7 @@ export const CAMPUS_SERVICES = {
     {
       id: 'student-service',
       url: 'https://E-studentservice.kdg.be/Main.aspx',
-      icon: 'e-studentservice',
+      icon: 'school-outline',
       color: '47, 95, 168',
       platform: 'student-service',
       translations: {
@@ -48,7 +48,7 @@ export const CAMPUS_SERVICES = {
     {
       id: 'schedule',
       url: 'https://timeedit.kdg.be/',
-      icon: 'timeedit',
+      icon: 'calendar-outline',
       color: '140, 232, 196',
       platform: 'schedule',
       translations: {

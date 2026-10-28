@@ -143,6 +143,14 @@ const AUTO_SIGN_IN = `
       var isPageUpdate =
         /\bpage\b.{0,100}\bneed(?:s)? to be updated\b/i.test(text) ||
         /\b(?:update|refresh|reload) (?:the|this|your) page\b/i.test(text);
+      var isConnectionProblem =
+        /connection|network|timed? ?out|reset|offline|failed to (?:load|fetch)|try again/i.test(text);
+      if (isConnectionProblem) {
+        window.setTimeout(function () {
+          window.location.reload();
+        }, 1500);
+        return;
+      }
       if (isPreconditionReload || isPageUpdate) {
         var reloadKey = 'unimate.precondition.reload.' + window.location.pathname;
         try {
@@ -504,6 +512,31 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     webRef.current.injectJavaScript(`window.location.assign(${JSON.stringify(url)}); true;`);
   }, []);
 
+  const retryTimer = useRef(null);
+  const retryCount = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    },
+    []
+  );
+
+  // Connection errors keep the loading screen up and silently retry.
+  const handleLoadError = useCallback(() => {
+    scheduleReady.current = false;
+    if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
+    readyDisplayTimer.current = null;
+    setAuthOverlayVisible(true);
+    if (retryTimer.current) return;
+    const delay = Math.min(5000, 1000 + retryCount.current * 1000);
+    retryCount.current += 1;
+    retryTimer.current = setTimeout(() => {
+      retryTimer.current = null;
+      webRef.current?.reload();
+    }, delay);
+  }, []);
+
   const reloadSchedule = useCallback(() => {
     if (Date.now() - lastRefresh.current < 1500) return;
     lastRefresh.current = Date.now();
@@ -584,6 +617,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
               onMessage={({ nativeEvent }) => {
                 if (nativeEvent.data !== 'schedule-ready') return;
                 scheduleReady.current = true;
+                retryCount.current = 0;
                 if (pageLoadStarted.current) {
                   finishPageLoad();
                 } else {
@@ -603,6 +637,11 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
                 }
               }}
               onLoadEnd={finishPageLoad}
+              onError={handleLoadError}
+              onHttpError={({ nativeEvent }) => {
+                if (nativeEvent.statusCode >= 500) handleLoadError();
+              }}
+              renderError={() => <View style={{ flex: 1, backgroundColor: theme.background }} />}
               onShouldStartLoadWithRequest={allowNavigation}
               onNavigationStateChange={(nav) => {
                 noteNavigation(nav.url);
@@ -633,6 +672,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
             ) : null}
             {authOverlayVisible ? (
               <View
+                onStartShouldSetResponder={() => true}
                 accessibilityRole="progressbar"
                 accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
                 style={{

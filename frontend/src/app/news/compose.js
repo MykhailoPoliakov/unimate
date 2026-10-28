@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -62,16 +62,30 @@ export default function NewsComposeScreen() {
   }, [post]);
 
   const isModerator = profile?.role === 'moderator';
-  const scope = moderatorScope(profile);
+  const scope = useMemo(
+    () => moderatorScope(profile),
+    [profile]
+  );
   const canTargetEveryone = !scope;
+  const isEdit = !!post;
   const pollOn = options.length > 0;
   const filledOptions = options.map((item) => item.trim()).filter(Boolean);
   const pollValid = !pollOn || filledOptions.length >= 2;
   const targetingEveryone = canTargetEveryone && everyone;
+  const scopedYears = scope?.years ?? [];
+  const selectedYearsInScope = selectedYears.filter((year) => scopedYears.includes(year));
+  const effectiveSelectedYears =
+    !targetingEveryone && scopedYears.length
+      ? selectedYearsInScope.length
+        ? selectedYearsInScope
+        : isEdit
+          ? selectedYears
+          : [...scopedYears].sort((a, b) => a - b)
+      : selectedYears;
   const targetingValid =
-    targetingEveryone || (!!institutionSlug && programSlugs.length > 0 && selectedYears.length > 0);
+    targetingEveryone ||
+    (!!institutionSlug && programSlugs.length > 0 && effectiveSelectedYears.length > 0);
   const canSave = title.trim().length > 0 && pollValid && targetingValid;
-  const isEdit = !!post;
   const selectedInstitution = institutions.find((item) => item.slug === institutionSlug);
   const selectedPrograms = programs.filter((item) => programSlugs.includes(item.slug));
   const yearSource = selectedPrograms.length ? selectedPrograms : programs;
@@ -80,10 +94,6 @@ export default function NewsComposeScreen() {
     Array.from({ length: maxYear }, (_, index) => index + 1),
     scope
   );
-
-  useEffect(() => {
-    if (isModerator) setEveryone(false);
-  }, [isModerator]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,13 +114,10 @@ export default function NewsComposeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isModerator, profile?.moderatorInstitutions]);
+  }, [isModerator, profile?.moderatorInstitutions, scope]);
 
   useEffect(() => {
-    if (everyone || !institutionSlug) {
-      setPrograms([]);
-      return;
-    }
+    if (targetingEveryone || !institutionSlug) return undefined;
     const apply = (rows) => {
       const next = withinModeratorPrograms(mergePrograms(institutionSlug, rows), scope);
       setPrograms(next);
@@ -137,26 +144,7 @@ export default function NewsComposeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [everyone, institutionSlug, isModerator, profile?.moderatorPrograms]);
-
-  useEffect(() => {
-    if (everyone || !scope?.years?.length) return;
-    setSelectedYears((current) => {
-      const allowed = current.filter((year) => scope.years.includes(year));
-      if (allowed.length) {
-        if (allowed.length === current.length && allowed.every((year, index) => year === current[index])) {
-          return current;
-        }
-        return allowed;
-      }
-      if (isEdit) return current;
-      const fallback = [...scope.years].sort((a, b) => a - b);
-      if (fallback.length === current.length && fallback.every((year, index) => year === current[index])) {
-        return current;
-      }
-      return fallback;
-    });
-  }, [everyone, scope, isEdit]);
+  }, [targetingEveryone, institutionSlug, isModerator, profile?.moderatorPrograms, scope]);
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -185,7 +173,7 @@ export default function NewsComposeScreen() {
       programNames: selectedPrograms.map((item) => item.name),
       selectedProgramCount: programSlugs.length,
       allProgramCount: programs.length,
-      years: selectedYears,
+      years: effectiveSelectedYears,
       allYearCount: maxYear,
       t,
     });
@@ -203,7 +191,7 @@ export default function NewsComposeScreen() {
       audience: audienceTags().join(' · '),
       institution: targetingEveryone ? null : institutionSlug,
       programs: targetingEveryone ? [] : programSlugs,
-      years: targetingEveryone ? [] : selectedYears,
+      years: targetingEveryone ? [] : effectiveSelectedYears,
     };
     router.back();
     const save = isEdit ? editPost({ id: post.id, ...payload }) : addPost(payload);
@@ -386,16 +374,25 @@ export default function NewsComposeScreen() {
               </ThemedText>
               <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
                 {yearChoices.map((year) => {
-                  const selected = selectedYears.includes(year);
+                  const selected = effectiveSelectedYears.includes(year);
                   return (
                     <Pressable
                       key={year}
                       onPress={() =>
-                        setSelectedYears((current) =>
-                          current.includes(year)
-                            ? current.filter((item) => item !== year)
-                            : [...current, year].sort((a, b) => a - b)
-                        )
+                        setSelectedYears((current) => {
+                          const allowed = current.filter((item) => scopedYears.includes(item));
+                          const base =
+                            !targetingEveryone && scopedYears.length
+                              ? allowed.length
+                                ? allowed
+                                : isEdit
+                                  ? current
+                                  : [...scopedYears].sort((a, b) => a - b)
+                              : current;
+                          return base.includes(year)
+                            ? base.filter((item) => item !== year)
+                            : [...base, year].sort((a, b) => a - b);
+                        })
                       }>
                       <ThemedView
                         type={selected ? 'backgroundSelected' : 'backgroundElement'}

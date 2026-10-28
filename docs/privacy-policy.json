@@ -19,7 +19,8 @@
         "Role. Student, moderator, or admin, as set on the UniMate server for your account id.",
         "News readership. When at least half of a published news card is visible in the news feed, or you open its details, UniMate counts one view per account for that article. The server stores an article-specific one-way hash to prevent duplicate counts, not your raw account id; admins can see aggregate view counts. This hash is pseudonymous data and is removed when you delete your account.",
         "Push notifications. If you allow notifications, we store a push token so we can send news alerts to this device.",
-        "Local links. Extra Home links you add yourself stay on this device (local storage). They are not uploaded as part of your server profile.",
+        "Local links. Extra Home links you add yourself stay on this device (local storage). They are not saved as part of your server profile. To show a title and icon, the app sends the link address to the UniMate server, which fetches that public web page and returns its title and icon. We do not store these requests with your profile.",
+        "Schedule. Your timetable address is saved only on this device. Schedule sign-in happens on your university's own pages inside the app; UniMate does not receive your password.",
         "News images. Moderators and admins may attach a photo when publishing news. That image is stored so other students can see the post."
       ],
       "paragraphs": [
@@ -47,7 +48,7 @@
     {
       "title": "Retention and your choices",
       "paragraphs": [
-        "You can change university, year, and language in Menu. To ask us to delete server-side profile data tied to your account id, email unimate.app@proton.me and include the id shown at the bottom of Menu."
+        "You can change university, year, and language in Menu. You can delete your account at any time in the app: open Menu and tap Delete profile. This removes your server-side profile data, push token and news view hashes. You can also email unimate.app@proton.me with the id shown at the bottom of Menu."
       ]
     },
     {

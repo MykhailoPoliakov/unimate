@@ -177,7 +177,10 @@ export function FeedProvider({ children }) {
   const [newsNotificationPreferences, setNewsNotificationPreferences] = useState({});
   const newsNotificationPreferencesRef = useRef(newsNotificationPreferences);
   const postsRef = useRef(posts);
-  postsRef.current = posts;
+
+  useEffect(() => {
+    postsRef.current = posts;
+  }, [posts]);
 
   useEffect(() => {
     const userId = profile?.userId;
@@ -269,7 +272,7 @@ export function FeedProvider({ children }) {
       });
     }
     setPosts(sortPosts([...postsById.values()]));
-  }, [profile?.userId, profile?.institution, profile?.program, profile?.yearOfStudy, profile?.language, profile?.role]);
+  }, [profile]);
 
   const recordNewsView = useCallback(
     async (id) => {
@@ -284,13 +287,13 @@ export function FeedProvider({ children }) {
       }
       return result;
     },
-    [profile?.userId]
+    [profile]
   );
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    refresh()
+    Promise.resolve()
+      .then(refresh)
       .catch(() => {
         if (!cancelled) setPosts([]);
       })
@@ -318,7 +321,7 @@ export function FeedProvider({ children }) {
 
   const setInAppNewsEnabled = useCallback(
     (enabled) => updateNewsNotificationPreferences(profile?.userId, { enabled }),
-    [profile?.userId, updateNewsNotificationPreferences]
+    [profile, updateNewsNotificationPreferences]
   );
 
   const markNewsItemRead = useCallback(
@@ -335,7 +338,7 @@ export function FeedProvider({ children }) {
       if (readIds.includes(key)) return;
       return updateNewsNotificationPreferences(profile.userId, { readIds: [...readIds, key] });
     },
-    [profile?.userId, updateNewsNotificationPreferences]
+    [profile, updateNewsNotificationPreferences]
   );
 
   const markNewsBadgeSeen = useCallback(() => {
@@ -425,7 +428,7 @@ export function FeedProvider({ children }) {
         throw error;
       }
     },
-    [profile?.userId]
+    [profile]
   );
 
   return (

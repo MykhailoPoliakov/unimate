@@ -30,7 +30,10 @@ export default function NewsScreen() {
   const viewedPostIds = useRef(new Set());
   const scrollOffset = useRef(0);
   const viewportHeight = useRef(0);
-  postsRef.current = posts;
+
+  useEffect(() => {
+    postsRef.current = posts;
+  }, [posts]);
 
   const checkVisiblePosts = useCallback(() => {
     if (!screenFocused.current || !profile?.userId || viewportHeight.current <= 0) return;
