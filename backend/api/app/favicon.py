@@ -10,7 +10,10 @@ from fastapi import HTTPException
 
 MAX_HTML_BYTES = 400_000
 FETCH_TIMEOUT = 6
-USER_AGENT = "UniMateFavicon/1.0"
+USER_AGENT = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+)
 
 
 class _PageMetaParser(HTMLParser):
@@ -96,9 +99,27 @@ def _same_site(first: str, second: str) -> bool:
     return root(first) == root(second)
 
 
-def _origin_favicon(url: str) -> str | None:
+def _is_image(url: str) -> bool:
+    try:
+        _assert_public_http_url(url)
+        request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "image/*"})
+        with urlopen(request, timeout=FETCH_TIMEOUT) as response:
+            return response.headers.get_content_type().startswith("image/")
+    except (HTTPException, URLError, TimeoutError, OSError):
+        return False
+
+
+def _origin_favicon(url: str, allow_ico: bool = True) -> str | None:
     parsed = urlparse(url)
-    icon = f"{parsed.scheme}://{parsed.netloc}/favicon.ico"
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    # Sites that block page fetches usually still serve a PNG touch icon, which
+    # the app can render (it cannot render .ico files).
+    for path in ("/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):
+        if _is_image(origin + path):
+            return origin + path
+    if not allow_ico:
+        return None
+    icon = f"{origin}/favicon.ico"
     try:
         _assert_public_http_url(icon)
     except HTTPException:
@@ -127,9 +148,13 @@ def preview_website(url: str) -> dict[str, str | None]:
     title = (parser.og_title or "".join(parser.title_chunks)).strip()
     title = re.sub(r"\s+", " ", title)[:200] or None
     icons = sorted(parser.icons, key=lambda item: item[0], reverse=True)
-    icon = urljoin(final_url, icons[0][1]) if icons else urljoin(final_url, "/favicon.ico")
-    try:
-        _assert_public_http_url(icon)
-    except HTTPException:
-        icon = None
+    icon = urljoin(final_url, icons[0][1]) if icons else None
+    if icon is None or urlparse(icon).path.lower().endswith(".ico"):
+        touch = _origin_favicon(final_url, allow_ico=False)
+        icon = touch or icon or _origin_favicon(final_url)
+    if icon is not None:
+        try:
+            _assert_public_http_url(icon)
+        except HTTPException:
+            icon = None
     return {"title": title, "icon": icon}
