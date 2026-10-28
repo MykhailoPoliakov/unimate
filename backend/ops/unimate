@@ -32,7 +32,9 @@ case "$1" in
     git pull --ff-only
     $COMPOSE build backend
     $COMPOSE up -d backend
-    curl -fsS https://api.unimate.be/health
+    echo "Waiting for the API to become healthy..."
+    curl -fsS --retry 15 --retry-delay 2 --retry-all-errors https://api.unimate.be/health
+    echo
     ;;
 
   list)
