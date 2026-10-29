@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import { useProfile } from '@/hooks/use-profile';
 import { LANGUAGES } from '@/i18n/translations';
 import {
+  ApiError,
   createNews,
   deleteNews,
   listManagedNews,
@@ -95,7 +96,7 @@ function toPost(item, language) {
     createdAt: item.created_at ?? null,
     authorId: item.author_id ?? null,
     viewCount: item.view_count ?? null,
-    canManage: false,
+    canManage: item.can_manage === true,
     institution: item.institution ?? null,
     programs: item.programs ?? (item.program ? [item.program] : []),
     years: item.years ?? [],
@@ -264,11 +265,17 @@ export function FeedProvider({ children }) {
     for (const item of managedItems) {
       const managedPost = toPost(item, profile.language);
       const visiblePost = postsById.get(managedPost.id);
+      const outsideAudience =
+        (managedPost.institution && managedPost.institution !== profile.institution) ||
+        (managedPost.programs.length > 0 && !managedPost.programs.includes(profile.program)) ||
+        (managedPost.years.length > 0 &&
+          !managedPost.years.includes(Number(profile.yearOfStudy)));
       postsById.set(managedPost.id, {
         ...managedPost,
         poll: visiblePost?.poll ?? managedPost.poll,
         authorId: visiblePost?.authorId ?? managedPost.authorId,
-        canManage: true,
+        canManage: managedPost.canManage,
+        outsideAudience: Boolean(outsideAudience),
       });
     }
     setPosts(sortPosts([...postsById.values()]));
@@ -277,7 +284,15 @@ export function FeedProvider({ children }) {
   const recordNewsView = useCallback(
     async (id) => {
       if (!profile?.userId || id == null) return;
-      const result = await submitNewsView(profile.userId, id);
+      let result;
+      try {
+        result = await submitNewsView(profile.userId, id);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404 && error.detail === 'Not found') {
+          return null;
+        }
+        throw error;
+      }
       if (Number.isInteger(result?.view_count)) {
         setPosts((current) =>
           current.map((post) =>

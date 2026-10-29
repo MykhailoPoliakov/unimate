@@ -101,8 +101,32 @@ class ModeratorPermissionTests(unittest.TestCase):
         self.assertEqual(stored.author_id, self.moderator.id)
         self.assertEqual(created.created_at.utcoffset().total_seconds(), 0)
 
+        other_program = Program(
+            institution_id=self.moderator.program.institution_id,
+            slug="other-program",
+            name="Other Program",
+            duration_years=3,
+        )
+        self.db.add(other_program)
+        self.db.flush()
+        other_audience_news = create_news(
+            NewsCreate(
+                is_published=True,
+                institution="test",
+                programs=["other-program"],
+                years=[3],
+                translations=[NewsTranslationIn(lang="en", title="Other audience", body="Details")],
+            ),
+            self.admin,
+            self.db,
+        )
+
         managed = list_managed_news(self.moderator, self.db)
-        self.assertEqual([item.id for item in managed], [created.id])
+        managed_by_id = {item.id: item for item in managed}
+        self.assertEqual(set(managed_by_id), {created.id, other_audience_news.id})
+        self.assertTrue(managed_by_id[created.id].can_manage)
+        self.assertFalse(managed_by_id[other_audience_news.id].can_manage)
+        self.assertIsNone(record_news_view(other_audience_news.id, self.moderator, self.db).view_count)
 
         updated = update_news(
             created.id,

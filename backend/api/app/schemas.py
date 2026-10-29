@@ -246,6 +246,7 @@ class NewsOut(BaseModel):
     created_at: datetime | None = None
     author_id: str | None = None
     view_count: int | None = None
+    can_manage: bool = False
     institution: str | None = None
     program: str | None = None
     programs: list[str] = Field(default_factory=list)

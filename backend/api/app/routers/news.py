@@ -4,16 +4,16 @@ from collections import defaultdict
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, selectinload
 
 from app.academic import year_of_study
-from app.audience import audience_fields, constrain_moderator_audience, resolve_audience
+from app.audience import audience_fields, constrain_moderator_audience, moderator_scope, resolve_audience
 from app.content import matches_audience, pick_translation, visible_to_institution
 from app.db import get_db
 from app.deps import get_current_user, require_news_manager
-from app.models import News, NewsTranslation, NewsView, NewsVote, User
+from app.models import Institution, News, NewsTranslation, NewsView, NewsVote, User
 from app.news_analytics import news_viewer_hash
 from app.poll import poll_options_from_news
 from app.rate_limit import enforce_create_cooldown
@@ -173,12 +173,50 @@ def list_managed_news(
     db: Session = Depends(get_db),
 ):
     query = select(News).options(selectinload(News.translations))
-    if user.role != "admin":
-        query = query.where(News.author_id == user.id)
+    if user.role == "moderator":
+        scope = moderator_scope(user)
+        institution_ids = db.scalars(
+            select(Institution.id).where(Institution.slug.in_(scope["institutions"]))
+        ).all()
+        institution_rules = [News.institution_id.is_(None)]
+        if institution_ids:
+            institution_rules.append(News.institution_id.in_(institution_ids))
+        query = query.where(
+            or_(
+                News.author_id == user.id,
+                and_(News.is_published, or_(*institution_rules)),
+            )
+        )
     news_items = db.scalars(
         query.order_by(News.created_at.desc(), News.id.desc())
     ).all()
-    return [_created_out(item, db, viewer=user) for item in news_items]
+    news_ids = [item.id for item in news_items]
+    counts_by_news: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    yours_by_news: dict[int, int] = {}
+    if news_ids:
+        for news_id, option_index, count in db.execute(
+            select(NewsVote.news_id, NewsVote.option_index, func.count())
+            .where(NewsVote.news_id.in_(news_ids))
+            .group_by(NewsVote.news_id, NewsVote.option_index)
+        ).all():
+            counts_by_news[news_id][option_index] = count
+        yours_by_news = dict(
+            db.execute(
+                select(NewsVote.news_id, NewsVote.option_index).where(
+                    NewsVote.news_id.in_(news_ids),
+                    NewsVote.user_id == user.id,
+                )
+            ).all()
+        )
+    return [
+        _created_out(
+            item,
+            db,
+            viewer=user,
+            poll=_poll_snapshot(item, counts_by_news[item.id], yours_by_news.get(item.id)),
+        )
+        for item in news_items
+    ]
 
 
 def _resolve_audience(data: NewsCreate, db: Session, user: User):
@@ -208,7 +246,12 @@ def _translation_row(item) -> NewsTranslation:
     )
 
 
-def _created_out(news: News, db: Session, viewer: User | None = None) -> NewsOut:
+def _created_out(
+    news: News,
+    db: Session,
+    viewer: User | None = None,
+    poll: NewsPollOut | None = None,
+) -> NewsOut:
     institution_slug, programs, years = audience_fields(news, db)
     view_count = None
     if viewer is not None and viewer.role == "admin":
@@ -221,10 +264,12 @@ def _created_out(news: News, db: Session, viewer: User | None = None) -> NewsOut
         created_at=_as_utc(news.created_at or news.published_at),
         author_id=str(news.author_id) if viewer is not None and viewer.role == "admin" and news.author_id else None,
         view_count=view_count,
+        can_manage=viewer is not None and (viewer.role == "admin" or news.author_id == viewer.id),
         institution=institution_slug,
         program=programs[0] if programs else None,
         programs=programs,
         years=years,
+        poll=poll,
         translations=[
             NewsTranslationOut(
                 lang=cast(Language, item.lang),
@@ -336,16 +381,34 @@ def delete_news(
 
 
 def _visible_news(news_id: int, user: User, db: Session) -> News:
-    rules = visible_to_institution(News, user.program.institution_id)
-    news = db.scalar(
-        select(News)
-        .options(selectinload(News.translations))
-        .where(News.id == news_id, News.is_published, *rules)
+    query = select(News).options(selectinload(News.translations)).where(
+        News.id == news_id,
+        News.is_published,
     )
-    year = year_of_study(user.enrollment_year)
-    if news is None or not matches_audience(
-        news, user.program.institution_id, user.program_id, user.program.slug, year
-    ):
+    if user.role == "moderator":
+        scope = moderator_scope(user)
+        institution_ids = db.scalars(
+            select(Institution.id).where(Institution.slug.in_(scope["institutions"]))
+        ).all()
+        institution_rules = [News.institution_id.is_(None)]
+        if institution_ids:
+            institution_rules.append(News.institution_id.in_(institution_ids))
+        query = query.where(or_(*institution_rules))
+    elif user.role != "admin":
+        query = query.where(*visible_to_institution(News, user.program.institution_id))
+    news = db.scalar(query)
+
+    matches_user = user.role in {"admin", "moderator"} or (
+        news is not None
+        and matches_audience(
+            news,
+            user.program.institution_id,
+            user.program_id,
+            user.program.slug,
+            year_of_study(user.enrollment_year),
+        )
+    )
+    if news is None or not matches_user:
         raise HTTPException(404, "Not found")
     return news
 

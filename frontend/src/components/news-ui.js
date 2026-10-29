@@ -335,8 +335,8 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
     <GlassCard
       solid
       style={{
-        backgroundColor: unread ? theme.backgroundElement : theme.cardMuted,
-        borderColor: unread ? theme.border : theme.background,
+        backgroundColor: post.outsideAudience ? `${theme.error}18` : unread ? theme.backgroundElement : theme.cardMuted,
+        borderColor: post.outsideAudience ? theme.error : unread ? theme.border : theme.background,
       }}>
       <PressScale onPress={() => onOpen(post)}>
         <NewsImage uri={post.imageUrl} compact />
@@ -350,6 +350,11 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
             }}>
             {post.title}
           </ThemedText>
+          {post.outsideAudience ? (
+            <ThemedText type="smallBold" style={{ color: theme.error }}>
+              {t('outsideAudience')}
+            </ThemedText>
+          ) : null}
           {post.body ? (
             <ThemedText
               themeColor="textSecondary"
