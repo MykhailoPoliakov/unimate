@@ -33,8 +33,15 @@ case "$1" in
     $COMPOSE build backend
     $COMPOSE up -d backend
     echo "Waiting for the API to become healthy..."
-    curl -fsS --retry 15 --retry-delay 2 --retry-all-errors https://api.unimate.be/health
-    echo
+    for _ in $(seq 1 30); do
+      if response="$(curl -fs https://api.unimate.be/health 2>/dev/null)"; then
+        echo "$response"
+        exit 0
+      fi
+      sleep 2
+    done
+    echo "API did not become healthy in time. Check: unimate logs backend"
+    exit 1
     ;;
 
   list)
