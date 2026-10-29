@@ -350,11 +350,6 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
             }}>
             {post.title}
           </ThemedText>
-          {post.outsideAudience ? (
-            <ThemedText type="smallBold" style={{ color: theme.error }}>
-              {t('outsideAudience')}
-            </ThemedText>
-          ) : null}
           {post.body ? (
             <ThemedText
               themeColor="textSecondary"
@@ -377,6 +372,11 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
               {profile?.role === 'admin' && Number.isInteger(post.viewCount) ? (
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, opacity: 0.7 }}>
                   {t('newsViews', { n: post.viewCount })}
+                </ThemedText>
+              ) : null}
+              {post.outsideAudience ? (
+                <ThemedText style={{ fontSize: 11, color: theme.error }}>
+                  {t('outsideAudience')}
                 </ThemedText>
               ) : null}
             </ThemedView>
