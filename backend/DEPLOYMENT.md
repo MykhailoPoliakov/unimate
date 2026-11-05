@@ -23,10 +23,14 @@ unimate update
 unimate list
 unimate grant USER_ID
 unimate revoke USER_ID
+unimate delete USER_ID
+unimate chuni USER_ID kdg/acs
 unimate backup
+unimate seed      # destructive, asks for confirmation
+unimate help
 ```
 
-The helper finds the repository relative to its own location, so `unimate` works from any directory. It uses `sudo docker compose` for Compose commands and `git pull --ff-only` for updates.
+The helper finds the repository relative to its own location, so `unimate` works from any directory. It uses `sudo docker compose` for Compose commands and `git pull --ff-only` for updates. `unimate update` pulls the latest code, which includes the helper itself, and rebuilds the API, so new commands are available as soon as it finishes. Open a new terminal (or run `source backend/ops/install.sh` again) to refresh tab completions.
 
 ## Current deployment: finish setup
 
@@ -249,6 +253,44 @@ sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec b
 ```
 
 Replace `USER_ID` with the user's ID. Grant admin access only to trusted accounts. This app's current identity mechanism is not safe for public admin access until real authentication is implemented.
+
+Delete a user or move them to another program (format `institution/program`, e.g. `kdg/acs`; a bare institution works only if it has a single program):
+
+```bash
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec backend python -m app.admin delete USER_ID
+sudo docker compose --env-file backend/.env -f backend/docker-compose.yml exec backend python -m app.admin chuni USER_ID kdg/acs
+```
+
+Deleting is permanent and asks for no confirmation. Changing a program keeps the user's role and moderator scope.
+
+## Local development commands
+
+Run from the repository root; secrets live in `backend/.env` (copy `backend/.env.example` first). Locally, `docker compose` is used without `sudo`.
+
+```bash
+# PostgreSQL only
+docker compose --env-file backend/.env -f backend/docker-compose.yml up -d db
+
+# API and database in Docker (API on 127.0.0.1:8001)
+docker compose --env-file backend/.env -f backend/docker-compose.yml up -d --build
+
+# Database shell
+docker compose --env-file backend/.env -f backend/docker-compose.yml exec db psql -U unimate -d unimate
+```
+
+To run the API directly, from `backend/api/` with its virtual environment activated (`python -m app.seed` is destructive: use it only on an empty database):
+
+```bash
+python -m app.seed
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m app.admin list    # also grant / revoke / delete USER_ID, chuni USER_ID INSTITUTION/PROGRAM
+```
+
+## Never do this
+
+- `python -m app.seed` (or `unimate seed`) on a live database: it deletes users, news and votes.
+- `docker compose ... down -v`: it deletes the persistent PostgreSQL volume.
+- Expose port 8001: Caddy should be the public API entry point.
 
 ## Database backups and restore
 

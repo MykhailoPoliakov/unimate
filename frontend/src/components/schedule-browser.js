@@ -137,19 +137,22 @@ const AUTO_SIGN_IN = `
   if (!window.__unimateAlertWrapped) {
     window.__unimateAlertWrapped = true;
     var nativeAlert = window.alert;
-    window.alert = function (message) {
+    var nativeConfirm = window.confirm;
+    var handleDialog = function (message) {
       var text = String(message ?? '');
       var isPreconditionReload = /precondition failed/i.test(text) && /reloading page/i.test(text);
       var isPageUpdate =
         /\bpage\b.{0,100}\bneed(?:s)? to be updated\b/i.test(text) ||
-        /\b(?:update|refresh|reload) (?:the|this|your) page\b/i.test(text);
+        /\b(?:update|refresh|reload) (?:the|this|your) page\b/i.test(text) ||
+        /\blogged out\b/i.test(text) ||
+        /\breloading (?:the )?page\b/i.test(text);
       var isConnectionProblem =
         /connection|network|timed? ?out|reset|offline|failed to (?:load|fetch)|try again/i.test(text);
       if (isConnectionProblem) {
         window.setTimeout(function () {
           window.location.reload();
         }, 1500);
-        return;
+        return true;
       }
       if (isPreconditionReload || isPageUpdate) {
         var reloadKey = 'unimate.precondition.reload.' + window.location.pathname;
@@ -160,16 +163,23 @@ const AUTO_SIGN_IN = `
             window.setTimeout(function () {
               window.location.reload();
             }, 0);
-            return;
           }
         } catch {
           window.setTimeout(function () {
             window.location.reload();
           }, 0);
         }
-        return;
+        return true;
       }
+      return false;
+    };
+    window.alert = function (message) {
+      if (handleDialog(message)) return;
       return nativeAlert.apply(window, arguments);
+    };
+    window.confirm = function (message) {
+      if (handleDialog(message)) return true;
+      return nativeConfirm.apply(window, arguments);
     };
     alertWrapped = true;
   }
@@ -613,6 +623,8 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
               setSupportMultipleWindows={false}
               allowsBackForwardNavigationGestures
               injectedJavaScriptBeforeContentLoaded={AUTO_SIGN_IN}
+              injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
+              injectedJavaScriptForMainFrameOnly={false}
               injectedJavaScript={AUTO_SIGN_IN}
               onMessage={({ nativeEvent }) => {
                 if (nativeEvent.data !== 'schedule-ready') return;

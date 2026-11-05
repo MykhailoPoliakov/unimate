@@ -7,6 +7,9 @@ COMPOSE="sudo docker compose --env-file backend/.env -f backend/docker-compose.y
 
 cd "$REPO"
 
+# Everything runs inside main so bash has parsed the whole script before
+# "update" runs git pull, which may rewrite this very file.
+main() {
 case "$1" in
   start)
     echo "Starting containers..."
@@ -30,6 +33,7 @@ case "$1" in
   update)
     echo "Pulling latest code from git and rebuilding backend..."
     git pull --ff-only
+    chmod +x "$SCRIPT_DIR/unimate" 2>/dev/null || true
     $COMPOSE build backend
     $COMPOSE up -d backend
     echo "Waiting for the API to become healthy..."
@@ -65,6 +69,22 @@ case "$1" in
     $COMPOSE exec backend python -m app.admin revoke "$2"
     ;;
 
+  delete)
+    if [ -z "$2" ]; then
+      echo "Usage: unimate delete <user_id>"
+      exit 1
+    fi
+    $COMPOSE exec backend python -m app.admin delete "$2"
+    ;;
+
+  chuni)
+    if [ -z "$2" ] || [ -z "$3" ]; then
+      echo "Usage: unimate chuni <user_id> <institution>/<program>  (e.g. kdg/acs)"
+      exit 1
+    fi
+    $COMPOSE exec backend python -m app.admin chuni "$2" "$3"
+    ;;
+
   seed)
     echo "WARNING: this drops and recreates all tables, deleting real user data, news and votes."
     read -p "Type YES to confirm: " confirm
@@ -82,12 +102,37 @@ case "$1" in
     ;;
 
   help)
-    echo "Usage: unimate {start|stop|status|logs [backend|db]|update|list|grant <user_id>|revoke <user_id>|seed|backup|help}"
+    print_help
     ;;
 
   *)
     echo "Unknown command: $1"
-    echo "Usage: unimate {start|stop|status|logs [backend|db]|update|list|grant <user_id>|revoke <user_id>|seed|backup|help}"
+    print_help
     exit 1
     ;;
 esac
+}
+
+print_help() {
+  cat <<'EOF'
+Usage: unimate <command>
+
+  start                       start containers
+  stop                        stop containers
+  status                      show container state
+  logs [backend|db]           follow logs (default: backend)
+  update                      git pull, rebuild the API, wait until healthy
+  list                        list accounts
+  grant <user_id>             make a user admin
+  revoke <user_id>            remove admin access
+  delete <user_id>            delete a user permanently
+  chuni <user_id> <inst>/<program>
+                              move a user to another program, e.g. kdg/acs
+  seed                        destructive reset, asks for confirmation
+  backup                      write a database dump to ~/unimate-backups/
+  help                        show this help
+EOF
+}
+
+main "$@"
+exit $?

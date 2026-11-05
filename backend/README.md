@@ -12,7 +12,6 @@ backend/
 ├── .env.example          Environment template
 ├── Caddyfile             Example reverse-proxy configuration for HTTPS
 ├── DEPLOYMENT.md         Server setup and operations
-├── commands.txt          Quick command reference
 ├── demo_university.py    Creates a fictional university for App Store screenshots
 └── README.md             This file
 ```
@@ -122,12 +121,14 @@ unimate update           # git pull, rebuild the API, wait until healthy
 unimate list             # list accounts
 unimate grant USER_ID    # make a user admin
 unimate revoke USER_ID   # remove admin access
+unimate delete USER_ID   # delete a user permanently
+unimate chuni USER_ID kdg/acs   # move a user to another institution/program
 unimate seed             # destructive reset, asks for confirmation
 unimate backup           # write a database dump to ~/unimate-backups/
 unimate help
 ```
 
-It uses `sudo docker compose` and `git pull --ff-only`, and finds the repository relative to its own location.
+It uses `sudo docker compose` and `git pull --ff-only`, and finds the repository relative to its own location. `unimate update` also updates the helper itself (it lives in the repo), so new commands work right after an update; open a new terminal for refreshed tab completion.
 
 ## Demo data for screenshots
 

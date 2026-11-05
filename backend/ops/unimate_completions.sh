@@ -8,7 +8,7 @@ _unimate_completions() {
 
   # Complete the command name: "unimate <TAB>".
   if [[ "$COMP_CWORD" -eq 1 ]]; then
-    COMPREPLY=( $(compgen -W "start stop status logs update list grant revoke seed backup help" -- "$current_word") )
+    COMPREPLY=( $(compgen -W "start stop status logs update list grant revoke delete chuni seed backup help" -- "$current_word") )
 
   # Complete the service name: "unimate logs <TAB>".
   elif [[ "$COMP_CWORD" -eq 2 && "$previous_word" == "logs" ]]; then

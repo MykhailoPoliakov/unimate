@@ -85,7 +85,10 @@ function toPost(item, language) {
     title: translation.title ?? '',
     body: parsed.body,
     options: parsed.options,
-    imageUrl: imageFromTranslation(translation),
+    imageUrl:
+      imageFromTranslation(translation) ||
+      translations.map(imageFromTranslation).find(Boolean) ||
+      '',
     tags: Array.isArray(translation.tags) ? translation.tags.filter(Boolean) : [],
     audience: translation.excerpt ?? '',
     lang: translation.lang,

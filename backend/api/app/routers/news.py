@@ -81,6 +81,29 @@ def news_out(
     if translation is None:
         return None
     institution_slug, programs, years = audience_fields(news, db)
+    blocks = _parse_json_list(translation.blocks)
+    hero_image_url = translation.hero_image_url
+    has_image = bool(hero_image_url) or any(
+        isinstance(block, dict) and block.get("type") == "image" and block.get("url") for block in blocks
+    )
+    if not has_image:
+        # Images may be stored on only one language's translation; reuse them.
+        for other in news.translations:
+            other_blocks = _parse_json_list(other.blocks)
+            image_block = next(
+                (
+                    block
+                    for block in other_blocks
+                    if isinstance(block, dict) and block.get("type") == "image" and block.get("url")
+                ),
+                None,
+            )
+            if image_block is not None:
+                blocks = [*blocks, image_block]
+                break
+            if other.hero_image_url:
+                hero_image_url = other.hero_image_url
+                break
     return NewsOut(
         id=news.id,
         is_published=news.is_published,
@@ -96,12 +119,12 @@ def news_out(
                 title=translation.title,
                 excerpt=translation.excerpt,
                 body=translation.body,
-                hero_image_url=translation.hero_image_url,
+                hero_image_url=hero_image_url,
                 hero_image_alt=translation.hero_image_alt,
                 cta_label=translation.cta_label,
                 cta_url=translation.cta_url,
                 tags=_parse_json_list(translation.tags),
-                blocks=_parse_json_list(translation.blocks),
+                blocks=blocks,
             )
         ],
         created_at=_as_utc(news.created_at or news.published_at),
