@@ -68,7 +68,8 @@ const MOBILE_SAFARI =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
 const STARTUP_PROGRESS = 0.6;
-const READY_DISPLAY_MS = 100;
+const READY_DISPLAY_MS = 150;
+const AUTH_OVERLAY_TIMEOUT_MS = 20000;
 
 const ScheduleBrowserContext = createContext(null);
 
@@ -309,7 +310,7 @@ const AUTO_SIGN_IN = `
         scheduleReadyTimer = null;
         if (
           !isSchedulePage() ||
-          document.readyState !== 'complete' ||
+          document.readyState === 'loading' ||
           isPageStillLoading()
         ) {
           return;
@@ -318,16 +319,43 @@ const AUTO_SIGN_IN = `
           window.__unimateScheduleReadySent = true;
           window.ReactNativeWebView.postMessage('schedule-ready');
         }
-      }, 2000);
+      }, 150);
     }
     if (!window.__unimateScheduleReadySent) return;
     if (retryTimer) clearInterval(retryTimer);
     if (observer) observer.disconnect();
   }
 
+  function clickMySchedule() {
+    var candidates = document.querySelectorAll('a, button, [role="button"], [role="menuitem"], li');
+    for (var i = 0; i < candidates.length; i += 1) {
+      var candidate = candidates[i];
+      var text = (candidate.innerText || candidate.textContent || candidate.getAttribute('aria-label') || '')
+        .replace(/\\s+/g, ' ')
+        .trim();
+      if (!/^(mijn rooster|my schedule|my timetable)$/i.test(text)) continue;
+      if (candidate.disabled || !candidate.getClientRects().length) continue;
+      if (window.__unimateMyScheduleClicked) return true;
+      window.__unimateMyScheduleClicked = true;
+      if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage('student-home');
+      window.setTimeout(function () {
+        if (!isSchedulePage()) {
+          var target = candidate.closest('a, button') || candidate;
+          clickImmediately(target);
+        }
+        window.setTimeout(function () {
+          window.__unimateMyScheduleClicked = false;
+        }, 3000);
+      }, 400);
+      return true;
+    }
+    return false;
+  }
+
   function clickNextStep() {
     if (isSchedulePage()) return false;
     rememberChoice();
+    if (clickMySchedule()) return true;
 
     var login = document.getElementById('loginAuth');
     if (login) {
@@ -434,11 +462,11 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
   const lastSaved = useRef(timetableUrl(initialUrl) ?? '');
   const signedIn = useRef(Boolean(timetableUrl(initialUrl)));
   const progressRef = useRef(STARTUP_PROGRESS);
-  const lastRefresh = useRef(0);
   const scheduleReady = useRef(false);
   const pageLoadStarted = useRef(false);
   const readyDisplayTimer = useRef(null);
-  const [authOverlayVisible, setAuthOverlayVisible] = useState(true);
+  const [authOverlayVisible, setAuthOverlayVisible] = useState(Boolean(timetableUrl(initialUrl)));
+  const [showBehind, setShowBehind] = useState(false);
   const [topProgressVisible, setTopProgressVisible] = useState(false);
   const [loadProgress, setLoadProgress] = useState(STARTUP_PROGRESS);
   const toolbarButtonStyle = {
@@ -478,6 +506,20 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     return () => clearInterval(timer);
   }, [authOverlayVisible, updateLoadProgress]);
 
+  const retryTimer = useRef(null);
+  const retryCount = useRef(0);
+
+  if (!authOverlayVisible && showBehind) setShowBehind(false);
+
+  useEffect(() => {
+    if (!authOverlayVisible) return undefined;
+    // If automatic sign-in stalls (e.g. it needs the user's input), reveal the page.
+    const timer = setTimeout(() => {
+      if (retryCount.current === 0) setAuthOverlayVisible(false);
+    }, AUTH_OVERLAY_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [authOverlayVisible]);
+
   useEffect(
     () => () => {
       if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
@@ -503,7 +545,8 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
         scheduleReady.current = false;
         if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
         readyDisplayTimer.current = null;
-        setAuthOverlayVisible(true);
+        // First-time users must see and use the login page; only returning users get the loading screen.
+        setAuthOverlayVisible(Boolean(lastSaved.current));
       }
       remember(url);
     },
@@ -521,9 +564,6 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     if (!url || !webRef.current) return;
     webRef.current.injectJavaScript(`window.location.assign(${JSON.stringify(url)}); true;`);
   }, []);
-
-  const retryTimer = useRef(null);
-  const retryCount = useRef(0);
 
   useEffect(
     () => () => {
@@ -547,13 +587,6 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     }, delay);
   }, []);
 
-  const reloadSchedule = useCallback(() => {
-    if (Date.now() - lastRefresh.current < 1500) return;
-    lastRefresh.current = Date.now();
-    beginPageLoad();
-    webRef.current?.reload();
-  }, [beginPageLoad]);
-
   return (
       <View style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={{ height: TOP_INSET, backgroundColor: theme.background }} />
@@ -571,12 +604,12 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
           }}>
           <PressScale
             accessibilityRole="button"
-            accessibilityLabel={t('reload')}
-            onPress={reloadSchedule}
+            accessibilityLabel={t('close')}
+            onPress={onClose}
             pressedScale={0.86}
             style={toolbarButtonStyle}
             contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
-            <Ionicons name="refresh" size={22} color={theme.text} />
+            <Ionicons name="close" size={22} color={theme.text} />
           </PressScale>
           <ThemedText
             type="smallBold"
@@ -590,15 +623,17 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
             }}>
             {t('yourSchedule')}
           </ThemedText>
-          <PressScale
-            accessibilityRole="button"
-            accessibilityLabel={t('close')}
-            onPress={onClose}
-            pressedScale={0.86}
-            style={toolbarButtonStyle}
-            contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
-            <Ionicons name="close" size={22} color={theme.text} />
-          </PressScale>
+          {authOverlayVisible ? (
+            <PressScale
+              accessibilityRole="button"
+              accessibilityLabel="Show login process"
+              onPress={() => setShowBehind((value) => !value)}
+              pressedScale={0.86}
+              style={toolbarButtonStyle}
+              contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
+              <Ionicons name={showBehind ? 'eye-off' : 'eye'} size={22} color={theme.text} />
+            </PressScale>
+          ) : null}
         </View>
         <View style={{ flex: 1, position: 'relative', backgroundColor: theme.background }}>
             <WebView
@@ -613,6 +648,8 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
               thirdPartyCookiesEnabled
               cacheEnabled
               incognito={false}
+              pullToRefreshEnabled
+              onLoadStart={beginPageLoad}
               scrollEnabled
               nestedScrollEnabled={Platform.OS === 'android'}
               overScrollMode={Platform.OS === 'android' ? 'always' : undefined}
@@ -627,6 +664,12 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
               injectedJavaScriptForMainFrameOnly={false}
               injectedJavaScript={AUTO_SIGN_IN}
               onMessage={({ nativeEvent }) => {
+                if (nativeEvent.data === 'student-home') {
+                  // Logged in on the Studenten page: allow the schedule and show the loading screen.
+                  signedIn.current = true;
+                  setAuthOverlayVisible(true);
+                  return;
+                }
                 if (nativeEvent.data !== 'schedule-ready') return;
                 scheduleReady.current = true;
                 retryCount.current = 0;
@@ -682,7 +725,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
                 />
               </View>
             ) : null}
-            {authOverlayVisible ? (
+            {authOverlayVisible && !showBehind ? (
               <View
                 onStartShouldSetResponder={() => true}
                 accessibilityRole="progressbar"
