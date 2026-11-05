@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 
 import { ApiError, readUser } from '@/lib/api';
 import { getDeviceId } from '@/lib/device-id';
+import { wipeLocalAccountData } from '@/lib/reset-device';
 
 const STORAGE_KEY = 'unimate.profile';
 const LAST_USER_KEY = 'unimate.last-user-id';
@@ -117,7 +118,10 @@ export function ProfileProvider({ children }) {
     [deviceId, persist, profile]
   );
 
-  const clearProfile = useCallback(async () => persist(null, { forgetUser: true }), [persist]);
+  const clearProfile = useCallback(async () => {
+    await wipeLocalAccountData();
+    return persist(null, { forgetUser: true });
+  }, [persist]);
 
   const refreshUser = useCallback(async () => {
     if (!profile?.userId) return profile;

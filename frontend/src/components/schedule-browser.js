@@ -6,6 +6,7 @@ import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 import { PressScale } from '@/components/motion';
+import { registerWebSessionCleaner } from '@/lib/reset-device';
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useI18n } from '@/hooks/use-i18n';
@@ -73,6 +74,24 @@ const AUTH_OVERLAY_TIMEOUT_MS = 20000;
 
 const ScheduleBrowserContext = createContext(null);
 
+const LOGOUT_URLS = [
+  'https://cloud.timeedit.net/be_kdg/web/student/logout.html',
+  'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
+];
+
+const CLEAR_WEB_STORAGE = `
+(function () {
+  try { window.localStorage.clear(); window.sessionStorage.clear(); } catch (e) {}
+  try {
+    document.cookie.split(';').forEach(function (cookie) {
+      var name = cookie.split('=')[0].trim();
+      if (name) document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    });
+  } catch (e) {}
+})();
+true;
+`;
+
 export function useScheduleBrowser() {
   const context = useContext(ScheduleBrowserContext);
   if (!context) throw new Error('useScheduleBrowser must be used within ScheduleBrowserProvider');
@@ -100,12 +119,71 @@ export function ScheduleBrowserProvider({ children }) {
     setBrowser((current) => ({ ...current, visible: false }));
   }, []);
 
+  const [cleanStep, setCleanStep] = useState(null);
+  const cleanStepRef = useRef(null);
+  const cleanDoneRef = useRef(null);
+
+  const advanceClean = useCallback(() => {
+    const current = cleanStepRef.current;
+    if (current == null) return;
+    const next = current + 1;
+    if (next < LOGOUT_URLS.length) {
+      cleanStepRef.current = next;
+      setCleanStep(next);
+      return;
+    }
+    cleanStepRef.current = null;
+    setCleanStep(null);
+    cleanDoneRef.current?.();
+    cleanDoneRef.current = null;
+  }, []);
+
+  // Signs out of TimeEdit/Microsoft inside the same web view cookie jar, which also works without native cookie access.
+  useEffect(
+    () =>
+      registerWebSessionCleaner(
+        () =>
+          new Promise((resolve) => {
+            setBrowser({ userId: null, initialUrl: null, visible: false });
+            if (Platform.OS === 'web') {
+              resolve();
+              return;
+            }
+            cleanDoneRef.current = resolve;
+            cleanStepRef.current = 0;
+            setCleanStep(0);
+          })
+      ),
+    []
+  );
+
+  useEffect(() => {
+    if (cleanStep == null) return undefined;
+    const timer = setTimeout(advanceClean, 6000);
+    return () => clearTimeout(timer);
+  }, [cleanStep, advanceClean]);
+
   const context = { preloadSchedule, openSchedule };
 
   return (
     <ScheduleBrowserContext.Provider value={context}>
       <View style={{ flex: 1 }}>
         {children}
+        {cleanStep != null ? (
+          <WebView
+            key={cleanStep}
+            source={{ uri: LOGOUT_URLS[cleanStep] }}
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            domStorageEnabled
+            incognito={false}
+            injectedJavaScript={CLEAR_WEB_STORAGE}
+            onLoadEnd={() => setTimeout(advanceClean, 800)}
+            onError={advanceClean}
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+            pointerEvents="none"
+          />
+        ) : null}
         {browser.initialUrl ? (
           <ScheduleBrowser
             visible={browser.visible}
@@ -327,6 +405,7 @@ const AUTO_SIGN_IN = `
   }
 
   function clickMySchedule() {
+    if (!window.__unimateAllowMySchedule) return false;
     var candidates = document.querySelectorAll('a, button, [role="button"], [role="menuitem"], li');
     for (var i = 0; i < candidates.length; i += 1) {
       var candidate = candidates[i];
@@ -467,6 +546,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
   const readyDisplayTimer = useRef(null);
   const [authOverlayVisible, setAuthOverlayVisible] = useState(Boolean(timetableUrl(initialUrl)));
   const [showBehind, setShowBehind] = useState(false);
+  const [autoSchedule, setAutoSchedule] = useState(Boolean(timetableUrl(initialUrl)));
   const [topProgressVisible, setTopProgressVisible] = useState(false);
   const [loadProgress, setLoadProgress] = useState(STARTUP_PROGRESS);
   const toolbarButtonStyle = {
@@ -542,6 +622,9 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     (url) => {
       if (isScheduleSignInUrl(url)) {
         signedIn.current = true;
+        // A login was started in this session, so the Studenten page may now be auto-advanced to "Mijn rooster".
+        setAutoSchedule(true);
+        webRef.current?.injectJavaScript('window.__unimateAllowMySchedule = true; true;');
         scheduleReady.current = false;
         if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
         readyDisplayTimer.current = null;
@@ -553,11 +636,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
     [remember]
   );
 
-  const allowNavigation = useCallback((request) => {
-    const url = request?.url ?? '';
-    if (signedIn.current || !timetableUrl(url)) return true;
-    return false;
-  }, []);
+  const allowNavigation = useCallback(() => true, []);
 
   const openPopupInPlace = useCallback((event) => {
     const url = event?.nativeEvent?.targetUrl;
@@ -659,7 +738,7 @@ function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
               javaScriptCanOpenWindowsAutomatically
               setSupportMultipleWindows={false}
               allowsBackForwardNavigationGestures
-              injectedJavaScriptBeforeContentLoaded={AUTO_SIGN_IN}
+              injectedJavaScriptBeforeContentLoaded={`window.__unimateAllowMySchedule = ${autoSchedule}; ${AUTO_SIGN_IN}`}
               injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
               injectedJavaScriptForMainFrameOnly={false}
               injectedJavaScript={AUTO_SIGN_IN}
