@@ -9,7 +9,7 @@ from app.academic import enrollment_year_for, year_of_study
 from app.audience import moderator_scope, serialize_moderator_scope
 from app.db import get_db
 from app.deps import get_current_user, require_admin
-from app.models import Button, Institution, News, NewsView, NewsVote, Program, PushToken, Social, User
+from app.models import Button, Institution, News, NewsView, NewsVote, Program, PushToken, User
 from app.news_analytics import news_viewer_hash
 from app.schemas import Language, UserCreate, UserOut, UserRoleUpdate, UserUpdate
 
@@ -166,7 +166,6 @@ def delete_user(
         )
     db.execute(update(News).where(News.author_id == user.id).values(author_id=None))
     db.execute(update(Button).where(Button.author_id == user.id).values(author_id=None))
-    db.execute(update(Social).where(Social.author_id == user.id).values(author_id=None))
     db.delete(user)
     db.commit()
     return Response(status_code=204)

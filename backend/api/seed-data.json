@@ -13,7 +13,7 @@
           "slug": "ibm",
           "name": "International Business Management",
           "duration_years": 3
-    },
+        },
         {
           "slug": "mct",
           "name": "Multimedia & Creative Technologies",
@@ -93,59 +93,6 @@
       }
     }
   ],
-  "socials": [
-    {
-      "url": "https://discord.gg/rG32pRTbq",
-      "institution": "kdg",
-      "program": "acs",
-      "sort_order": 4,
-      "icon": "logo-discord",
-      "platform": "discord",
-      "translations": {
-        "nl": ["ACS Discord", "Officiële ACS Discord, beheerd door de studentenraad"],
-        "de": ["ACS Discord", "Offizieller ACS-Discord, betreut vom Studierendenrat"],
-        "fr": ["Discord ACS", "Discord officiel d'ACS, géré par le conseil étudiant"],
-        "en": ["ACS Discord", "Official ACS discord, hosted by student-council"],
-        "uk": ["ACS Discord", "Офіційний Discord ACS, який веде студентська рада"],
-        "ru": ["ACS Discord", "Официальный Discord ACS под управлением студенческого совета"]
-      }
-    },
-    {
-      "url": "https://chat.whatsapp.com/GLV5RPpk9q3FkKIxbWG4xV?mode=gi_t",
-      "institution": "kdg",
-      "program": "acs",
-      "year_min": 1,
-      "year_max": 1,
-      "sort_order": 5,
-      "icon": "logo-whatsapp",
-      "platform": "whatsapp",
-      "translations": {
-        "nl": ["ACS WhatsApp - 1e jaar", "WhatsApp-groep voor eerstejaarsstudenten ACS"],
-        "de": ["ACS WhatsApp - 1. Jahr", "WhatsApp-Gruppe für ACS-Studierende im ersten Jahr"],
-        "fr": ["WhatsApp ACS - 1re année", "Groupe WhatsApp pour les étudiants d'ACS en première année"],
-        "en": ["ACS WhatsApp - 1st Year", "WhatsApp group for first-year ACS students"],
-        "uk": ["WhatsApp ACS - 1-й курс", "Група WhatsApp для студентів ACS першого курсу"],
-        "ru": ["WhatsApp ACS - 1-й курс", "Группа WhatsApp для студентов ACS первого курса"]
-      }
-    },
-    {
-      "url": "https://t.me/kdg_ua",
-      "institution": "kdg",
-      "year_min": 1,
-      "year_max": 1,
-      "sort_order": 4,
-      "icon": "paper-plane",
-      "platform": "telegram",
-      "translations": {
-        "nl": ["Oekraïense Telegram - 1e jaar", "Telegramgroep voor Oekraïense eerstejaarsstudenten bij KdG"],
-        "de": ["Ukrainischer Telegram-Kanal - 1. Jahr", "Telegram-Gruppe für ukrainische Erstsemester an der KdG"],
-        "fr": ["Telegram ukrainien - 1re année", "Groupe Telegram pour les étudiants ukrainiens de première année à la KdG"],
-        "en": ["Ukrainian Telegram - 1st Year", "Telegram group for first-year Ukrainian students at KdG"],
-        "uk": ["Український Telegram - 1-й курс", "Telegram-група для українських студентів першого курсу KdG"],
-        "ru": ["Украинский Telegram - 1-й курс", "Telegram-группа для украинских студентов первого курса KdG"]
-      }
-    }
-  ],
   "news": [
     {
       "institution": "kdg",
@@ -163,8 +110,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["AI", "Innovation", "Students"],
           "blocks": [
-            {"type": "paragraph", "content": "The new space brings together coding, design, and research in one environment, creating more opportunities for cross-disciplinary collaboration."},
-            {"type": "paragraph", "content": "Students will also be able to join workshops covering prompt engineering, data ethics, and applied AI projects with community partners."}
+            {
+              "type": "paragraph",
+              "content": "The new space brings together coding, design, and research in one environment, creating more opportunities for cross-disciplinary collaboration."
+            },
+            {
+              "type": "paragraph",
+              "content": "Students will also be able to join workshops covering prompt engineering, data ethics, and applied AI projects with community partners."
+            }
           ]
         },
         "nl": {
@@ -177,8 +130,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["AI", "Innovatie", "Studenten"],
           "blocks": [
-            {"type": "paragraph", "content": "De nieuwe ruimte brengt programmeren, design en onderzoek samen in één omgeving, waardoor samenwerking tussen disciplines makkelijker wordt."},
-            {"type": "paragraph", "content": "Studenten kunnen ook workshops volgen over prompt engineering, data-ethiek en toegepaste AI-projecten met partners uit de gemeenschap."}
+            {
+              "type": "paragraph",
+              "content": "De nieuwe ruimte brengt programmeren, design en onderzoek samen in één omgeving, waardoor samenwerking tussen disciplines makkelijker wordt."
+            },
+            {
+              "type": "paragraph",
+              "content": "Studenten kunnen ook workshops volgen over prompt engineering, data-ethiek en toegepaste AI-projecten met partners uit de gemeenschap."
+            }
           ]
         }
       }
@@ -196,8 +155,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Campus", "Sustainability", "Student Life"],
           "blocks": [
-            {"type": "paragraph", "content": "The renovation will be delivered in stages to minimise disruption to classes and project work."},
-            {"type": "paragraph", "content": "Students are encouraged to share feedback on how the new spaces can support study, social life and wellbeing."}
+            {
+              "type": "paragraph",
+              "content": "The renovation will be delivered in stages to minimise disruption to classes and project work."
+            },
+            {
+              "type": "paragraph",
+              "content": "Students are encouraged to share feedback on how the new spaces can support study, social life and wellbeing."
+            }
           ]
         },
         "nl": {
@@ -210,8 +175,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Campus", "Duurzaamheid", "Studentenleven"],
           "blocks": [
-            {"type": "paragraph", "content": "De renovatie verloopt in stappen om verstoringen van lessen en projecten te beperken."},
-            {"type": "paragraph", "content": "Studenten worden aangemoedigd om feedback te geven over hoe de nieuwe ruimtes studie, sociaal leven en welzijn kunnen ondersteunen."}
+            {
+              "type": "paragraph",
+              "content": "De renovatie verloopt in stappen om verstoringen van lessen en projecten te beperken."
+            },
+            {
+              "type": "paragraph",
+              "content": "Studenten worden aangemoedigd om feedback te geven over hoe de nieuwe ruimtes studie, sociaal leven en welzijn kunnen ondersteunen."
+            }
           ]
         }
       }
@@ -229,8 +200,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["International", "Exchange", "Students"],
           "blocks": [
-            {"type": "paragraph", "content": "Visitors were able to compare programmes, deadlines and living arrangements before making their application plans."},
-            {"type": "paragraph", "content": "The fair reinforced KdG's commitment to internationalisation and cross-cultural learning."}
+            {
+              "type": "paragraph",
+              "content": "Visitors were able to compare programmes, deadlines and living arrangements before making their application plans."
+            },
+            {
+              "type": "paragraph",
+              "content": "The fair reinforced KdG's commitment to internationalisation and cross-cultural learning."
+            }
           ]
         },
         "nl": {
@@ -243,8 +220,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Internationaal", "Uitwisseling", "Studenten"],
           "blocks": [
-            {"type": "paragraph", "content": "Bezoekers konden programma's, deadlines en woonopties vergelijken voordat ze hun plannen maakten."},
-            {"type": "paragraph", "content": "De beurs onderstreepte KdG's inzet voor internationalisering en intercultureel leren."}
+            {
+              "type": "paragraph",
+              "content": "Bezoekers konden programma's, deadlines en woonopties vergelijken voordat ze hun plannen maakten."
+            },
+            {
+              "type": "paragraph",
+              "content": "De beurs onderstreepte KdG's inzet voor internationalisering en intercultureel leren."
+            }
           ]
         }
       }
@@ -262,8 +245,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Wellbeing", "Students", "Support"],
           "blocks": [
-            {"type": "paragraph", "content": "The council will work closely with student services to match resources to student needs."},
-            {"type": "paragraph", "content": "Additional events will also focus on stress management and healthy routines."}
+            {
+              "type": "paragraph",
+              "content": "The council will work closely with student services to match resources to student needs."
+            },
+            {
+              "type": "paragraph",
+              "content": "Additional events will also focus on stress management and healthy routines."
+            }
           ]
         },
         "nl": {
@@ -276,8 +265,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Welzijn", "Studenten", "Ondersteuning"],
           "blocks": [
-            {"type": "paragraph", "content": "De raad werkt nauw samen met de studentenservice om middelen op de juiste behoeften af te stemmen."},
-            {"type": "paragraph", "content": "Er komen ook extra activiteiten over stressmanagement en gezonde routines."}
+            {
+              "type": "paragraph",
+              "content": "De raad werkt nauw samen met de studentenservice om middelen op de juiste behoeften af te stemmen."
+            },
+            {
+              "type": "paragraph",
+              "content": "Er komen ook extra activiteiten over stressmanagement en gezonde routines."
+            }
           ]
         }
       }
@@ -295,8 +290,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Career", "Jobs", "Students"],
           "blocks": [
-            {"type": "paragraph", "content": "Employers highlighted internship opportunities, trainee roles and graduate schemes tailored to current student needs."},
-            {"type": "paragraph", "content": "Students were also able to ask practical questions about CVs, interviews and portfolio building."}
+            {
+              "type": "paragraph",
+              "content": "Employers highlighted internship opportunities, trainee roles and graduate schemes tailored to current student needs."
+            },
+            {
+              "type": "paragraph",
+              "content": "Students were also able to ask practical questions about CVs, interviews and portfolio building."
+            }
           ]
         },
         "nl": {
@@ -309,8 +310,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Carrière", "Banen", "Studenten"],
           "blocks": [
-            {"type": "paragraph", "content": "Werkgevers benadrukten stages, traineeship-rollen en graduele programma's die aansluiten bij de behoefte van huidige studenten."},
-            {"type": "paragraph", "content": "Studenten konden ook praktische vragen stellen over CV's, interviews en portfolio's."}
+            {
+              "type": "paragraph",
+              "content": "Werkgevers benadrukten stages, traineeship-rollen en graduele programma's die aansluiten bij de behoefte van huidige studenten."
+            },
+            {
+              "type": "paragraph",
+              "content": "Studenten konden ook praktische vragen stellen over CV's, interviews en portfolio's."
+            }
           ]
         }
       }
@@ -328,8 +335,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Digital Skills", "First Year", "Learning"],
           "blocks": [
-            {"type": "paragraph", "content": "The sessions were designed to make practical tasks feel less intimidating for new students."},
-            {"type": "paragraph", "content": "Students also learned about cybersecurity basics and how to organise study files more efficiently."}
+            {
+              "type": "paragraph",
+              "content": "The sessions were designed to make practical tasks feel less intimidating for new students."
+            },
+            {
+              "type": "paragraph",
+              "content": "Students also learned about cybersecurity basics and how to organise study files more efficiently."
+            }
           ]
         },
         "nl": {
@@ -342,8 +355,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Digitale vaardigheden", "Eerste jaar", "Leren"],
           "blocks": [
-            {"type": "paragraph", "content": "De sessies waren ontworpen om praktische taken minder intimiderend te maken voor nieuwe studenten."},
-            {"type": "paragraph", "content": "Studenten leerden ook over cyberveiligheid en het efficiënter organiseren van studiebestanden."}
+            {
+              "type": "paragraph",
+              "content": "De sessies waren ontworpen om praktische taken minder intimiderend te maken voor nieuwe studenten."
+            },
+            {
+              "type": "paragraph",
+              "content": "Studenten leerden ook over cyberveiligheid en het efficiënter organiseren van studiebestanden."
+            }
           ]
         }
       }
@@ -361,8 +380,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Sustainability", "Campus", "Environment"],
           "blocks": [
-            {"type": "paragraph", "content": "The upgrades are part of a wider strategy to make daily campus life more sustainable and student-friendly."},
-            {"type": "paragraph", "content": "A pilot survey will also help identify where transport and energy changes can have the biggest impact."}
+            {
+              "type": "paragraph",
+              "content": "The upgrades are part of a wider strategy to make daily campus life more sustainable and student-friendly."
+            },
+            {
+              "type": "paragraph",
+              "content": "A pilot survey will also help identify where transport and energy changes can have the biggest impact."
+            }
           ]
         },
         "nl": {
@@ -375,8 +400,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Duurzaamheid", "Campus", "Milieu"],
           "blocks": [
-            {"type": "paragraph", "content": "De upgrades maken deel uit van een bredere strategie om dagelijks campusleven duurzamer en studentenvriendelijker te maken."},
-            {"type": "paragraph", "content": "Een pilotsurvey helpt bepalen waar transport- en energieveranderingen het grootste effect hebben."}
+            {
+              "type": "paragraph",
+              "content": "De upgrades maken deel uit van een bredere strategie om dagelijks campusleven duurzamer en studentenvriendelijker te maken."
+            },
+            {
+              "type": "paragraph",
+              "content": "Een pilotsurvey helpt bepalen waar transport- en energieveranderingen het grootste effect hebben."
+            }
           ]
         }
       }
@@ -394,8 +425,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Wellbeing", "Health", "Support"],
           "blocks": [
-            {"type": "paragraph", "content": "The centre will work with study advisors, counselling services and student organisations to improve holistic support."},
-            {"type": "paragraph", "content": "Students can access sessions and guidance throughout the academic year, not only in crisis moments."}
+            {
+              "type": "paragraph",
+              "content": "The centre will work with study advisors, counselling services and student organisations to improve holistic support."
+            },
+            {
+              "type": "paragraph",
+              "content": "Students can access sessions and guidance throughout the academic year, not only in crisis moments."
+            }
           ]
         },
         "nl": {
@@ -408,8 +445,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Welzijn", "Gezondheid", "Ondersteuning"],
           "blocks": [
-            {"type": "paragraph", "content": "Het centrum werkt samen met studieadvisers, counselingdiensten en studentenorganisaties om een holistische ondersteuning te bieden."},
-            {"type": "paragraph", "content": "Studenten kunnen gedurende het academische jaar terecht voor sessies en begeleiding, niet alleen in crisismomenten."}
+            {
+              "type": "paragraph",
+              "content": "Het centrum werkt samen met studieadvisers, counselingdiensten en studentenorganisaties om een holistische ondersteuning te bieden."
+            },
+            {
+              "type": "paragraph",
+              "content": "Studenten kunnen gedurende het academische jaar terecht voor sessies en begeleiding, niet alleen in crisismomenten."
+            }
           ]
         }
       }
@@ -428,8 +471,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Startups", "Innovation", "ACS"],
           "blocks": [
-            {"type": "paragraph", "content": "Each team was judged on originality, market relevance and readiness to build a real venture."},
-            {"type": "paragraph", "content": "The finals are expected to attract investors, mentors and community partners from across the region."}
+            {
+              "type": "paragraph",
+              "content": "Each team was judged on originality, market relevance and readiness to build a real venture."
+            },
+            {
+              "type": "paragraph",
+              "content": "The finals are expected to attract investors, mentors and community partners from across the region."
+            }
           ]
         },
         "nl": {
@@ -442,8 +491,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Startups", "Innovatie", "ACS"],
           "blocks": [
-            {"type": "paragraph", "content": "Elk team werd beoordeeld op originaliteit, marktrelevantie en bereidheid om echt bedrijf te bouwen."},
-            {"type": "paragraph", "content": "De finale verwacht investeerders, mentoren en partners uit de regio."}
+            {
+              "type": "paragraph",
+              "content": "Elk team werd beoordeeld op originaliteit, marktrelevantie en bereidheid om echt bedrijf te bouwen."
+            },
+            {
+              "type": "paragraph",
+              "content": "De finale verwacht investeerders, mentoren en partners uit de regio."
+            }
           ]
         }
       }
@@ -462,8 +517,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Nursing", "Community", "Health"],
           "blocks": [
-            {"type": "paragraph", "content": "Students said the experience strengthened their confidence in patient communication and health education."},
-            {"type": "paragraph", "content": "Local health teams praised the organisation and the professionalism of the student volunteers."}
+            {
+              "type": "paragraph",
+              "content": "Students said the experience strengthened their confidence in patient communication and health education."
+            },
+            {
+              "type": "paragraph",
+              "content": "Local health teams praised the organisation and the professionalism of the student volunteers."
+            }
           ]
         },
         "nl": {
@@ -476,8 +537,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Verpleegkunde", "Gemeenschap", "Gezondheid"],
           "blocks": [
-            {"type": "paragraph", "content": "Studenten zeiden dat de ervaring hun vertrouwen in patiëntcommunicatie en gezondheidsvoorlichting vergrootte."},
-            {"type": "paragraph", "content": "Lokale gezondheidsorganisaties prezen de organisatie en professionaliteit van de studentvrijwilligers."}
+            {
+              "type": "paragraph",
+              "content": "Studenten zeiden dat de ervaring hun vertrouwen in patiëntcommunicatie en gezondheidsvoorlichting vergrootte."
+            },
+            {
+              "type": "paragraph",
+              "content": "Lokale gezondheidsorganisaties prezen de organisatie en professionaliteit van de studentvrijwilligers."
+            }
           ]
         }
       }
@@ -495,8 +562,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Erasmus", "Culture", "Students"],
           "blocks": [
-            {"type": "paragraph", "content": "The programme created space for students to share food, stories and traditions from their home countries."},
-            {"type": "paragraph", "content": "Many participants said the event helped them feel more connected to the wider campus community."}
+            {
+              "type": "paragraph",
+              "content": "The programme created space for students to share food, stories and traditions from their home countries."
+            },
+            {
+              "type": "paragraph",
+              "content": "Many participants said the event helped them feel more connected to the wider campus community."
+            }
           ]
         },
         "nl": {
@@ -509,8 +582,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Erasmus", "Cultuur", "Studenten"],
           "blocks": [
-            {"type": "paragraph", "content": "Het programma gaf studenten ruimte om eten, verhalen en tradities uit hun thuislanden te delen."},
-            {"type": "paragraph", "content": "Veel deelnemers zeiden dat het evenement hen dichter bij de bredere campusgemeenschap bracht."}
+            {
+              "type": "paragraph",
+              "content": "Het programma gaf studenten ruimte om eten, verhalen en tradities uit hun thuislanden te delen."
+            },
+            {
+              "type": "paragraph",
+              "content": "Veel deelnemers zeiden dat het evenement hen dichter bij de bredere campusgemeenschap bracht."
+            }
           ]
         }
       }
@@ -528,8 +607,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Exams", "Academic", "Planning"],
           "blocks": [
-            {"type": "paragraph", "content": "Students are encouraged to check the timetable carefully, especially if they have multiple assessments in the same week."},
-            {"type": "paragraph", "content": "Study support services remain available for revision planning and time management guidance."}
+            {
+              "type": "paragraph",
+              "content": "Students are encouraged to check the timetable carefully, especially if they have multiple assessments in the same week."
+            },
+            {
+              "type": "paragraph",
+              "content": "Study support services remain available for revision planning and time management guidance."
+            }
           ]
         },
         "nl": {
@@ -542,8 +627,14 @@
           "cta_url": "https://www.kdg.be/en",
           "tags": ["Examens", "Academisch", "Planning"],
           "blocks": [
-            {"type": "paragraph", "content": "Studenten worden aangemoedigd om het tijdschema goed te controleren, vooral als ze meerdere toetsen in dezelfde week hebben."},
-            {"type": "paragraph", "content": "Studiebegeleiding blijft beschikbaar voor herhalingsplanning en tijdmanagement."}
+            {
+              "type": "paragraph",
+              "content": "Studenten worden aangemoedigd om het tijdschema goed te controleren, vooral als ze meerdere toetsen in dezelfde week hebben."
+            },
+            {
+              "type": "paragraph",
+              "content": "Studiebegeleiding blijft beschikbaar voor herhalingsplanning en tijdmanagement."
+            }
           ]
         }
       }

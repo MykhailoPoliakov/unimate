@@ -27,12 +27,6 @@ BUTTONS = [
     ("library", "Library", "Books and study material", "https://openlibrary.org/", "28, 28, 28"),
     ("schedule", "Schedule", "Class timetable", "https://www.timeanddate.com/", "140, 232, 196"),
 ]
-SOCIALS = [
-    ("Student Community", "Chat with students from your program", "chatbubbles-outline", "https://www.reddit.com/"),
-    ("Campus Events", "Parties, trips and workshops", "calendar-outline", "https://www.eventbrite.com/"),
-    ("Photo Club", "Pictures from around campus", "images-outline", "https://unsplash.com/"),
-    ("Study Group", "Find people to study with", "people-outline", "https://www.coursera.org/"),
-]
 
 
 def translations(title, description):
@@ -65,9 +59,6 @@ def main():
                 raise
 
     if "--remove" in sys.argv:
-        for social in call("GET", "/socials/manage"):
-            if social["institution"] == SLUG:
-                call("DELETE", f"/socials/{social['id']}")
         for button in call("GET", "/buttons/manage"):
             if button["institution"] == SLUG:
                 call("DELETE", f"/buttons/{button['id']}")
@@ -83,23 +74,6 @@ def main():
         "programs": [program["slug"] for program in PROGRAMS],
         "years": [1, 2, 3],
     }
-    existing = {s["url"] for s in call("GET", "/socials/manage") if s["institution"] == SLUG}
-    for index, (title, description, icon, url) in enumerate(SOCIALS, 1):
-        if url in existing:
-            continue
-        call(
-            "POST",
-            "/socials",
-            {
-                "url": url,
-                "icon": icon,
-                "platform": "website",
-                "sort_order": index,
-                **audience,
-                "translations": translations(title, description),
-            },
-        )
-
     me = call("GET", f"/users/{user_id}")
     call("PATCH", f"/users/{user_id}", {"institution": SLUG, "program": "cs", "year_of_study": 3})
     try:

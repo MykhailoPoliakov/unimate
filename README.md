@@ -1,6 +1,6 @@
 # UniMate
 
-UniMate is a mobile app that puts everything a student needs in one place: study links, social channels, and news from their institution.
+UniMate is a mobile app that puts everything a student needs in one place: study links and news from their institution.
 
 Students pick their university, study program, and year once. UniMate then shows only what is relevant to them.
 
@@ -8,18 +8,17 @@ Students pick their university, study program, and year once. UniMate then shows
 
 - **Home** – quick-access buttons for the services of your university, such as the learning platform and student services, plus your personal timetable link.
 - **News** – posts from your institution, targeted by university, program, and year. News can include images, links, and polls.
-- **Socials** – community and social links for your university and program.
 - **Notifications** – optional push notifications for new news.
 - **Languages** – English, Dutch, German, French, Ukrainian, and Russian.
 - **Privacy first** – no email or password sign-up. The app creates an anonymous profile, and you can delete it at any time from the menu.
 
 ## Who uses it
 
-| Role | What they can do |
-| --- | --- |
-| Student | Reads news, links, and socials for their own university, program, and year. |
-| Moderator | Publishes and manages news for their university. |
-| Admin | Manages universities, programs, links, news, and user roles. |
+| Role      | What they can do                                                  |
+| --------- | ----------------------------------------------------------------- |
+| Student   | Reads news and links for their own university, program, and year. |
+| Moderator | Publishes and manages news for their university.                  |
+| Admin     | Manages universities, programs, links, news, and user roles.      |
 
 ## Repository layout
 

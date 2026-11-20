@@ -1,1 +1,4 @@
-export { useResolvedColorScheme as useColorScheme } from '@/hooks/use-theme-preference';
+// UniMate is dark-only.
+export function useColorScheme() {
+  return "dark"
+}

@@ -7,8 +7,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-dark.png",
     "scheme": "unimate",
-    "userInterfaceStyle": "automatic",
-    "backgroundColor": "#E4E1DB",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#070809",
     "ios": {
       "bundleIdentifier": "com.unimate.app",
       "icon": {
@@ -18,15 +18,11 @@
       },
       "requireFullScreen": true,
       "infoPlist": {
-        "UISupportedInterfaceOrientations": [
-          "UIInterfaceOrientationPortrait"
-        ],
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
         "UISupportedInterfaceOrientations~ipad": [
           "UIInterfaceOrientationPortrait"
         ],
-        "UIBackgroundModes": [
-          "remote-notification"
-        ],
+        "UIBackgroundModes": ["remote-notification"],
         "LSApplicationQueriesSchemes": [
           "instagram",
           "fb",
@@ -77,10 +73,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#E4E1DB",
-          "dark": {
-            "backgroundColor": "#070809"
-          }
+          "backgroundColor": "#070809"
         }
       ],
       [

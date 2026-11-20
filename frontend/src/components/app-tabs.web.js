@@ -1,54 +1,70 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
-import { Pressable, View } from 'react-native';
+import Ionicons from "@expo/vector-icons/Ionicons"
+import { Tabs, TabList, TabTrigger, TabSlot } from "expo-router/ui"
+import { Pressable, View } from "react-native"
 
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import { ThemedText } from "./themed-text"
+import { ThemedView } from "./themed-view"
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useFeed } from '@/hooks/use-feed';
-import { useI18n } from '@/hooks/use-i18n';
+import { Colors } from "@/constants/theme"
+import { useFeed } from "@/hooks/use-feed"
+import { useI18n } from "@/hooks/use-i18n"
 
 export default function AppTabs() {
-  const { t } = useI18n();
-  const { unreadNewsCount } = useFeed();
+  const { t } = useI18n()
+  const { unreadNewsCount } = useFeed()
 
   return (
     <Tabs>
-      <TabSlot style={{ height: '100%' }} />
+      <TabSlot style={{ height: "100%" }} />
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon="home-outline" selectedIcon="home">{t('home')}</TabButton>
+            <TabButton icon="home-outline" selectedIcon="home">
+              {t("home")}
+            </TabButton>
           </TabTrigger>
           <TabTrigger name="news" href="/news" asChild>
-            <TabButton icon="newspaper-outline" selectedIcon="newspaper" badgeCount={unreadNewsCount}>{t('news')}</TabButton>
-          </TabTrigger>
-          <TabTrigger name="socials" href="/socials" asChild>
-            <TabButton icon="people-outline" selectedIcon="people">{t('socials')}</TabButton>
+            <TabButton
+              icon="newspaper-outline"
+              selectedIcon="newspaper"
+              badgeCount={unreadNewsCount}
+            >
+              {t("news")}
+            </TabButton>
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton icon="ellipsis-horizontal-circle-outline" selectedIcon="ellipsis-horizontal-circle">{t('menu')}</TabButton>
+            <TabButton
+              icon="ellipsis-horizontal-circle-outline"
+              selectedIcon="ellipsis-horizontal-circle"
+            >
+              {t("menu")}
+            </TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
     </Tabs>
-  );
+  )
 }
 
-export function TabButton({ children, icon, selectedIcon, isFocused, badgeCount = 0, ...props }) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+export function TabButton({
+  children,
+  icon,
+  selectedIcon,
+  isFocused,
+  badgeCount = 0,
+  ...props
+}) {
+  const colors = Colors.dark
 
   return (
     <Pressable {...props} className="active:opacity-70">
       <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        className="py-one px-three rounded-three flex-row items-center gap-one">
+        type={isFocused ? "backgroundSelected" : "backgroundElement"}
+        className="py-one px-three rounded-three flex-row items-center gap-one"
+      >
         {icon && (
           <Ionicons
-            name={isFocused ? selectedIcon ?? icon : icon}
+            name={isFocused ? (selectedIcon ?? icon) : icon}
             size={14}
             color={colors.text}
           />
@@ -59,23 +75,28 @@ export function TabButton({ children, icon, selectedIcon, isFocused, badgeCount 
         {badgeCount > 0 ? (
           <ThemedView
             className="min-w-[18px] h-[18px] px-one items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.error }}>
+            style={{ backgroundColor: colors.error }}
+          >
             <ThemedText className="!text-white" type="smallBold">
-              {badgeCount > 99 ? '99+' : badgeCount}
+              {badgeCount > 99 ? "99+" : badgeCount}
             </ThemedText>
           </ThemedView>
         ) : null}
       </ThemedView>
     </Pressable>
-  );
+  )
 }
 
 export function CustomTabList(props) {
   return (
-    <View {...props} className="absolute w-full p-three justify-center items-center flex-row">
+    <View
+      {...props}
+      className="absolute w-full p-three justify-center items-center flex-row"
+    >
       <ThemedView
         type="backgroundElement"
-        className="py-two px-five rounded-five flex-row items-center grow gap-two max-w-content">
+        className="py-two px-five rounded-five flex-row items-center grow gap-two max-w-content"
+      >
         <ThemedText type="smallBold" themeColor="primary" className="mr-auto">
           UniMate
         </ThemedText>
@@ -83,5 +104,5 @@ export function CustomTabList(props) {
         {props.children}
       </ThemedView>
     </View>
-  );
+  )
 }

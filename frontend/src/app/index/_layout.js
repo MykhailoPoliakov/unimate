@@ -1,11 +1,12 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router"
 
-import { useI18n } from '@/hooks/use-i18n';
-import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from "@/hooks/use-i18n"
+import { useTheme } from "@/hooks/use-theme"
+import NewsScreen from "../news"
 
 export default function HomeLayout() {
-  const theme = useTheme();
-  const { t } = useI18n();
+  const theme = useTheme()
+  const { t } = useI18n()
 
   return (
     <Stack
@@ -13,13 +14,31 @@ export default function HomeLayout() {
         headerTintColor: theme.primary,
         headerStyle: { backgroundColor: theme.background },
         headerTitleStyle: { color: theme.text },
-        headerBackButtonDisplayMode: 'minimal',
+        headerBackButtonDisplayMode: "minimal",
         headerShadowVisible: false,
-        headerBlurEffect: 'none',
+        headerBlurEffect: "none",
         contentStyle: { backgroundColor: theme.background },
-      }}>
+      }}
+    >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="compose" options={{ headerBackTitle: t('home') }} />
+      <Stack.Screen
+        name="compose"
+        options={{
+          headerBackTitle: t("home"),
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="newsCompose"
+        option={{
+          headerBackTitle: t("home"),
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+        }}
+      />
     </Stack>
-  );
+  )
 }

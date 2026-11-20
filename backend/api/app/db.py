@@ -42,7 +42,7 @@ SessionLocal = sessionmaker(bind=engine)
 def ensure_audience_columns() -> None:
     inspector = inspect(engine)
     with engine.begin() as connection:
-        for table in ("news", "socials"):
+        for table in ("news",):
             if table not in inspector.get_table_names():
                 continue
             columns = {column["name"] for column in inspector.get_columns(table)}
@@ -96,20 +96,10 @@ def ensure_audience_columns() -> None:
                             "institution_id": row.institution_id,
                         },
                     )
-        if "social_translations" in inspector.get_table_names():
-            social_columns = {
-                column["name"]: column
-                for column in inspector.get_columns("social_translations")
-            }
-            description = social_columns.get("description")
-            if (
-                description
-                and description["type"].length is not None
-                and description["type"].length < 2000
-            ):
-                connection.execute(text(
-                    "ALTER TABLE social_translations ALTER COLUMN description TYPE VARCHAR(2000)"
-                ))
+        # The socials feature was removed. Drop its tables (translations first) so the
+        # leftover foreign keys to users/institutions/programs cannot block deletes.
+        connection.execute(text("DROP TABLE IF EXISTS social_translations"))
+        connection.execute(text("DROP TABLE IF EXISTS socials"))
         if "buttons" in inspector.get_table_names():
             button_columns = {column["name"] for column in inspector.get_columns("buttons")}
             if "program_slugs" not in button_columns:

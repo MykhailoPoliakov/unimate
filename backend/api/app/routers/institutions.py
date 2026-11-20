@@ -7,7 +7,7 @@ from app.audience import moderator_scope
 from app.content import parse_json_list
 from app.db import get_db
 from app.deps import require_admin
-from app.models import Button, Institution, News, Program, Social, User
+from app.models import Button, Institution, News, Program, User
 from app.schemas import InstitutionCreate, InstitutionOut, NameUpdate, ProgramCreate, ProgramOut
 
 router = APIRouter(prefix="/institutions", tags=["institutions"])
@@ -17,7 +17,7 @@ def _program_delete_conflict(db: Session, program: Program) -> str | None:
     if db.scalar(select(func.count()).select_from(User).where(User.program_id == program.id)):
         return "Move users to another program before deleting this program"
 
-    for model in (Button, News, Social):
+    for model in (Button, News):
         if db.scalar(
             select(func.count()).select_from(model).where(model.program_id == program.id)
         ):
@@ -89,7 +89,7 @@ def delete_institution(
         if conflict:
             raise HTTPException(409, conflict)
 
-    for model in (Button, News, Social):
+    for model in (Button, News):
         if db.scalar(
             select(func.count()).select_from(model).where(model.institution_id == institution.id)
         ):

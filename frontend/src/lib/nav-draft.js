@@ -1,18 +1,9 @@
-let socialDraft = null;
-let linkDraft = null;
-
-export function setSocialDraft(item) {
-  socialDraft = item ?? null;
-}
-
-export function getSocialDraft() {
-  return socialDraft;
-}
+let linkDraft = null
 
 export function setLinkDraft(item) {
-  linkDraft = item ?? null;
+  linkDraft = item ?? null
 }
 
 export function getLinkDraft() {
-  return linkDraft;
+  return linkDraft
 }

@@ -1,16 +1,16 @@
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Platform, Pressable, StyleSheet, View } from "react-native"
+import Ionicons from "@expo/vector-icons/Ionicons"
 
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from "@/hooks/use-theme"
 
-let GlassView = null;
-let isLiquidGlassAvailable = () => false;
+let GlassView = null
+let isLiquidGlassAvailable = () => false
 try {
-  const glass = require('expo-glass-effect');
-  GlassView = glass.GlassView;
-  isLiquidGlassAvailable = glass.isLiquidGlassAvailable ?? (() => false);
+  const glass = require("expo-glass-effect")
+  GlassView = glass.GlassView
+  isLiquidGlassAvailable = glass.isLiquidGlassAvailable ?? (() => false)
 } catch {
-  GlassView = null;
+  GlassView = null
 }
 
 export function glassShadow(theme) {
@@ -20,11 +20,16 @@ export function glassShadow(theme) {
     shadowOpacity: theme.shadowOpacity,
     shadowRadius: 22,
     elevation: 10,
-  };
+  }
 }
 
-export function GlassCard({ children, style, contentClassName, solid = false }) {
-  const theme = useTheme();
+export function GlassCard({
+  children,
+  style,
+  contentClassName,
+  solid = false,
+}) {
+  const theme = useTheme()
   const frame = [
     styles.frame,
     glassShadow(theme),
@@ -33,53 +38,57 @@ export function GlassCard({ children, style, contentClassName, solid = false }) 
       backgroundColor: solid ? theme.backgroundElement : theme.glass,
     },
     style,
-  ];
+  ]
 
   if (!solid && GlassView && isLiquidGlassAvailable()) {
     return (
       <GlassView
         glassEffectStyle="regular"
         isInteractive
-        style={[frame, { backgroundColor: 'transparent', overflow: 'visible' }]}>
+        style={[frame, { backgroundColor: "transparent", overflow: "visible" }]}
+      >
         {children}
       </GlassView>
-    );
+    )
   }
 
   return (
     <View style={frame} className={contentClassName}>
       {children}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   frame: {
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
   },
   circle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    aspectRatio: 1,
+    flexGrow: 0,
+    flexShrink: 0,
+    borderRadius: 20,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
   },
-});
+})
 
 export function GlassCircleButton({ onPress, icon, accessibilityLabel }) {
-  const theme = useTheme();
+  const theme = useTheme()
   const circle = [
     styles.circle,
     {
       borderColor: theme.glassBorder,
       backgroundColor: theme.glass,
     },
-  ];
-  const glyph = <Ionicons name={icon} size={20} color={theme.text} />;
+  ]
+  const glyph = <Ionicons name={icon} size={20} color={theme.text} />
 
   const button = (
     <Pressable
@@ -88,31 +97,41 @@ export function GlassCircleButton({ onPress, icon, accessibilityLabel }) {
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       className="active:opacity-70"
-      style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+      style={[
+        StyleSheet.absoluteFill,
+        { alignItems: "center", justifyContent: "center" },
+      ]}
+    >
       {glyph}
     </Pressable>
-  );
+  )
 
   if (GlassView && isLiquidGlassAvailable()) {
     return (
-      <GlassView
-        glassEffectStyle="regular"
-        isInteractive
-        style={[circle, { backgroundColor: 'transparent', overflow: 'visible' }]}>
-        {button}
-      </GlassView>
-    );
+      <View style={circle}>
+        <GlassView
+          glassEffectStyle="regular"
+          isInteractive
+          style={[
+            StyleSheet.absoluteFill,
+            { borderRadius: 20, backgroundColor: "transparent" },
+          ]}
+        >
+          {button}
+        </GlassView>
+      </View>
+    )
   }
 
-  return <View style={circle}>{button}</View>;
+  return <View style={circle}>{button}</View>
 }
 
 export function GlassBackButton({ onPress }) {
   return (
     <GlassCircleButton
       onPress={onPress}
-      icon={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
+      icon={Platform.OS === "ios" ? "chevron-back" : "arrow-back"}
       accessibilityLabel="Back"
     />
-  );
+  )
 }

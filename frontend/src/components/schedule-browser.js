@@ -1,83 +1,96 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
-import { initialWindowMetrics } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import Ionicons from "@expo/vector-icons/Ionicons"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
+import { ActivityIndicator, BackHandler, Platform, View } from "react-native"
+import { initialWindowMetrics } from "react-native-safe-area-context"
+import { WebView } from "react-native-webview"
 
-import { PressScale } from '@/components/motion';
-import { registerWebSessionCleaner } from '@/lib/reset-device';
-import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
-import { useI18n } from '@/hooks/use-i18n';
+import { PressScale } from "@/components/motion"
+import { registerWebSessionCleaner } from "@/lib/reset-device"
+import { ThemedText } from "@/components/themed-text"
+import { Colors } from "@/constants/theme"
+import { useI18n } from "@/hooks/use-i18n"
 
 export function scheduleStorageKey(userId) {
-  return `unimate.scheduleUrl.${userId}`;
+  return `unimate.scheduleUrl.${userId}`
 }
 
-const SKIP_HTML = /\/(index|login|logout|error|saml|sso|signin|signon)\.html$/i;
+const SKIP_HTML = /\/(index|login|logout|error|saml|sso|signin|signon)\.html$/i
 
 export function timetableUrl(value) {
-  const trimmed = String(value ?? '').trim();
-  let url;
+  const trimmed = String(value ?? "").trim()
+  let url
   try {
-    url = new URL(trimmed);
+    url = new URL(trimmed)
   } catch {
-    return null;
+    return null
   }
-  if (url.protocol !== 'https:') return null;
-  const host = url.hostname.toLowerCase();
-  if (host !== 'cloud.timeedit.net' && host !== 'timeedit.kdg.be') return null;
-  if (/login|logout|saml|sso|microsoftonline|adfs/i.test(url.pathname)) return null;
-  if (!/\.html$/i.test(url.pathname) || SKIP_HTML.test(url.pathname)) return null;
-  return url.toString();
+  if (url.protocol !== "https:") return null
+  const host = url.hostname.toLowerCase()
+  if (host !== "cloud.timeedit.net" && host !== "timeedit.kdg.be") return null
+  if (/login|logout|saml|sso|microsoftonline|adfs/i.test(url.pathname))
+    return null
+  if (!/\.html$/i.test(url.pathname) || SKIP_HTML.test(url.pathname))
+    return null
+  return url.toString()
 }
 
 export function scheduleStartUrl(value) {
-  const saved = timetableUrl(value);
-  if (saved) return saved;
+  const saved = timetableUrl(value)
+  if (saved) return saved
   try {
-    const url = new URL(String(value ?? '').trim());
-    const host = url.hostname.toLowerCase();
-    if (host === 'timeedit.kdg.be') return 'https://cloud.timeedit.net/be_kdg/web/student/';
-    if (host === 'cloud.timeedit.net') {
-      const parts = url.pathname.split('/').filter(Boolean);
-      const org = parts[0] || 'be_kdg';
-      const section = parts[1] || 'web';
-      return `https://cloud.timeedit.net/${org}/${section}/student/`;
+    const url = new URL(String(value ?? "").trim())
+    const host = url.hostname.toLowerCase()
+    if (host === "timeedit.kdg.be")
+      return "https://cloud.timeedit.net/be_kdg/web/student/"
+    if (host === "cloud.timeedit.net") {
+      const parts = url.pathname.split("/").filter(Boolean)
+      const org = parts[0] || "be_kdg"
+      const section = parts[1] || "web"
+      return `https://cloud.timeedit.net/${org}/${section}/student/`
     }
   } catch {
     // Fall through to the KdG student entry.
   }
-  return 'https://cloud.timeedit.net/be_kdg/web/student/';
+  return "https://cloud.timeedit.net/be_kdg/web/student/"
 }
 
-const TOP_INSET = Platform.OS === 'ios' ? Math.max(initialWindowMetrics?.insets.top ?? 0, 62) : (initialWindowMetrics?.insets.top ?? 0);
+const TOP_INSET =
+  Platform.OS === "ios"
+    ? Math.max(initialWindowMetrics?.insets.top ?? 0, 62)
+    : (initialWindowMetrics?.insets.top ?? 0)
 const TOOLBAR_BUTTON_STYLE = {
   width: 40,
   height: 40,
   borderRadius: 20,
   borderWidth: 1,
-};
+}
 const TOOLBAR_BUTTON_CONTENT_STYLE = {
   flex: 1,
-  alignItems: 'center',
-  justifyContent: 'center',
-};
+  alignItems: "center",
+  justifyContent: "center",
+}
 
 const MOBILE_SAFARI =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 
-const STARTUP_PROGRESS = 0.6;
-const READY_DISPLAY_MS = 150;
-const AUTH_OVERLAY_TIMEOUT_MS = 20000;
+const STARTUP_PROGRESS = 0.6
+const READY_DISPLAY_MS = 150
+const AUTH_OVERLAY_TIMEOUT_MS = 20000
 
-const ScheduleBrowserContext = createContext(null);
+const ScheduleBrowserContext = createContext(null)
 
 const LOGOUT_URLS = [
-  'https://cloud.timeedit.net/be_kdg/web/student/logout.html',
-  'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
-];
+  "https://cloud.timeedit.net/be_kdg/web/student/logout.html",
+  "https://login.microsoftonline.com/common/oauth2/v2.0/logout",
+]
 
 const CLEAR_WEB_STORAGE = `
 (function () {
@@ -90,12 +103,15 @@ const CLEAR_WEB_STORAGE = `
   } catch (e) {}
 })();
 true;
-`;
+`
 
 export function useScheduleBrowser() {
-  const context = useContext(ScheduleBrowserContext);
-  if (!context) throw new Error('useScheduleBrowser must be used within ScheduleBrowserProvider');
-  return context;
+  const context = useContext(ScheduleBrowserContext)
+  if (!context)
+    throw new Error(
+      "useScheduleBrowser must be used within ScheduleBrowserProvider",
+    )
+  return context
 }
 
 export function ScheduleBrowserProvider({ children }) {
@@ -103,40 +119,41 @@ export function ScheduleBrowserProvider({ children }) {
     userId: null,
     initialUrl: null,
     visible: false,
-  });
+  })
 
   const preloadSchedule = useCallback((userId, initialUrl) => {
     setBrowser((current) => {
-      if (current.userId === userId && current.initialUrl === initialUrl) return current;
-      if (current.visible && current.userId === userId) return current;
-      return { userId, initialUrl, visible: false };
-    });
-  }, []);
+      if (current.userId === userId && current.initialUrl === initialUrl)
+        return current
+      if (current.visible && current.userId === userId) return current
+      return { userId, initialUrl, visible: false }
+    })
+  }, [])
   const openSchedule = useCallback((userId, initialUrl) => {
-    setBrowser({ userId, initialUrl, visible: true });
-  }, []);
+    setBrowser({ userId, initialUrl, visible: true })
+  }, [])
   const closeSchedule = useCallback(() => {
-    setBrowser((current) => ({ ...current, visible: false }));
-  }, []);
+    setBrowser((current) => ({ ...current, visible: false }))
+  }, [])
 
-  const [cleanStep, setCleanStep] = useState(null);
-  const cleanStepRef = useRef(null);
-  const cleanDoneRef = useRef(null);
+  const [cleanStep, setCleanStep] = useState(null)
+  const cleanStepRef = useRef(null)
+  const cleanDoneRef = useRef(null)
 
   const advanceClean = useCallback(() => {
-    const current = cleanStepRef.current;
-    if (current == null) return;
-    const next = current + 1;
+    const current = cleanStepRef.current
+    if (current == null) return
+    const next = current + 1
     if (next < LOGOUT_URLS.length) {
-      cleanStepRef.current = next;
-      setCleanStep(next);
-      return;
+      cleanStepRef.current = next
+      setCleanStep(next)
+      return
     }
-    cleanStepRef.current = null;
-    setCleanStep(null);
-    cleanDoneRef.current?.();
-    cleanDoneRef.current = null;
-  }, []);
+    cleanStepRef.current = null
+    setCleanStep(null)
+    cleanDoneRef.current?.()
+    cleanDoneRef.current = null
+  }, [])
 
   // Signs out of TimeEdit/Microsoft inside the same web view cookie jar, which also works without native cookie access.
   useEffect(
@@ -144,26 +161,26 @@ export function ScheduleBrowserProvider({ children }) {
       registerWebSessionCleaner(
         () =>
           new Promise((resolve) => {
-            setBrowser({ userId: null, initialUrl: null, visible: false });
-            if (Platform.OS === 'web') {
-              resolve();
-              return;
+            setBrowser({ userId: null, initialUrl: null, visible: false })
+            if (Platform.OS === "web") {
+              resolve()
+              return
             }
-            cleanDoneRef.current = resolve;
-            cleanStepRef.current = 0;
-            setCleanStep(0);
-          })
+            cleanDoneRef.current = resolve
+            cleanStepRef.current = 0
+            setCleanStep(0)
+          }),
       ),
-    []
-  );
+    [],
+  )
 
   useEffect(() => {
-    if (cleanStep == null) return undefined;
-    const timer = setTimeout(advanceClean, 6000);
-    return () => clearTimeout(timer);
-  }, [cleanStep, advanceClean]);
+    if (cleanStep == null) return undefined
+    const timer = setTimeout(advanceClean, 6000)
+    return () => clearTimeout(timer)
+  }, [cleanStep, advanceClean])
 
-  const context = { preloadSchedule, openSchedule };
+  const context = { preloadSchedule, openSchedule }
 
   return (
     <ScheduleBrowserContext.Provider value={context}>
@@ -180,7 +197,7 @@ export function ScheduleBrowserProvider({ children }) {
             injectedJavaScript={CLEAR_WEB_STORAGE}
             onLoadEnd={() => setTimeout(advanceClean, 800)}
             onError={advanceClean}
-            style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
             pointerEvents="none"
           />
         ) : null}
@@ -194,19 +211,19 @@ export function ScheduleBrowserProvider({ children }) {
         ) : null}
       </View>
     </ScheduleBrowserContext.Provider>
-  );
+  )
 }
 
 export function isScheduleSignInUrl(value) {
   try {
-    const host = new URL(String(value ?? '')).hostname.toLowerCase();
+    const host = new URL(String(value ?? "")).hostname.toLowerCase()
     return (
-      host === 'www.timeedit.net' ||
-      host === 'auth.timeedit.net' ||
+      host === "www.timeedit.net" ||
+      host === "auth.timeedit.net" ||
       /microsoftonline|live\.com|microsoft\.com|adfs|okta/.test(host)
-    );
+    )
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -532,346 +549,397 @@ const AUTO_SIGN_IN = `
   return true;
 })();
 true;
-`;
+`
 
 function ScheduleBrowserScreen({ userId, initialUrl, onClose }) {
-  const theme = Colors.light;
-  const { t } = useI18n();
-  const webRef = useRef(null);
-  const lastSaved = useRef(timetableUrl(initialUrl) ?? '');
-  const signedIn = useRef(Boolean(timetableUrl(initialUrl)));
-  const progressRef = useRef(STARTUP_PROGRESS);
-  const scheduleReady = useRef(false);
-  const pageLoadStarted = useRef(false);
-  const readyDisplayTimer = useRef(null);
-  const [authOverlayVisible, setAuthOverlayVisible] = useState(Boolean(timetableUrl(initialUrl)));
-  const [showBehind, setShowBehind] = useState(false);
-  const [autoSchedule, setAutoSchedule] = useState(Boolean(timetableUrl(initialUrl)));
-  const [topProgressVisible, setTopProgressVisible] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(STARTUP_PROGRESS);
+  const theme = Colors.dark
+  const { t } = useI18n()
+  const webRef = useRef(null)
+  const lastSaved = useRef(timetableUrl(initialUrl) ?? "")
+  const signedIn = useRef(Boolean(timetableUrl(initialUrl)))
+  const progressRef = useRef(STARTUP_PROGRESS)
+  const scheduleReady = useRef(false)
+  const pageLoadStarted = useRef(false)
+  const readyDisplayTimer = useRef(null)
+  const [authOverlayVisible, setAuthOverlayVisible] = useState(
+    Boolean(timetableUrl(initialUrl)),
+  )
+  const [showBehind, setShowBehind] = useState(false)
+  const [autoSchedule, setAutoSchedule] = useState(
+    Boolean(timetableUrl(initialUrl)),
+  )
+  const [topProgressVisible, setTopProgressVisible] = useState(false)
+  const [loadProgress, setLoadProgress] = useState(STARTUP_PROGRESS)
   const toolbarButtonStyle = {
     ...TOOLBAR_BUTTON_STYLE,
     borderColor: theme.border,
     backgroundColor: theme.backgroundElement,
-  };
+  }
 
   const updateLoadProgress = useCallback((progress) => {
-    const next = Math.max(progressRef.current, Math.min(0.99, Math.max(0, progress)));
-    if (next === progressRef.current) return;
-    progressRef.current = next;
-    setLoadProgress(next);
-  }, []);
+    const next = Math.max(
+      progressRef.current,
+      Math.min(0.99, Math.max(0, progress)),
+    )
+    if (next === progressRef.current) return
+    progressRef.current = next
+    setLoadProgress(next)
+  }, [])
 
   const beginPageLoad = useCallback(() => {
-    if (!scheduleReady.current || pageLoadStarted.current) return;
-    pageLoadStarted.current = true;
-    progressRef.current = 0;
-    setLoadProgress(0);
-    setTopProgressVisible(true);
-  }, []);
+    if (!scheduleReady.current || pageLoadStarted.current) return
+    pageLoadStarted.current = true
+    progressRef.current = 0
+    setLoadProgress(0)
+    setTopProgressVisible(true)
+  }, [])
 
   const finishPageLoad = useCallback(() => {
-    if (!scheduleReady.current) return;
-    pageLoadStarted.current = false;
-    progressRef.current = 1;
-    setLoadProgress(1);
-    setTopProgressVisible(false);
-  }, []);
+    if (!scheduleReady.current) return
+    pageLoadStarted.current = false
+    progressRef.current = 1
+    setLoadProgress(1)
+    setTopProgressVisible(false)
+  }, [])
 
   useEffect(() => {
-    if (!authOverlayVisible) return undefined;
+    if (!authOverlayVisible) return undefined
     const timer = setInterval(() => {
-      updateLoadProgress(progressRef.current + 0.01);
-    }, 300);
-    return () => clearInterval(timer);
-  }, [authOverlayVisible, updateLoadProgress]);
+      updateLoadProgress(progressRef.current + 0.01)
+    }, 300)
+    return () => clearInterval(timer)
+  }, [authOverlayVisible, updateLoadProgress])
 
-  const retryTimer = useRef(null);
-  const retryCount = useRef(0);
+  const retryTimer = useRef(null)
+  const retryCount = useRef(0)
 
-  if (!authOverlayVisible && showBehind) setShowBehind(false);
+  if (!authOverlayVisible && showBehind) setShowBehind(false)
 
   useEffect(() => {
-    if (!authOverlayVisible) return undefined;
+    if (!authOverlayVisible) return undefined
     // If automatic sign-in stalls (e.g. it needs the user's input), reveal the page.
     const timer = setTimeout(() => {
-      if (retryCount.current === 0) setAuthOverlayVisible(false);
-    }, AUTH_OVERLAY_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [authOverlayVisible]);
+      if (retryCount.current === 0) setAuthOverlayVisible(false)
+    }, AUTH_OVERLAY_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [authOverlayVisible])
 
   useEffect(
     () => () => {
-      if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
+      if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current)
     },
-    []
-  );
+    [],
+  )
 
   const remember = useCallback(
     async (url) => {
-      if (!signedIn.current) return;
-      const next = timetableUrl(url);
-      if (!next || !userId || next === lastSaved.current) return;
-      lastSaved.current = next;
-      await AsyncStorage.setItem(scheduleStorageKey(userId), next);
+      if (!signedIn.current) return
+      const next = timetableUrl(url)
+      if (!next || !userId || next === lastSaved.current) return
+      lastSaved.current = next
+      await AsyncStorage.setItem(scheduleStorageKey(userId), next)
     },
-    [userId]
-  );
+    [userId],
+  )
 
   const noteNavigation = useCallback(
     (url) => {
       if (isScheduleSignInUrl(url)) {
-        signedIn.current = true;
+        signedIn.current = true
         // A login was started in this session, so the Studenten page may now be auto-advanced to "Mijn rooster".
-        setAutoSchedule(true);
-        webRef.current?.injectJavaScript('window.__unimateAllowMySchedule = true; true;');
-        scheduleReady.current = false;
-        if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
-        readyDisplayTimer.current = null;
+        setAutoSchedule(true)
+        webRef.current?.injectJavaScript(
+          "window.__unimateAllowMySchedule = true; true;",
+        )
+        scheduleReady.current = false
+        if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current)
+        readyDisplayTimer.current = null
         // First-time users must see and use the login page; only returning users get the loading screen.
-        setAuthOverlayVisible(Boolean(lastSaved.current));
+        setAuthOverlayVisible(Boolean(lastSaved.current))
       }
-      remember(url);
+      remember(url)
     },
-    [remember]
-  );
+    [remember],
+  )
 
-  const allowNavigation = useCallback(() => true, []);
+  const allowNavigation = useCallback(() => true, [])
 
   const openPopupInPlace = useCallback((event) => {
-    const url = event?.nativeEvent?.targetUrl;
-    if (!url || !webRef.current) return;
-    webRef.current.injectJavaScript(`window.location.assign(${JSON.stringify(url)}); true;`);
-  }, []);
+    const url = event?.nativeEvent?.targetUrl
+    if (!url || !webRef.current) return
+    webRef.current.injectJavaScript(
+      `window.location.assign(${JSON.stringify(url)}); true;`,
+    )
+  }, [])
 
   useEffect(
     () => () => {
-      if (retryTimer.current) clearTimeout(retryTimer.current);
+      if (retryTimer.current) clearTimeout(retryTimer.current)
     },
-    []
-  );
+    [],
+  )
 
   // Connection errors keep the loading screen up and silently retry.
   const handleLoadError = useCallback(() => {
-    scheduleReady.current = false;
-    if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
-    readyDisplayTimer.current = null;
-    setAuthOverlayVisible(true);
-    if (retryTimer.current) return;
-    const delay = Math.min(5000, 1000 + retryCount.current * 1000);
-    retryCount.current += 1;
+    scheduleReady.current = false
+    if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current)
+    readyDisplayTimer.current = null
+    setAuthOverlayVisible(true)
+    if (retryTimer.current) return
+    const delay = Math.min(5000, 1000 + retryCount.current * 1000)
+    retryCount.current += 1
     retryTimer.current = setTimeout(() => {
-      retryTimer.current = null;
-      webRef.current?.reload();
-    }, delay);
-  }, []);
+      retryTimer.current = null
+      webRef.current?.reload()
+    }, delay)
+  }, [])
 
   return (
-      <View style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={{ height: TOP_INSET, backgroundColor: theme.background }} />
-        <View
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <View style={{ height: TOP_INSET, backgroundColor: theme.background }} />
+      <View
+        style={{
+          height: 56,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 16,
+          backgroundColor: theme.background,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.border,
+          zIndex: 1,
+        }}
+      >
+        <PressScale
+          accessibilityRole="button"
+          accessibilityLabel={t("close")}
+          onPress={onClose}
+          pressedScale={0.86}
+          style={toolbarButtonStyle}
+          contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}
+        >
+          <Ionicons name="close" size={22} color={theme.text} />
+        </PressScale>
+        <ThemedText
+          type="smallBold"
+          numberOfLines={1}
           style={{
-            height: 56,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
-            backgroundColor: theme.background,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.border,
-            zIndex: 1,
-          }}>
+            position: "absolute",
+            left: 64,
+            right: 64,
+            textAlign: "center",
+            color: theme.text,
+          }}
+        >
+          {t("yourSchedule")}
+        </ThemedText>
+        {authOverlayVisible ? (
           <PressScale
             accessibilityRole="button"
-            accessibilityLabel={t('close')}
-            onPress={onClose}
+            accessibilityLabel="Show login process"
+            onPress={() => setShowBehind((value) => !value)}
             pressedScale={0.86}
             style={toolbarButtonStyle}
-            contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
-            <Ionicons name="close" size={22} color={theme.text} />
-          </PressScale>
-          <ThemedText
-            type="smallBold"
-            numberOfLines={1}
-            style={{
-              position: 'absolute',
-              left: 64,
-              right: 64,
-              textAlign: 'center',
-              color: theme.text,
-            }}>
-            {t('yourSchedule')}
-          </ThemedText>
-          {authOverlayVisible ? (
-            <PressScale
-              accessibilityRole="button"
-              accessibilityLabel="Show login process"
-              onPress={() => setShowBehind((value) => !value)}
-              pressedScale={0.86}
-              style={toolbarButtonStyle}
-              contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}>
-              <Ionicons name={showBehind ? 'eye-off' : 'eye'} size={22} color={theme.text} />
-            </PressScale>
-          ) : null}
-        </View>
-        <View style={{ flex: 1, position: 'relative', backgroundColor: theme.background }}>
-            <WebView
-              key={`${userId ?? 'schedule'}:${initialUrl}`}
-              ref={webRef}
-              source={{ uri: initialUrl }}
-              style={{ flex: 1, backgroundColor: theme.background }}
-              userAgent={Platform.OS === 'ios' ? MOBILE_SAFARI : undefined}
-              javaScriptEnabled
-              domStorageEnabled
-              sharedCookiesEnabled
-              thirdPartyCookiesEnabled
-              cacheEnabled
-              incognito={false}
-              pullToRefreshEnabled
-              onLoadStart={beginPageLoad}
-              scrollEnabled
-              nestedScrollEnabled={Platform.OS === 'android'}
-              overScrollMode={Platform.OS === 'android' ? 'always' : undefined}
-              automaticallyAdjustContentInsets={false}
-              bounces
-              decelerationRate={Platform.OS === 'ios' ? 'normal' : undefined}
-              javaScriptCanOpenWindowsAutomatically
-              setSupportMultipleWindows={false}
-              allowsBackForwardNavigationGestures
-              injectedJavaScriptBeforeContentLoaded={`window.__unimateAllowMySchedule = ${autoSchedule}; ${AUTO_SIGN_IN}`}
-              injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
-              injectedJavaScriptForMainFrameOnly={false}
-              injectedJavaScript={AUTO_SIGN_IN}
-              onMessage={({ nativeEvent }) => {
-                if (nativeEvent.data === 'student-home') {
-                  // Logged in on the Studenten page: allow the schedule and show the loading screen.
-                  signedIn.current = true;
-                  setAuthOverlayVisible(true);
-                  return;
-                }
-                if (nativeEvent.data !== 'schedule-ready') return;
-                scheduleReady.current = true;
-                retryCount.current = 0;
-                if (pageLoadStarted.current) {
-                  finishPageLoad();
-                } else {
-                  progressRef.current = 1;
-                  setLoadProgress(1);
-                  setTopProgressVisible(false);
-                }
-                if (readyDisplayTimer.current) clearTimeout(readyDisplayTimer.current);
-                readyDisplayTimer.current = setTimeout(() => {
-                  readyDisplayTimer.current = null;
-                  if (scheduleReady.current) setAuthOverlayVisible(false);
-                }, READY_DISPLAY_MS);
-              }}
-              onLoadProgress={({ nativeEvent }) => {
-                if (pageLoadStarted.current) {
-                  updateLoadProgress(nativeEvent.progress * 0.99);
-                }
-              }}
-              onLoadEnd={finishPageLoad}
-              onError={handleLoadError}
-              onHttpError={({ nativeEvent }) => {
-                if (nativeEvent.statusCode >= 500) handleLoadError();
-              }}
-              renderError={() => <View style={{ flex: 1, backgroundColor: theme.background }} />}
-              onShouldStartLoadWithRequest={allowNavigation}
-              onNavigationStateChange={(nav) => {
-                noteNavigation(nav.url);
-              }}
-              onOpenWindow={openPopupInPlace}
+            contentStyle={TOOLBAR_BUTTON_CONTENT_STYLE}
+          >
+            <Ionicons
+              name={showBehind ? "eye-off" : "eye"}
+              size={22}
+              color={theme.text}
             />
-            {topProgressVisible ? (
-              <View
-                accessibilityRole="progressbar"
-                accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 3,
-                  overflow: 'hidden',
-                  backgroundColor: theme.border,
-                }}>
-                <View
-                  style={{
-                    width: `${Math.round(loadProgress * 100)}%`,
-                    height: '100%',
-                    backgroundColor: theme.primary,
-                  }}
-                />
-              </View>
-            ) : null}
-            {authOverlayVisible && !showBehind ? (
-              <View
-                onStartShouldSetResponder={() => true}
-                accessibilityRole="progressbar"
-                accessibilityValue={{ min: 0, max: 100, now: Math.round(loadProgress * 100) }}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  left: 0,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 24,
-                  backgroundColor: theme.background,
-                }}>
-                <ActivityIndicator size="large" color={theme.primary} />
-                <ThemedText type="smallBold" style={{ marginTop: 20, color: theme.text }}>
-                  {t('loggingInAndLoading')}
-                </ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: 10, marginBottom: 8 }}>
-                  {Math.round(loadProgress * 100)}%
-                </ThemedText>
-                <View
-                  style={{
-                    width: '100%',
-                    maxWidth: 280,
-                    height: 4,
-                    overflow: 'hidden',
-                    borderRadius: 4,
-                    backgroundColor: theme.backgroundElement,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: `${Math.round(loadProgress * 100)}%`,
-                      height: '100%',
-                      borderRadius: 4,
-                      backgroundColor: theme.primary,
-                    }}
-                  />
-                </View>
-              </View>
-            ) : null}
-        </View>
+          </PressScale>
+        ) : null}
       </View>
-  );
+      <View
+        style={{
+          flex: 1,
+          position: "relative",
+          backgroundColor: theme.background,
+        }}
+      >
+        <WebView
+          key={`${userId ?? "schedule"}:${initialUrl}`}
+          ref={webRef}
+          source={{ uri: initialUrl }}
+          style={{ flex: 1, backgroundColor: theme.background }}
+          userAgent={Platform.OS === "ios" ? MOBILE_SAFARI : undefined}
+          javaScriptEnabled
+          domStorageEnabled
+          sharedCookiesEnabled
+          thirdPartyCookiesEnabled
+          cacheEnabled
+          incognito={false}
+          pullToRefreshEnabled
+          onLoadStart={beginPageLoad}
+          scrollEnabled
+          nestedScrollEnabled={Platform.OS === "android"}
+          overScrollMode={Platform.OS === "android" ? "always" : undefined}
+          automaticallyAdjustContentInsets={false}
+          bounces
+          decelerationRate={Platform.OS === "ios" ? "normal" : undefined}
+          javaScriptCanOpenWindowsAutomatically
+          setSupportMultipleWindows={false}
+          allowsBackForwardNavigationGestures
+          injectedJavaScriptBeforeContentLoaded={`window.__unimateAllowMySchedule = ${autoSchedule}; ${AUTO_SIGN_IN}`}
+          injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
+          injectedJavaScriptForMainFrameOnly={false}
+          injectedJavaScript={AUTO_SIGN_IN}
+          onMessage={({ nativeEvent }) => {
+            if (nativeEvent.data === "student-home") {
+              // Logged in on the Studenten page: allow the schedule and show the loading screen.
+              signedIn.current = true
+              setAuthOverlayVisible(true)
+              return
+            }
+            if (nativeEvent.data !== "schedule-ready") return
+            scheduleReady.current = true
+            retryCount.current = 0
+            if (pageLoadStarted.current) {
+              finishPageLoad()
+            } else {
+              progressRef.current = 1
+              setLoadProgress(1)
+              setTopProgressVisible(false)
+            }
+            if (readyDisplayTimer.current)
+              clearTimeout(readyDisplayTimer.current)
+            readyDisplayTimer.current = setTimeout(() => {
+              readyDisplayTimer.current = null
+              if (scheduleReady.current) setAuthOverlayVisible(false)
+            }, READY_DISPLAY_MS)
+          }}
+          onLoadProgress={({ nativeEvent }) => {
+            if (pageLoadStarted.current) {
+              updateLoadProgress(nativeEvent.progress * 0.99)
+            }
+          }}
+          onLoadEnd={finishPageLoad}
+          onError={handleLoadError}
+          onHttpError={({ nativeEvent }) => {
+            if (nativeEvent.statusCode >= 500) handleLoadError()
+          }}
+          renderError={() => (
+            <View style={{ flex: 1, backgroundColor: theme.background }} />
+          )}
+          onShouldStartLoadWithRequest={allowNavigation}
+          onNavigationStateChange={(nav) => {
+            noteNavigation(nav.url)
+          }}
+          onOpenWindow={openPopupInPlace}
+        />
+        {topProgressVisible ? (
+          <View
+            accessibilityRole="progressbar"
+            accessibilityValue={{
+              min: 0,
+              max: 100,
+              now: Math.round(loadProgress * 100),
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              overflow: "hidden",
+              backgroundColor: theme.border,
+            }}
+          >
+            <View
+              style={{
+                width: `${Math.round(loadProgress * 100)}%`,
+                height: "100%",
+                backgroundColor: theme.primary,
+              }}
+            />
+          </View>
+        ) : null}
+        {authOverlayVisible && !showBehind ? (
+          <View
+            onStartShouldSetResponder={() => true}
+            accessibilityRole="progressbar"
+            accessibilityValue={{
+              min: 0,
+              max: 100,
+              now: Math.round(loadProgress * 100),
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 24,
+              backgroundColor: theme.background,
+            }}
+          >
+            <ActivityIndicator size="large" color={theme.primary} />
+            <ThemedText
+              type="smallBold"
+              style={{ marginTop: 20, color: theme.text }}
+            >
+              {t("loggingInAndLoading")}
+            </ThemedText>
+            <ThemedText
+              type="small"
+              style={{
+                color: theme.textSecondary,
+                marginTop: 10,
+                marginBottom: 8,
+              }}
+            >
+              {Math.round(loadProgress * 100)}%
+            </ThemedText>
+            <View
+              style={{
+                width: "100%",
+                maxWidth: 280,
+                height: 4,
+                overflow: "hidden",
+                borderRadius: 4,
+                backgroundColor: theme.backgroundElement,
+              }}
+            >
+              <View
+                style={{
+                  width: `${Math.round(loadProgress * 100)}%`,
+                  height: "100%",
+                  borderRadius: 4,
+                  backgroundColor: theme.primary,
+                }}
+              />
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  )
 }
 
 function ScheduleBrowser({ visible, initialUrl, onClose, userId }) {
   const handleClose = useCallback(() => {
-    if (!visible) return false;
-    onClose();
-    return true;
-  }, [onClose, visible]);
+    if (!visible) return false
+    onClose()
+    return true
+  }, [onClose, visible])
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', handleClose);
-    return () => subscription.remove();
-  }, [handleClose]);
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleClose,
+    )
+    return () => subscription.remove()
+  }, [handleClose])
 
-  if (!initialUrl) return null;
+  if (!initialUrl) return null
 
   return (
     <View
-      pointerEvents={visible ? 'auto' : 'none'}
+      pointerEvents={visible ? "auto" : "none"}
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: 0,
         right: 0,
         bottom: 0,
@@ -879,13 +947,14 @@ function ScheduleBrowser({ visible, initialUrl, onClose, userId }) {
         zIndex: visible ? 1000 : -1,
         elevation: visible ? 1000 : 0,
         opacity: visible ? 1 : 0,
-      }}>
+      }}
+    >
       <ScheduleBrowserScreen
-        key={`${userId ?? 'schedule'}:${initialUrl}`}
+        key={`${userId ?? "schedule"}:${initialUrl}`}
         userId={userId}
         initialUrl={initialUrl}
         onClose={onClose}
       />
     </View>
-  );
+  )
 }

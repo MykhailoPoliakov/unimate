@@ -27,7 +27,7 @@ The app picks its API address in this order:
 Port 8001 is where the backend runs in Docker and in the local setup from the backend guide. To use another address, such as a physical device on your local network, create `frontend/.env` from the template and edit it:
 
 ```sh
-cp .env.example .env  
+cp .env.example .env
 ```
 
 ```text
@@ -49,7 +49,7 @@ npm run lint         # ESLint via Expo
 
 ## Structure
 
-- `src/app/` – file-based routes: `index` (Home), `news`, `socials`, and `settings`, including its legal pages.
+- `src/app/` – file-based routes: `index` (Home), `news`, and `settings`, including its legal pages.
 - `src/components/` – shared UI such as tabs, news cards, settings rows, and legal-document layout.
 - `src/hooks/` – profile, news feed, theme, notification, and localization state.
 - `src/lib/` – the API client, device helpers, and domain utilities.

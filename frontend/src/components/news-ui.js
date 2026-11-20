@@ -32,16 +32,22 @@ export function NewsImage({ uri, height, compact = false }) {
   const [failed, setFailed] = useState(false);
   if (!uri?.trim() || failed) return null;
   return (
-    <Image
-      source={{ uri: uri.trim() }}
-      style={
-        height
-          ? { width: '100%', height, backgroundColor: 'transparent' }
-          : { width: '100%', aspectRatio: compact ? NEWS_LIST_IMAGE_RATIO : NEWS_IMAGE_RATIO, backgroundColor: 'transparent' }
-      }
-      contentFit="cover"
-      onError={() => setFailed(true)}
-    />
+    <View
+      style={{
+        width: '100%',
+        ...(height
+          ? { height }
+          : { aspectRatio: compact ? NEWS_LIST_IMAGE_RATIO : NEWS_IMAGE_RATIO }),
+        overflow: 'hidden',
+        ...(compact ? { borderTopLeftRadius: 19, borderTopRightRadius: 19 } : {}),
+      }}>
+      <Image
+        source={{ uri: uri.trim() }}
+        style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
+        contentFit="cover"
+        onError={() => setFailed(true)}
+      />
+    </View>
   );
 }
 
@@ -333,10 +339,8 @@ export function PostCard({ post, onOpen, onEdit, onDelete }) {
 
   return (
     <GlassCard
-      solid
       style={{
-        backgroundColor: post.outsideAudience ? `${theme.error}18` : unread ? theme.backgroundElement : theme.cardMuted,
-        borderColor: post.outsideAudience ? theme.error : unread ? theme.border : theme.background,
+        borderColor: post.outsideAudience ? theme.error : theme.glassBorder,
       }}>
       <PressScale onPress={() => onOpen(post)}>
         <NewsImage uri={post.imageUrl} compact />

@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { listEnter, PressScale } from '@/components/motion';
 import { PostCard } from '@/components/news-ui';
 import { useReload } from '@/components/reload-button';
+import { GradientBackground } from '@/components/gradient-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFeed } from '@/hooks/use-feed';
@@ -97,7 +98,8 @@ export default function NewsScreen() {
   };
 
   return (
-    <ThemedView className="flex-1">
+    <ThemedView className="flex-1 bg-transparent">
+      <GradientBackground />
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1"

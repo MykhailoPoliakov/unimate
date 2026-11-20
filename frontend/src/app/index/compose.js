@@ -1,90 +1,106 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import { Stack, useRouter } from "expo-router"
+import { useEffect, useState } from "react"
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   TextInput,
-} from 'react-native';
+} from "react-native"
 
-import { DEFAULT_LINK_COLOR, LINK_COLORS, linksStorageKey } from '@/components/button-modal';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useI18n } from '@/hooks/use-i18n';
-import { useProfile } from '@/hooks/use-profile';
-import { useTheme } from '@/hooks/use-theme';
-import { previewButton } from '@/lib/api';
-import { getLinkDraft } from '@/lib/nav-draft';
-import { isValidHttpUrl, normalizeUrl } from '@/lib/social-service';
+import {
+  DEFAULT_LINK_COLOR,
+  LINK_COLORS,
+  linksStorageKey,
+} from "@/components/button-modal"
+import { ThemedText } from "@/components/themed-text"
+import { ThemedView } from "@/components/themed-view"
+import { useI18n } from "@/hooks/use-i18n"
+import { useProfile } from "@/hooks/use-profile"
+import { useTheme } from "@/hooks/use-theme"
+import { previewButton } from "@/lib/api"
+import { getLinkDraft } from "@/lib/nav-draft"
+import { isValidHttpUrl, normalizeUrl } from "@/lib/social-service"
+import { GradientBackground } from "@/components/gradient-background"
 
 export default function LinkComposeScreen() {
-  const theme = useTheme();
-  const { t } = useI18n();
-  const router = useRouter();
-  const { profile } = useProfile();
-  const item = getLinkDraft();
-  const [url, setUrl] = useState(item?.url ?? '');
-  const [title, setTitle] = useState(item?.title ?? '');
-  const [description, setDescription] = useState(item?.description ?? '');
-  const [icon, setIcon] = useState(item?.icon ?? null);
-  const [color, setColor] = useState(item?.color ?? DEFAULT_LINK_COLOR);
-  const isEdit = !!item?.id;
-  const urlLooksValid = isValidHttpUrl(url);
-  const normalized = urlLooksValid ? normalizeUrl(url) : '';
-  const canSave = urlLooksValid && title.trim().length > 0;
-  const showUrlError = url.trim().length > 0 && !urlLooksValid;
+  const theme = useTheme()
+  const { t } = useI18n()
+  const router = useRouter()
+  const { profile } = useProfile()
+  const item = getLinkDraft()
+  const [url, setUrl] = useState(item?.url ?? "")
+  const [title, setTitle] = useState(item?.title ?? "")
+  const [description, setDescription] = useState(item?.description ?? "")
+  const [icon, setIcon] = useState(item?.icon ?? null)
+  const [color, setColor] = useState(item?.color ?? DEFAULT_LINK_COLOR)
+  const isEdit = !!item?.id
+  const urlLooksValid = isValidHttpUrl(url)
+  const normalized = urlLooksValid ? normalizeUrl(url) : ""
+  const canSave = urlLooksValid && title.trim().length > 0
+  const showUrlError = url.trim().length > 0 && !urlLooksValid
 
   useEffect(() => {
-    if (!urlLooksValid || !profile?.userId) return undefined;
+    if (!urlLooksValid || !profile?.userId) return undefined
     const timer = setTimeout(() => {
       previewButton(profile.userId, normalized)
         .then((preview) => {
-          if (preview?.title) setTitle((current) => current.trim() || preview.title);
-          if (preview?.icon) setIcon(preview.icon);
+          if (preview?.title)
+            setTitle((current) => current.trim() || preview.title)
+          if (preview?.icon) setIcon(preview.icon)
         })
-        .catch(() => {});
-    }, 700);
-    return () => clearTimeout(timer);
-  }, [normalized, profile?.userId]);
+        .catch(() => {})
+    }, 700)
+    return () => clearTimeout(timer)
+  }, [normalized, profile?.userId])
 
   const handleSave = async () => {
-    if (!canSave || !profile?.userId) return;
+    if (!canSave || !profile?.userId) return
     const link = {
       id: item?.id ?? `local-${Date.now()}`,
       url: normalized,
       icon,
       color,
-      platform: 'custom',
+      platform: "custom",
       title: title.trim(),
       description: description.trim() || null,
       canManage: true,
-    };
-    const stored = JSON.parse((await AsyncStorage.getItem(linksStorageKey(profile.userId))) ?? '[]');
-    const exists = stored.some((row) => row.id === link.id);
-    const next = exists ? stored.map((row) => (row.id === link.id ? link : row)) : [...stored, link];
-    await AsyncStorage.setItem(linksStorageKey(profile.userId), JSON.stringify(next));
-    router.back();
-  };
+    }
+    const stored = JSON.parse(
+      (await AsyncStorage.getItem(linksStorageKey(profile.userId))) ?? "[]",
+    )
+    const exists = stored.some((row) => row.id === link.id)
+    const next = exists
+      ? stored.map((row) => (row.id === link.id ? link : row))
+      : [...stored, link]
+    await AsyncStorage.setItem(
+      linksStorageKey(profile.userId),
+      JSON.stringify(next),
+    )
+    router.back()
+  }
 
   return (
-    <ThemedView className="flex-1">
+    <ThemedView className="flex-1 bg-transparent">
+      <GradientBackground />
       <Stack.Screen
         options={{
-          title: isEdit ? t('editService') : t('addService'),
+          title: isEdit ? t("editService") : t("addService"),
           headerRight: () => (
             <Pressable
               onPress={handleSave}
               disabled={!canSave}
               className="active:opacity-70"
               hitSlop={8}
-              style={{ paddingHorizontal: 10 }}>
+              style={{ paddingHorizontal: 10 }}
+            >
               <ThemedText
-                themeColor={canSave ? 'primary' : 'textSecondary'}
+                themeColor={canSave ? "primary" : "textSecondary"}
                 numberOfLines={1}
-                style={{ fontSize: 17, fontWeight: '600' }}>
-                {t('save')}
+                style={{ fontSize: 17, fontWeight: "600" }}
+              >
+                {t("save")}
               </ThemedText>
             </Pressable>
           ),
@@ -92,11 +108,14 @@ export default function LinkComposeScreen() {
       />
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-four py-three gap-three pb-bottom-tab-gap"
-          keyboardShouldPersistTaps="handled">
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+        >
           <TextInput
             value={url}
             onChangeText={setUrl}
@@ -106,25 +125,31 @@ export default function LinkComposeScreen() {
             autoCorrect={false}
             keyboardType="url"
             className="rounded-three px-three py-three text-base font-medium"
-            style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
+            style={{
+              backgroundColor: theme.backgroundElement,
+              color: theme.text,
+            }}
           />
           {showUrlError ? (
             <ThemedText type="small" style={{ color: theme.error }}>
-              {t('enterALink')}
+              {t("enterALink")}
             </ThemedText>
           ) : null}
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder={t('title')}
+            placeholder={t("title")}
             placeholderTextColor={theme.textSecondary}
             className="rounded-three px-three py-three text-base font-medium"
-            style={{ backgroundColor: theme.backgroundElement, color: theme.text }}
+            style={{
+              backgroundColor: theme.backgroundElement,
+              color: theme.text,
+            }}
           />
           <TextInput
             value={description}
             onChangeText={setDescription}
-            placeholder={t('socialDescription')}
+            placeholder={t("socialDescription")}
             placeholderTextColor={theme.textSecondary}
             multiline
             maxLength={500}
@@ -133,15 +158,15 @@ export default function LinkComposeScreen() {
             style={{
               backgroundColor: theme.backgroundElement,
               color: theme.text,
-              textAlignVertical: 'top',
+              textAlignVertical: "top",
             }}
           />
           <ThemedText type="small" themeColor="textSecondary">
-            {t('buttonColor')}
+            {t("buttonColor")}
           </ThemedText>
           <ThemedView className="flex-row flex-wrap gap-two bg-transparent">
             {LINK_COLORS.map((value) => {
-              const selected = color === value;
+              const selected = color === value
               return (
                 <Pressable key={value} onPress={() => setColor(value)}>
                   <ThemedView
@@ -153,11 +178,11 @@ export default function LinkComposeScreen() {
                     }}
                   />
                 </Pressable>
-              );
+              )
             })}
           </ThemedView>
         </ScrollView>
       </KeyboardAvoidingView>
     </ThemedView>
-  );
+  )
 }

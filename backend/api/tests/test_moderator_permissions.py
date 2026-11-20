@@ -26,25 +26,11 @@ from app.schemas import (
     NewsCreate,
     NewsTranslationIn,
     PushDeviceUpdate,
-    SocialTranslationIn,
     UserRoleUpdate,
 )
 
 
 class ModeratorPermissionTests(unittest.TestCase):
-    def test_social_descriptions_accept_up_to_2000_characters(self):
-        description = "a" * 2000
-        translation = SocialTranslationIn(lang="en", title="Community", description=description)
-
-        self.assertEqual(translation.description, description)
-
-        with self.assertRaises(ValueError):
-            SocialTranslationIn(
-                lang="en",
-                title="Community",
-                description=f"{description}a",
-            )
-
     def setUp(self):
         self.engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
         Base.metadata.drop_all(self.engine)

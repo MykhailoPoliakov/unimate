@@ -29,12 +29,12 @@ Create `backend/.env` from the template and set a strong `POSTGRES_PASSWORD`:
 Copy-Item backend\.env.example backend\.env
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database name, user, and password. |
-| `DOMAIN` | Public API domain, used by the Caddy deployment. |
-| `WEB_CONCURRENCY` | Number of API worker processes. |
-| `DATABASE_URL` | Optional. Overrides the URL built from the `POSTGRES_*` values. |
+| Variable                                            | Purpose                                                         |
+| --------------------------------------------------- | --------------------------------------------------------------- |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database name, user, and password.                              |
+| `DOMAIN`                                            | Public API domain, used by the Caddy deployment.                |
+| `WEB_CONCURRENCY`                                   | Number of API worker processes.                                 |
+| `DATABASE_URL`                                      | Optional. Overrides the URL built from the `POSTGRES_*` values. |
 
 ## Local development
 
@@ -69,7 +69,7 @@ docker compose --env-file backend/.env -f backend/docker-compose.yml up -d --bui
 
 ## Database and seed data
 
-`api/seed-data.json` holds the initial institutions, buttons, and social links. `python -m app.seed` loads it, but it **drops and recreates all application tables**. That deletes users, news, and poll votes, so only run it on an empty database or when you deliberately want a reset.
+`api/seed-data.json` holds the initial institutions and buttons. `python -m app.seed` loads it, but it **drops and recreates all application tables**. That deletes users, news, and poll votes, so only run it on an empty database or when you deliberately want a reset.
 
 Open a database shell with:
 
